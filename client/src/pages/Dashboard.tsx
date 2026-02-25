@@ -436,7 +436,7 @@ function AIChatTab({ parentName, isParent }: { parentName?: string; isParent?: b
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      setMessages([...newMessages, { role: "assistant", content: data.reply }]);
+      setMessages([...newMessages, { role: "assistant", content: data.reply, imageUrl: data.imageUrl || undefined }]);
       if (data.hasAlert) {
         toast({ title: "Внимание!", description: "Обнаружен сигнал тревоги. Алерт отправлен.", variant: "destructive" });
       }
@@ -493,6 +493,9 @@ function AIChatTab({ parentName, isParent }: { parentName?: string; isParent?: b
             <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${msg.role === "user" ? "bg-primary text-white rounded-br-sm" : "bg-slate-100 text-slate-800 rounded-bl-sm"}`}>
                 {msg.content}
+                {(msg as any).imageUrl && (
+                  <img src={(msg as any).imageUrl} alt="Картинка от Внучка" className="mt-2 rounded-lg max-w-full" data-testid={`img-chat-${i}`} />
+                )}
               </div>
             </div>
           ))}

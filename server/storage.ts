@@ -1,4 +1,4 @@
-import { eq, desc, and, count } from "drizzle-orm";
+import { eq, desc, and, count, gte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import {
@@ -60,6 +60,7 @@ export interface IStorage {
   createChatMessage(msg: InsertChatMessage): Promise<ChatMessage>;
 
   logAiUsage(log: InsertAiUsageLog): Promise<void>;
+  countAiUsageToday(userId: number, endpoint: string): Promise<number>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -232,6 +233,18 @@ export class DatabaseStorage implements IStorage {
     } catch (err) {
       console.error("[logAiUsage] Failed to log AI usage:", err);
     }
+  }
+
+  async countAiUsageToday(userId: number, endpoint: string): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [result] = await db.select({ cnt: count() }).from(aiUsageLogs)
+      .where(and(
+        eq(aiUsageLogs.userId, userId),
+        eq(aiUsageLogs.endpoint, endpoint),
+        gte(aiUsageLogs.createdAt, today)
+      ));
+    return Number(result?.cnt) || 0;
   }
 }
 

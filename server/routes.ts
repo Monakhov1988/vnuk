@@ -332,7 +332,12 @@ export async function registerRoutes(
         });
       }
 
-      return res.json(result);
+      return res.json({
+        reply: result.reply,
+        hasAlert: result.hasAlert,
+        intent: result.intent,
+        imageUrl: result.imageUrl || null,
+      });
     } catch (e: any) {
       return res.status(500).json({ message: "Ошибка AI: " + e.message });
     }

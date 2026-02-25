@@ -1,4 +1,4 @@
-import { Bot, InlineKeyboard } from "grammy";
+import { Bot, InlineKeyboard, InputFile } from "grammy";
 import crypto from "crypto";
 import { storage } from "./storage";
 import { chatWithGrandchild, recognizeMeter } from "./ai";
@@ -469,6 +469,8 @@ export function startTelegramBot() {
         hasAlert: false,
       });
 
+      await ctx.replyWithChatAction("typing");
+
       const result = await chatWithGrandchild(messages, user.name, user.id);
 
       await storage.createChatMessage({
@@ -508,7 +510,18 @@ export function startTelegramBot() {
         }
       }
 
-      await ctx.reply(result.reply);
+      if (result.imageUrl) {
+        try {
+          await ctx.replyWithPhoto(result.imageUrl, {
+            caption: result.reply.substring(0, 1024),
+          });
+        } catch (imgErr) {
+          console.error("[telegram] Failed to send image:", imgErr);
+          await ctx.reply(result.reply);
+        }
+      } else {
+        await ctx.reply(result.reply);
+      }
     } catch (err: any) {
       console.error("[telegram] Chat error:", err);
       await ctx.reply("Ой, что-то я задумался. Напишите ещё раз через минутку.");

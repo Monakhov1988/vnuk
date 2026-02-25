@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
+import { getWeather, searchWeb, searchRecipe, generateImage } from "./tools";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -54,6 +55,29 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 ВОРЧИТ / НЕДОВОЛЕН:
 — Не спорь. Выслушай. «Понимаю. Это правда неприятно.»
 — Мягко переключи: «Зато сегодня погода хорошая. На балкон выходил(а)?»
+
+═══════════════════════════════════════
+ТВОИ ИНСТРУМЕНТЫ
+═══════════════════════════════════════
+
+У тебя есть специальные возможности. Используй их когда нужно:
+
+ПОГОДА (get_weather):
+Когда спрашивают о погоде, прогнозе, температуре на улице — вызови get_weather с названием города. Если город не назван — используй «Москва». Перескажи результат тепло и по-простому: «Сегодня на улице 15 градусов, тепло! Можно погулять.»
+
+ПОИСК ИНФОРМАЦИИ (search_web):
+Когда спрашивают о новостях, событиях, актуальной информации, праздниках, датах — вызови search_web. Пересказывай результат по-своему, тепло. Рассказывай только хорошие и интересные новости. Не вставляй URL-ссылки — они не нужны.
+
+РЕЦЕПТЫ (search_recipe):
+Когда просят рецепт, как приготовить блюдо — вызови search_recipe. Перескажи рецепт пошагово, простым языком, как бабушка учила.
+
+КАРТИНКИ И ОТКРЫТКИ (generate_image):
+Когда просят нарисовать открытку, картинку, поздравление, красивую картинку — вызови generate_image. Опиши на английском ЧТО именно нарисовать (это важно — описание на английском для качества). Например: «A warm greeting card with spring flowers, sunlight, soft watercolor style, no text». После генерации скажи что-то тёплое, например: «Вот, нарисовал для тебя! Нравится?»
+
+ВАЖНО ПРО ИНСТРУМЕНТЫ:
+— Не говори пользователю «я воспользуюсь инструментом» или «я ищу в интернете». Просто сделай и расскажи результат.
+— Если инструмент не сработал — не извиняйся длинно. Скажи просто: «Что-то не получилось узнать, попробуем попозже?»
+— Не вставляй ссылки и URL в ответы — бабушке они не нужны.
 
 ═══════════════════════════════════════
 ЧТО ТЫ УМЕЕШЬ
@@ -123,6 +147,95 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 
 Отвечай на русском языке. Всегда.`;
 
+const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
+  {
+    type: "function",
+    function: {
+      name: "get_weather",
+      description: "Узнать текущую погоду и прогноз на завтра для указанного города",
+      parameters: {
+        type: "object",
+        properties: {
+          city: { type: "string", description: "Название города на русском (например: Москва, Санкт-Петербург, Казань)" },
+        },
+        required: ["city"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_web",
+      description: "Найти актуальную информацию: новости, события, праздники, факты",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Поисковый запрос на русском языке" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_recipe",
+      description: "Найти подробный пошаговый рецепт блюда",
+      parameters: {
+        type: "object",
+        properties: {
+          dish: { type: "string", description: "Название блюда (например: шарлотка, борщ, пирожки с капустой)" },
+        },
+        required: ["dish"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_image",
+      description: "Нарисовать картинку или открытку по описанию",
+      parameters: {
+        type: "object",
+        properties: {
+          description: { type: "string", description: "Описание картинки на АНГЛИЙСКОМ языке для лучшего качества (например: A warm greeting card with spring flowers, soft watercolor style)" },
+        },
+        required: ["description"],
+      },
+    },
+  },
+];
+
+async function executeToolCall(
+  toolName: string,
+  args: Record<string, string>,
+  userId?: number
+): Promise<{ text: string; imageUrl?: string }> {
+  switch (toolName) {
+    case "get_weather": {
+      const result = await getWeather(args.city || "Москва");
+      return { text: result };
+    }
+    case "search_web": {
+      const result = await searchWeb(args.query || "");
+      return { text: result };
+    }
+    case "search_recipe": {
+      const result = await searchRecipe(args.dish || "");
+      return { text: result };
+    }
+    case "generate_image": {
+      const result = await generateImage(args.description || "", userId);
+      if (result.error) {
+        return { text: result.error };
+      }
+      return { text: "Картинка успешно сгенерирована.", imageUrl: result.url || undefined };
+    }
+    default:
+      return { text: "Инструмент не найден." };
+  }
+}
+
 function getMoscowTime(): { hours: number; timeOfDay: string } {
   const now = new Date();
   const moscowOffset = 3 * 60;
@@ -148,7 +261,7 @@ export async function chatWithGrandchild(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   parentName?: string,
   userId?: number
-): Promise<{ reply: string; hasAlert: boolean; intent: string }> {
+): Promise<{ reply: string; hasAlert: boolean; intent: string; imageUrl?: string }> {
   const { hours, timeOfDay } = getMoscowTime();
   const timeStr = `${String(hours).padStart(2, "0")}:00`;
 
@@ -160,15 +273,62 @@ export async function chatWithGrandchild(
 
   const recentMessages = messages.slice(-20);
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: systemMessage },
-      ...recentMessages,
-    ],
-    max_tokens: 600,
-    temperature: 0.75,
-  });
+  const apiMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: "system", content: systemMessage },
+    ...recentMessages,
+  ];
+
+  let imageUrl: string | undefined;
+  let totalTokensIn = 0;
+  let totalTokensOut = 0;
+  let response: OpenAI.Chat.Completions.ChatCompletion;
+  let iterations = 0;
+  const MAX_TOOL_ITERATIONS = 3;
+
+  while (iterations < MAX_TOOL_ITERATIONS) {
+    iterations++;
+
+    response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: apiMessages,
+      tools: TOOLS,
+      max_tokens: 600,
+      temperature: 0.75,
+    });
+
+    totalTokensIn += response.usage?.prompt_tokens || 0;
+    totalTokensOut += response.usage?.completion_tokens || 0;
+
+    const choice = response.choices[0];
+
+    if (choice?.finish_reason !== "tool_calls" || !choice.message.tool_calls) {
+      break;
+    }
+
+    apiMessages.push(choice.message);
+
+    for (const toolCall of choice.message.tool_calls) {
+      const fnName = toolCall.function.name;
+      let fnArgs: Record<string, string> = {};
+      try {
+        fnArgs = JSON.parse(toolCall.function.arguments);
+      } catch {
+        fnArgs = {};
+      }
+
+      const toolResult = await executeToolCall(fnName, fnArgs, userId);
+
+      if (toolResult.imageUrl) {
+        imageUrl = toolResult.imageUrl;
+      }
+
+      apiMessages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: toolResult.text,
+      });
+    }
+  }
 
   const reply = response.choices[0]?.message?.content || "Ой, что-то я задумался. Повтори, пожалуйста.";
   const hasAlert = reply.includes("[ALERT]");
@@ -176,21 +336,19 @@ export async function chatWithGrandchild(
   const lastUserMessage = recentMessages.filter(m => m.role === "user").pop()?.content || "";
   const intent = detectIntentLocal(lastUserMessage, hasAlert);
 
-  const usage = response.usage;
-  if (usage) {
-    storage.logAiUsage({
-      userId: userId || null,
-      endpoint: "chat",
-      model: "gpt-4o-mini",
-      tokensIn: usage.prompt_tokens,
-      tokensOut: usage.completion_tokens,
-    });
-  }
+  storage.logAiUsage({
+    userId: userId || null,
+    endpoint: "chat",
+    model: "gpt-4o-mini",
+    tokensIn: totalTokensIn,
+    tokensOut: totalTokensOut,
+  });
 
   return {
     reply: reply.replace(/\[ALERT\]/g, "").trim(),
     hasAlert,
     intent,
+    imageUrl,
   };
 }
 
