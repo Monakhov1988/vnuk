@@ -1,38 +1,151 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { eq, desc, and } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
+import {
+  type User, type InsertUser,
+  type Reminder, type InsertReminder,
+  type Event, type InsertEvent,
+  type UtilityMetric, type InsertUtilityMetric,
+  type Memoir, type InsertMemoir,
+  type HealthLog, type InsertHealthLog,
+  users, reminders, events, utilityMetrics, memoirs, healthLogs,
+} from "@shared/schema";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  getUser(id: number): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserLinkCode(userId: number, code: string): Promise<User>;
+  linkParent(childId: number, parentId: number): Promise<void>;
+  getLinkedParent(childId: number): Promise<User | undefined>;
+  getUserByLinkCode(code: string): Promise<User | undefined>;
+
+  getReminders(userId: number): Promise<Reminder[]>;
+  getRemindersByParent(parentId: number): Promise<Reminder[]>;
+  createReminder(reminder: InsertReminder): Promise<Reminder>;
+  updateReminderStatus(id: number, status: string): Promise<Reminder>;
+  deleteReminder(id: number): Promise<void>;
+
+  getEvents(userId: number, limit?: number): Promise<Event[]>;
+  createEvent(event: InsertEvent): Promise<Event>;
+  markEventRead(id: number): Promise<void>;
+  getUnreadEventsCount(userId: number): Promise<number>;
+
+  getUtilityMetrics(parentId: number): Promise<UtilityMetric[]>;
+  createUtilityMetric(metric: InsertUtilityMetric): Promise<UtilityMetric>;
+
+  getMemoirs(parentId: number): Promise<Memoir[]>;
+  createMemoir(memoir: InsertMemoir): Promise<Memoir>;
+
+  getHealthLogs(parentId: number, limit?: number): Promise<HealthLog[]>;
+  createHealthLog(log: InsertHealthLog): Promise<HealthLog>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const db = drizzle(pool);
 
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async updateUserLinkCode(userId: number, code: string): Promise<User> {
+    const [user] = await db.update(users).set({ linkCode: code }).where(eq(users.id, userId)).returning();
+    return user;
+  }
+
+  async linkParent(childId: number, parentId: number): Promise<void> {
+    await db.update(users).set({ linkedParentId: parentId }).where(eq(users.id, childId));
+  }
+
+  async getLinkedParent(childId: number): Promise<User | undefined> {
+    const child = await this.getUser(childId);
+    if (!child?.linkedParentId) return undefined;
+    return this.getUser(child.linkedParentId);
+  }
+
+  async getUserByLinkCode(code: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.linkCode, code));
+    return user;
+  }
+
+  async getReminders(userId: number): Promise<Reminder[]> {
+    return db.select().from(reminders).where(eq(reminders.userId, userId)).orderBy(reminders.timeHour, reminders.timeMinute);
+  }
+
+  async getRemindersByParent(parentId: number): Promise<Reminder[]> {
+    return db.select().from(reminders).where(eq(reminders.parentId, parentId)).orderBy(reminders.timeHour, reminders.timeMinute);
+  }
+
+  async createReminder(reminder: InsertReminder): Promise<Reminder> {
+    const [r] = await db.insert(reminders).values(reminder).returning();
+    return r;
+  }
+
+  async updateReminderStatus(id: number, status: string): Promise<Reminder> {
+    const [r] = await db.update(reminders).set({ status: status as any }).where(eq(reminders.id, id)).returning();
+    return r;
+  }
+
+  async deleteReminder(id: number): Promise<void> {
+    await db.delete(reminders).where(eq(reminders.id, id));
+  }
+
+  async getEvents(userId: number, limit = 50): Promise<Event[]> {
+    return db.select().from(events).where(eq(events.userId, userId)).orderBy(desc(events.createdAt)).limit(limit);
+  }
+
+  async createEvent(event: InsertEvent): Promise<Event> {
+    const [e] = await db.insert(events).values(event).returning();
+    return e;
+  }
+
+  async markEventRead(id: number): Promise<void> {
+    await db.update(events).set({ isRead: true }).where(eq(events.id, id));
+  }
+
+  async getUnreadEventsCount(userId: number): Promise<number> {
+    const result = await db.select().from(events).where(and(eq(events.userId, userId), eq(events.isRead, false)));
+    return result.length;
+  }
+
+  async getUtilityMetrics(parentId: number): Promise<UtilityMetric[]> {
+    return db.select().from(utilityMetrics).where(eq(utilityMetrics.parentId, parentId)).orderBy(desc(utilityMetrics.createdAt));
+  }
+
+  async createUtilityMetric(metric: InsertUtilityMetric): Promise<UtilityMetric> {
+    const [m] = await db.insert(utilityMetrics).values(metric).returning();
+    return m;
+  }
+
+  async getMemoirs(parentId: number): Promise<Memoir[]> {
+    return db.select().from(memoirs).where(eq(memoirs.parentId, parentId)).orderBy(desc(memoirs.createdAt));
+  }
+
+  async createMemoir(memoir: InsertMemoir): Promise<Memoir> {
+    const [m] = await db.insert(memoirs).values(memoir).returning();
+    return m;
+  }
+
+  async getHealthLogs(parentId: number, limit = 30): Promise<HealthLog[]> {
+    return db.select().from(healthLogs).where(eq(healthLogs.parentId, parentId)).orderBy(desc(healthLogs.createdAt)).limit(limit);
+  }
+
+  async createHealthLog(log: InsertHealthLog): Promise<HealthLog> {
+    const [l] = await db.insert(healthLogs).values(log).returning();
+    return l;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

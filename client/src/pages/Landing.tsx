@@ -2,8 +2,7 @@ import { ShieldCheck, HeartPulse, Radio, Wrench, BookHeart, FileText, ShoppingBa
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import parentImg from "@/assets/images/elderly-parent.jpg";
-import adultImg from "@/assets/images/adult-child.jpg";
+import { Link } from "wouter";
 
 export default function Landing() {
   return (
@@ -22,9 +21,11 @@ export default function Landing() {
             <a href="#dashboard" className="hover:text-primary transition-colors">Личный кабинет</a>
             <a href="#pricing" className="hover:text-primary transition-colors">Тарифы</a>
           </div>
-          <Button className="rounded-full px-6 shadow-sm hover:shadow-md transition-all">
-            Подключить маме
-          </Button>
+          <Link href="/auth">
+            <Button className="rounded-full px-6 shadow-sm hover:shadow-md transition-all">
+              Подключить маме
+            </Button>
+          </Link>
         </div>
       </nav>
 
@@ -45,9 +46,11 @@ export default function Landing() {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 mb-10">
+                <Link href="/auth">
                 <Button size="lg" className="rounded-full text-base h-14 px-8 shadow-lg shadow-primary/20">
                   Попробовать бесплатно <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
+              </Link>
                 <Button size="lg" variant="outline" className="rounded-full text-base h-14 px-8 border-slate-200 hover:bg-slate-50">
                   Демо-звонок
                 </Button>
@@ -69,12 +72,11 @@ export default function Landing() {
               {/* Abstract decorative blobs */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-blue-100 to-orange-50 rounded-full blur-3xl -z-10" />
               
-              <div className="relative rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-200/50 border border-white/50 aspect-[4/3] md:aspect-square">
-                <img 
-                  src={adultImg} 
-                  alt="Спокойный сын за работой" 
-                  className="w-full h-full object-cover"
-                />
+              <div className="relative rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-200/50 border border-white/50 aspect-[4/3] md:aspect-square bg-gradient-to-br from-blue-100 via-white to-orange-50 flex items-center justify-center">
+                <div className="text-center px-8">
+                  <div className="text-7xl mb-4">👵📱</div>
+                  <p className="text-slate-600 font-medium">Всегда на связи</p>
+                </div>
                 
                 {/* Floating UI Elements */}
                 <div className="absolute bottom-6 left-6 right-6 glass-panel rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-4 duration-700 delay-300">
@@ -249,9 +251,11 @@ export default function Landing() {
               <p className="text-blue-100 text-lg mb-10">
                 Подключите «Внучка» сегодня. Подарите родителям умного помощника, а себе — спокойствие.
               </p>
-              <Button size="lg" className="rounded-full h-14 px-8 bg-white text-primary hover:bg-slate-50 font-semibold text-lg shadow-xl">
-                Оформить подписку за 990₽/мес
-              </Button>
+              <Link href="/auth">
+                <Button size="lg" className="rounded-full h-14 px-8 bg-white text-primary hover:bg-slate-50 font-semibold text-lg shadow-xl">
+                  Оформить подписку за 990₽/мес
+                </Button>
+              </Link>
               <p className="mt-4 text-sm text-blue-200 opacity-80">Первые 7 дней бесплатно. Отменить можно в любой момент.</p>
             </div>
           </div>
