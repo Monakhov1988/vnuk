@@ -18,6 +18,7 @@ export const users = pgTable("users", {
   role: roleEnum("role").notNull().default("child"),
   linkCode: varchar("link_code", { length: 8 }).unique(),
   linkedParentId: integer("linked_parent_id").references((): any => users.id),
+  telegramChatId: text("telegram_chat_id").unique(),
   timezone: text("timezone").default("Europe/Moscow"),
   createdAt: timestamp("created_at").defaultNow(),
 });

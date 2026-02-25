@@ -23,6 +23,9 @@ export interface IStorage {
   linkParent(childId: number, parentId: number): Promise<void>;
   getLinkedParent(childId: number): Promise<User | undefined>;
   getUserByLinkCode(code: string): Promise<User | undefined>;
+  getUserByTelegramChatId(chatId: string): Promise<User | undefined>;
+  updateUserTelegramChatId(userId: number, chatId: string): Promise<User>;
+  getChildrenByParentId(parentId: number): Promise<User[]>;
 
   getReminder(id: number): Promise<Reminder | undefined>;
   getReminders(userId: number): Promise<Reminder[]>;
@@ -96,6 +99,20 @@ export class DatabaseStorage implements IStorage {
   async getUserByLinkCode(code: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.linkCode, code));
     return user;
+  }
+
+  async getUserByTelegramChatId(chatId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.telegramChatId, chatId));
+    return user;
+  }
+
+  async updateUserTelegramChatId(userId: number, chatId: string): Promise<User> {
+    const [user] = await db.update(users).set({ telegramChatId: chatId }).where(eq(users.id, userId)).returning();
+    return user;
+  }
+
+  async getChildrenByParentId(parentId: number): Promise<User[]> {
+    return db.select().from(users).where(eq(users.linkedParentId, parentId));
   }
 
   async getReminder(id: number): Promise<Reminder | undefined> {

@@ -4,6 +4,7 @@ import connectPgSimple from "connect-pg-simple";
 import crypto from "crypto";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
+import { startTelegramBot, stopTelegramBot } from "./telegram";
 import { createServer } from "http";
 
 const app = express();
@@ -117,6 +118,16 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      startTelegramBot();
     },
   );
+
+  process.on("SIGTERM", () => {
+    stopTelegramBot();
+    httpServer.close();
+  });
+  process.on("SIGINT", () => {
+    stopTelegramBot();
+    httpServer.close();
+  });
 })();
