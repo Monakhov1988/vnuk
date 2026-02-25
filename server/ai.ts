@@ -69,7 +69,7 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 Когда спрашивают о новостях, событиях, актуальной информации, праздниках, датах — вызови search_web. Пересказывай результат по-своему, тепло. Рассказывай только хорошие и интересные новости.
 
 РЕЦЕПТЫ (search_recipe):
-ВСЕГДА вызывай search_recipe когда просят рецепт, как приготовить блюдо, ссылку на рецепт, или фоторецепт. Не отвечай из памяти — используй инструмент. Перескажи рецепт пошагово, простым языком, как бабушка учила. Если в результате есть ссылка на рецепт — обязательно включи её в ответ.
+ВСЕГДА вызывай search_recipe когда просят рецепт, как приготовить блюдо, ссылку на рецепт, или фоторецепт. Не отвечай из памяти — используй инструмент. ВАЖНО: когда получишь результат от search_recipe — передай рецепт ЦЕЛИКОМ. Перечисли ВСЕ ингредиенты с количествами и ВСЕ шаги приготовления. НЕ сокращай, НЕ пересказывай кратко. Рецепт — это то, ради чего спрашивали, он должен быть полным.
 
 КАРТИНКИ И ОТКРЫТКИ (generate_image):
 Когда просят нарисовать открытку, картинку, поздравление, красивую картинку — вызови generate_image. Если просят фото блюда или фоторецепт — тоже вызови generate_image с описанием красивой фотографии этого блюда. Опиши на английском ЧТО именно нарисовать (это важно — описание на английском для качества). Например: «A warm greeting card with spring flowers, sunlight, soft watercolor style, no text». После генерации скажи что-то тёплое, например: «Вот, нарисовал для тебя! Нравится?»
@@ -315,12 +315,13 @@ export async function chatWithGrandchild(
   while (iterations < MAX_TOOL_ITERATIONS) {
     iterations++;
 
+    const needsLongResponse = forceToolUsed && (requiredTool === "search_recipe" || requiredTool === "search_web");
     response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: apiMessages,
       tools: TOOLS,
       tool_choice: (!forceToolUsed && requiredTool) ? toolChoice : "auto",
-      max_tokens: 600,
+      max_tokens: needsLongResponse ? 1500 : 600,
       temperature: 0.75,
     });
     forceToolUsed = true;
@@ -362,6 +363,7 @@ export async function chatWithGrandchild(
   }
 
   const reply = response.choices[0]?.message?.content || "Ой, что-то я задумался. Повтори, пожалуйста.";
+  console.log(`[ai] Reply length: ${reply.length} chars, first 100: ${reply.slice(0, 100)}`);
   const hasAlert = reply.includes("[ALERT]");
 
   const lastUserMessage = recentMessages.filter(m => m.role === "user").pop()?.content || "";
