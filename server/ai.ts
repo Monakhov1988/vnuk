@@ -257,6 +257,24 @@ function getMoscowTime(): { hours: number; timeOfDay: string } {
   return { hours, timeOfDay };
 }
 
+function detectRequiredTool(message: string): string | null {
+  const lower = message.toLowerCase();
+
+  const recipeWords = ["рецепт", "приготов", "готовить", "испечь", "сварить", "запечь", "пожарить", "потушить", "как сделать торт", "как сделать пирог", "как печь", "шарлотк", "борщ", "пирожк", "блин", "оладь", "пельмен", "вареник", "котлет", "суп ", "каш", "салат", "запеканк", "фоторецепт"];
+  if (recipeWords.some(w => lower.includes(w))) return "search_recipe";
+
+  const weatherWords = ["погод", "температур", "градус", "на улице", "дождь будет", "снег будет", "прогноз"];
+  if (weatherWords.some(w => lower.includes(w))) return "get_weather";
+
+  const imageWords = ["нарисуй", "открытк", "картинк", "нарисовать", "фото блюда", "сгенерируй"];
+  if (imageWords.some(w => lower.includes(w))) return "generate_image";
+
+  const searchWords = ["новости", "что произошло", "событи", "что случилось", "расскажи про "];
+  if (searchWords.some(w => lower.includes(w))) return "search_web";
+
+  return null;
+}
+
 export async function chatWithGrandchild(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   parentName?: string,
@@ -273,6 +291,13 @@ export async function chatWithGrandchild(
 
   const recentMessages = messages.slice(-20);
 
+  const lastUserMsg = recentMessages.filter(m => m.role === "user").pop()?.content || "";
+  const requiredTool = detectRequiredTool(lastUserMsg);
+  const toolChoice: OpenAI.Chat.Completions.ChatCompletionToolChoiceOption = requiredTool
+    ? { type: "function", function: { name: requiredTool } }
+    : "auto";
+  console.log(`[ai] User: "${lastUserMsg.slice(0, 60)}" → tool_choice: ${requiredTool || "auto"}`);
+
   const apiMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: "system", content: systemMessage },
     ...recentMessages,
@@ -284,6 +309,7 @@ export async function chatWithGrandchild(
   let response: OpenAI.Chat.Completions.ChatCompletion;
   let iterations = 0;
   const MAX_TOOL_ITERATIONS = 3;
+  let forceToolUsed = false;
 
   while (iterations < MAX_TOOL_ITERATIONS) {
     iterations++;
@@ -292,16 +318,19 @@ export async function chatWithGrandchild(
       model: "gpt-4o-mini",
       messages: apiMessages,
       tools: TOOLS,
+      tool_choice: (!forceToolUsed && requiredTool) ? toolChoice : "auto",
       max_tokens: 600,
       temperature: 0.75,
     });
+    forceToolUsed = true;
 
     totalTokensIn += response.usage?.prompt_tokens || 0;
     totalTokensOut += response.usage?.completion_tokens || 0;
 
     const choice = response.choices[0];
+    console.log(`[ai] Iteration ${iterations}: finish_reason=${choice?.finish_reason}, tool_calls=${choice?.message?.tool_calls?.length || 0}`);
 
-    if (choice?.finish_reason !== "tool_calls" || !choice.message.tool_calls) {
+    if (!choice.message.tool_calls || choice.message.tool_calls.length === 0) {
       break;
     }
 
@@ -316,6 +345,7 @@ export async function chatWithGrandchild(
         fnArgs = {};
       }
 
+      console.log(`[ai] Calling tool: ${fnName}(${JSON.stringify(fnArgs)})`);
       const toolResult = await executeToolCall(fnName, fnArgs, userId);
 
       if (toolResult.imageUrl) {
