@@ -10,8 +10,9 @@ import {
   type HealthLog, type InsertHealthLog,
   type Subscription, type InsertSubscription,
   type Waitlist, type InsertWaitlist,
+  type ChatMessage, type InsertChatMessage,
   type InsertAiUsageLog,
-  users, reminders, events, utilityMetrics, memoirs, healthLogs, subscriptions, waitlist, aiUsageLogs,
+  users, reminders, events, utilityMetrics, memoirs, healthLogs, subscriptions, waitlist, chatMessages, aiUsageLogs,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -49,6 +50,9 @@ export interface IStorage {
 
   addToWaitlist(email: string): Promise<Waitlist>;
   getWaitlistCount(): Promise<number>;
+
+  getChatMessages(parentId: number, limit?: number): Promise<ChatMessage[]>;
+  createChatMessage(msg: InsertChatMessage): Promise<ChatMessage>;
 
   logAiUsage(log: InsertAiUsageLog): Promise<void>;
 }
@@ -182,6 +186,15 @@ export class DatabaseStorage implements IStorage {
   async getWaitlistCount(): Promise<number> {
     const result = await db.select().from(waitlist);
     return result.length;
+  }
+
+  async getChatMessages(parentId: number, limit = 50): Promise<ChatMessage[]> {
+    return db.select().from(chatMessages).where(eq(chatMessages.parentId, parentId)).orderBy(desc(chatMessages.createdAt)).limit(limit);
+  }
+
+  async createChatMessage(msg: InsertChatMessage): Promise<ChatMessage> {
+    const [m] = await db.insert(chatMessages).values(msg).returning();
+    return m;
   }
 
   async logAiUsage(log: InsertAiUsageLog): Promise<void> {
