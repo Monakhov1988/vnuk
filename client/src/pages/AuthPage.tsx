@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,12 @@ export default function AuthPage() {
   const [regPassword, setRegPassword] = useState("");
   const [regRole, setRegRole] = useState<"child" | "parent">("child");
 
+  useEffect(() => {
+    fetch("/api/auth/me").then(r => {
+      if (r.ok) navigate("/dashboard");
+    });
+  }, [navigate]);
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -32,7 +38,6 @@ export default function AuthPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      localStorage.setItem("vnuchok_user", JSON.stringify(data.user));
       navigate("/dashboard");
     } catch (err: any) {
       toast({ title: "Ошибка", description: err.message, variant: "destructive" });
@@ -52,7 +57,6 @@ export default function AuthPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      localStorage.setItem("vnuchok_user", JSON.stringify(data.user));
       navigate("/dashboard");
     } catch (err: any) {
       toast({ title: "Ошибка", description: err.message, variant: "destructive" });

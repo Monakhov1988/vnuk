@@ -8,7 +8,9 @@ import {
   type UtilityMetric, type InsertUtilityMetric,
   type Memoir, type InsertMemoir,
   type HealthLog, type InsertHealthLog,
-  users, reminders, events, utilityMetrics, memoirs, healthLogs,
+  type Subscription, type InsertSubscription,
+  type Waitlist, type InsertWaitlist,
+  users, reminders, events, utilityMetrics, memoirs, healthLogs, subscriptions, waitlist,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -26,7 +28,7 @@ export interface IStorage {
   updateReminderStatus(id: number, status: string): Promise<Reminder>;
   deleteReminder(id: number): Promise<void>;
 
-  getEvents(userId: number, limit?: number): Promise<Event[]>;
+  getEvents(userId: number, limit?: number, offset?: number): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
   markEventRead(id: number): Promise<void>;
   getUnreadEventsCount(userId: number): Promise<number>;
@@ -39,6 +41,13 @@ export interface IStorage {
 
   getHealthLogs(parentId: number, limit?: number): Promise<HealthLog[]>;
   createHealthLog(log: InsertHealthLog): Promise<HealthLog>;
+
+  getSubscription(userId: number): Promise<Subscription | undefined>;
+  createSubscription(sub: InsertSubscription): Promise<Subscription>;
+  updateSubscriptionStatus(id: number, status: string): Promise<Subscription>;
+
+  addToWaitlist(email: string): Promise<Waitlist>;
+  getWaitlistCount(): Promise<number>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -102,8 +111,8 @@ export class DatabaseStorage implements IStorage {
     await db.delete(reminders).where(eq(reminders.id, id));
   }
 
-  async getEvents(userId: number, limit = 50): Promise<Event[]> {
-    return db.select().from(events).where(eq(events.userId, userId)).orderBy(desc(events.createdAt)).limit(limit);
+  async getEvents(userId: number, limit = 50, offset = 0): Promise<Event[]> {
+    return db.select().from(events).where(eq(events.userId, userId)).orderBy(desc(events.createdAt)).limit(limit).offset(offset);
   }
 
   async createEvent(event: InsertEvent): Promise<Event> {
@@ -145,6 +154,31 @@ export class DatabaseStorage implements IStorage {
   async createHealthLog(log: InsertHealthLog): Promise<HealthLog> {
     const [l] = await db.insert(healthLogs).values(log).returning();
     return l;
+  }
+
+  async getSubscription(userId: number): Promise<Subscription | undefined> {
+    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).orderBy(desc(subscriptions.createdAt)).limit(1);
+    return sub;
+  }
+
+  async createSubscription(sub: InsertSubscription): Promise<Subscription> {
+    const [s] = await db.insert(subscriptions).values(sub).returning();
+    return s;
+  }
+
+  async updateSubscriptionStatus(id: number, status: string): Promise<Subscription> {
+    const [s] = await db.update(subscriptions).set({ status: status as any }).where(eq(subscriptions.id, id)).returning();
+    return s;
+  }
+
+  async addToWaitlist(email: string): Promise<Waitlist> {
+    const [w] = await db.insert(waitlist).values({ email }).returning();
+    return w;
+  }
+
+  async getWaitlistCount(): Promise<number> {
+    const result = await db.select().from(waitlist);
+    return result.length;
   }
 }
 

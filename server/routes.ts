@@ -1,8 +1,8 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { type Server } from "http";
 import { storage } from "./storage";
+import { chatWithGrandchild, recognizeMeter, analyzeIntent } from "./ai";
 import {
-  insertUserSchema,
   insertReminderSchema,
   insertEventSchema,
   insertUtilityMetricSchema,
@@ -10,6 +10,14 @@ import {
   insertHealthLogSchema,
 } from "@shared/schema";
 import { z } from "zod";
+import bcrypt from "bcrypt";
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Необходима авторизация" });
+  }
+  next();
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -31,11 +39,14 @@ export async function registerRoutes(
       if (existing) {
         return res.status(400).json({ message: "Пользователь с таким email уже существует" });
       }
-      const user = await storage.createUser(data);
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      const user = await storage.createUser({ ...data, password: hashedPassword });
       if (user.role === "parent") {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         await storage.updateUserLinkCode(user.id, code);
       }
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
       return res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     } catch (e: any) {
       return res.status(400).json({ message: e.message });
@@ -46,19 +57,43 @@ export async function registerRoutes(
     try {
       const { email, password } = req.body;
       const user = await storage.getUserByEmail(email);
-      if (!user || user.password !== password) {
+      if (!user) {
         return res.status(401).json({ message: "Неверный email или пароль" });
       }
+      const valid = await bcrypt.compare(password, user.password);
+      if (!valid) {
+        return res.status(401).json({ message: "Неверный email или пароль" });
+      }
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
       return res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role, linkedParentId: user.linkedParentId } });
     } catch (e: any) {
       return res.status(400).json({ message: e.message });
     }
   });
 
+  app.get("/api/auth/me", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Не авторизован" });
+    }
+    const user = await storage.getUser(req.session.userId);
+    if (!user) {
+      return res.status(401).json({ message: "Пользователь не найден" });
+    }
+    return res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role, linkedParentId: user.linkedParentId } });
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy(() => {
+      res.json({ success: true });
+    });
+  });
+
   // ========== LINK PARENT ==========
-  app.post("/api/link-parent", async (req, res) => {
+  app.post("/api/link-parent", requireAuth, async (req, res) => {
     try {
-      const { childId, linkCode } = req.body;
+      const { linkCode } = req.body;
+      const childId = req.session.userId!;
       const parent = await storage.getUserByLinkCode(linkCode);
       if (!parent) {
         return res.status(404).json({ message: "Код не найден. Проверьте и попробуйте снова." });
@@ -71,23 +106,28 @@ export async function registerRoutes(
   });
 
   // ========== REMINDERS ==========
-  app.get("/api/reminders/:userId", async (req, res) => {
-    const userId = parseInt(req.params.userId);
+  app.get("/api/reminders", requireAuth, async (req, res) => {
+    const userId = req.session.userId!;
     const list = await storage.getReminders(userId);
     return res.json(list);
   });
 
-  app.post("/api/reminders", async (req, res) => {
+  app.post("/api/reminders", requireAuth, async (req, res) => {
     try {
-      const data = insertReminderSchema.parse(req.body);
-      const reminder = await storage.createReminder(data);
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      if (!user?.linkedParentId) {
+        return res.status(400).json({ message: "Сначала привяжите родителя" });
+      }
+      const parsed = insertReminderSchema.parse({ ...req.body, userId, parentId: user.linkedParentId });
+      const reminder = await storage.createReminder(parsed);
       await storage.createEvent({
-        userId: data.userId,
-        parentId: data.parentId,
+        userId,
+        parentId: user.linkedParentId,
         type: "medication",
         severity: "info",
-        title: `Добавлено напоминание: ${data.medicineName}`,
-        description: `Время: ${String(data.timeHour).padStart(2, "0")}:${String(data.timeMinute).padStart(2, "0")}`,
+        title: `Добавлено напоминание: ${reminder.medicineName}`,
+        description: `Время: ${String(reminder.timeHour).padStart(2, "0")}:${String(reminder.timeMinute).padStart(2, "0")}`,
       });
       return res.json(reminder);
     } catch (e: any) {
@@ -95,9 +135,9 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/reminders/:id/status", async (req, res) => {
+  app.patch("/api/reminders/:id/status", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       const { status } = req.body;
       const reminder = await storage.updateReminderStatus(id, status);
       return res.json(reminder);
@@ -106,23 +146,25 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/reminders/:id", async (req, res) => {
-    const id = parseInt(req.params.id);
+  app.delete("/api/reminders/:id", requireAuth, async (req, res) => {
+    const id = parseInt(req.params.id as string);
     await storage.deleteReminder(id);
     return res.json({ success: true });
   });
 
   // ========== EVENTS ==========
-  app.get("/api/events/:userId", async (req, res) => {
-    const userId = parseInt(req.params.userId);
+  app.get("/api/events", requireAuth, async (req, res) => {
+    const userId = req.session.userId!;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
-    const list = await storage.getEvents(userId, limit);
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+    const list = await storage.getEvents(userId, limit, offset);
     return res.json(list);
   });
 
-  app.post("/api/events", async (req, res) => {
+  app.post("/api/events", requireAuth, async (req, res) => {
     try {
-      const data = insertEventSchema.parse(req.body);
+      const userId = req.session.userId!;
+      const data = insertEventSchema.parse({ ...req.body, userId });
       const event = await storage.createEvent(data);
       return res.json(event);
     } catch (e: any) {
@@ -130,32 +172,39 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/events/:id/read", async (req, res) => {
-    const id = parseInt(req.params.id);
+  app.patch("/api/events/:id/read", requireAuth, async (req, res) => {
+    const id = parseInt(req.params.id as string);
     await storage.markEventRead(id);
     return res.json({ success: true });
   });
 
-  app.get("/api/events/:userId/unread-count", async (req, res) => {
-    const userId = parseInt(req.params.userId);
+  app.get("/api/events/unread-count", requireAuth, async (req, res) => {
+    const userId = req.session.userId!;
     const count = await storage.getUnreadEventsCount(userId);
     return res.json({ count });
   });
 
   // ========== UTILITY METRICS ==========
-  app.get("/api/utility-metrics/:parentId", async (req, res) => {
-    const parentId = parseInt(req.params.parentId);
-    const list = await storage.getUtilityMetrics(parentId);
+  app.get("/api/utility-metrics", requireAuth, async (req, res) => {
+    const userId = req.session.userId!;
+    const user = await storage.getUser(userId);
+    if (!user?.linkedParentId) return res.json([]);
+    const list = await storage.getUtilityMetrics(user.linkedParentId);
     return res.json(list);
   });
 
-  app.post("/api/utility-metrics", async (req, res) => {
+  app.post("/api/utility-metrics", requireAuth, async (req, res) => {
     try {
-      const data = insertUtilityMetricSchema.parse(req.body);
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      if (!user?.linkedParentId) {
+        return res.status(400).json({ message: "Сначала привяжите родителя" });
+      }
+      const data = insertUtilityMetricSchema.parse({ ...req.body, userId, parentId: user.linkedParentId });
       const metric = await storage.createUtilityMetric(data);
       await storage.createEvent({
-        userId: data.userId,
-        parentId: data.parentId,
+        userId,
+        parentId: user.linkedParentId,
         type: "utility",
         severity: "info",
         title: `Показания ${data.meterType} переданы`,
@@ -168,15 +217,22 @@ export async function registerRoutes(
   });
 
   // ========== MEMOIRS ==========
-  app.get("/api/memoirs/:parentId", async (req, res) => {
-    const parentId = parseInt(req.params.parentId);
-    const list = await storage.getMemoirs(parentId);
+  app.get("/api/memoirs", requireAuth, async (req, res) => {
+    const userId = req.session.userId!;
+    const user = await storage.getUser(userId);
+    if (!user?.linkedParentId) return res.json([]);
+    const list = await storage.getMemoirs(user.linkedParentId);
     return res.json(list);
   });
 
-  app.post("/api/memoirs", async (req, res) => {
+  app.post("/api/memoirs", requireAuth, async (req, res) => {
     try {
-      const data = insertMemoirSchema.parse(req.body);
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      if (!user?.linkedParentId) {
+        return res.status(400).json({ message: "Сначала привяжите родителя" });
+      }
+      const data = insertMemoirSchema.parse({ ...req.body, userId, parentId: user.linkedParentId });
       const memoir = await storage.createMemoir(data);
       return res.json(memoir);
     } catch (e: any) {
@@ -185,20 +241,27 @@ export async function registerRoutes(
   });
 
   // ========== HEALTH LOGS ==========
-  app.get("/api/health-logs/:parentId", async (req, res) => {
-    const parentId = parseInt(req.params.parentId);
+  app.get("/api/health-logs", requireAuth, async (req, res) => {
+    const userId = req.session.userId!;
+    const user = await storage.getUser(userId);
+    if (!user?.linkedParentId) return res.json([]);
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
-    const list = await storage.getHealthLogs(parentId, limit);
+    const list = await storage.getHealthLogs(user.linkedParentId, limit);
     return res.json(list);
   });
 
-  app.post("/api/health-logs", async (req, res) => {
+  app.post("/api/health-logs", requireAuth, async (req, res) => {
     try {
-      const data = insertHealthLogSchema.parse(req.body);
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      if (!user?.linkedParentId) {
+        return res.status(400).json({ message: "Сначала привяжите родителя" });
+      }
+      const data = insertHealthLogSchema.parse({ ...req.body, parentId: user.linkedParentId });
       const log = await storage.createHealthLog(data);
       await storage.createEvent({
-        userId: 0,
-        parentId: data.parentId,
+        userId,
+        parentId: user.linkedParentId,
         type: "checkin",
         severity: "info",
         title: "Давление записано",
@@ -210,15 +273,71 @@ export async function registerRoutes(
     }
   });
 
-  // ========== DASHBOARD SUMMARY ==========
-  app.get("/api/dashboard/:userId", async (req, res) => {
+  // ========== AI ENDPOINTS ==========
+  app.post("/api/ai/chat", requireAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.params.userId);
+      const { messages } = req.body;
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ message: "Отправьте массив messages" });
+      }
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      const parent = user?.linkedParentId ? await storage.getUser(user.linkedParentId) : null;
+
+      const result = await chatWithGrandchild(messages, parent?.name || undefined);
+
+      if (result.hasAlert && user?.linkedParentId) {
+        await storage.createEvent({
+          userId,
+          parentId: user.linkedParentId,
+          type: "alert",
+          severity: "critical",
+          title: "Родитель сообщил о проблеме со здоровьем!",
+          description: messages[messages.length - 1]?.content || "",
+        });
+      }
+
+      return res.json(result);
+    } catch (e: any) {
+      return res.status(500).json({ message: "Ошибка AI: " + e.message });
+    }
+  });
+
+  app.post("/api/ai/recognize-meter", requireAuth, async (req, res) => {
+    try {
+      const { imageBase64 } = req.body;
+      if (!imageBase64) {
+        return res.status(400).json({ message: "Отправьте изображение в base64" });
+      }
+      const result = await recognizeMeter(imageBase64);
+      return res.json(result);
+    } catch (e: any) {
+      return res.status(500).json({ message: "Ошибка распознавания: " + e.message });
+    }
+  });
+
+  app.post("/api/ai/analyze-intent", requireAuth, async (req, res) => {
+    try {
+      const { text } = req.body;
+      if (!text) {
+        return res.status(400).json({ message: "Отправьте text" });
+      }
+      const result = await analyzeIntent(text);
+      return res.json(result);
+    } catch (e: any) {
+      return res.status(500).json({ message: "Ошибка анализа: " + e.message });
+    }
+  });
+
+  // ========== DASHBOARD SUMMARY ==========
+  app.get("/api/dashboard", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ message: "Пользователь не найден" });
 
       const parent = await storage.getLinkedParent(userId);
-      const recentEvents = await storage.getEvents(userId, 10);
+      const recentEvents = await storage.getEvents(userId, 10, 0);
       const unreadCount = await storage.getUnreadEventsCount(userId);
       const remindersList = await storage.getReminders(userId);
 
@@ -249,6 +368,45 @@ export async function registerRoutes(
       });
     } catch (e: any) {
       return res.status(500).json({ message: e.message });
+    }
+  });
+
+  // ========== SUBSCRIPTIONS ==========
+  app.get("/api/subscription", requireAuth, async (req, res) => {
+    const userId = req.session.userId!;
+    const sub = await storage.getSubscription(userId);
+    return res.json(sub || null);
+  });
+
+  app.post("/api/subscription", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { plan } = req.body;
+      if (!["basic", "standard", "premium"].includes(plan)) {
+        return res.status(400).json({ message: "Неверный тариф" });
+      }
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+      const sub = await storage.createSubscription({ userId, plan, status: "active", expiresAt });
+      return res.json(sub);
+    } catch (e: any) {
+      return res.status(400).json({ message: e.message });
+    }
+  });
+
+  // ========== WAITLIST ==========
+  app.post("/api/waitlist", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ message: "Укажите email" });
+      const entry = await storage.addToWaitlist(email);
+      const count = await storage.getWaitlistCount();
+      return res.json({ success: true, position: count });
+    } catch (e: any) {
+      if (e.message?.includes("unique")) {
+        return res.json({ success: true, message: "Вы уже в списке!" });
+      }
+      return res.status(400).json({ message: e.message });
     }
   });
 

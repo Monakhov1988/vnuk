@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,44 +8,58 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ShieldCheck, HeartPulse, Bell, FileText, BookHeart, LogOut, Plus, Trash2, CheckCircle2,
-  AlertTriangle, XCircle, Activity, Droplets, Zap, Link2, Clock
+  AlertTriangle, XCircle, Activity, Droplets, Zap, Link2, Clock, Send, MessageCircle, Camera, Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-function getUser() {
-  const raw = localStorage.getItem("vnuchok_user");
-  if (!raw) return null;
-  return JSON.parse(raw);
+async function fetchAuth() {
+  const res = await fetch("/api/auth/me");
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.user;
 }
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const user = getUser();
+
+  const { data: user, isLoading: userLoading } = useQuery({
+    queryKey: ["auth"],
+    queryFn: fetchAuth,
+    retry: false,
+  });
 
   useEffect(() => {
-    if (!user) navigate("/auth");
-  }, [user, navigate]);
+    if (!userLoading && !user) navigate("/auth");
+  }, [user, userLoading, navigate]);
 
   const { data: dashboard, isLoading } = useQuery({
-    queryKey: ["dashboard", user?.id],
+    queryKey: ["dashboard"],
     queryFn: async () => {
-      const res = await fetch(`/api/dashboard/${user.id}`);
+      const res = await fetch("/api/dashboard");
       if (!res.ok) throw new Error("Ошибка загрузки");
       return res.json();
     },
-    enabled: !!user?.id,
+    enabled: !!user,
     refetchInterval: 30000,
   });
 
-  if (!user) return null;
+  if (userLoading || !user) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    </div>
+  );
   if (isLoading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="animate-pulse text-muted-foreground">Загрузка...</div>
+      <div className="text-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+        <p className="text-muted-foreground">Загрузка данных...</p>
+      </div>
     </div>
   );
 
@@ -56,14 +70,14 @@ export default function Dashboard() {
   };
   const status = statusConfig[dashboard?.overallStatus || "ok"];
 
-  function handleLogout() {
-    localStorage.removeItem("vnuchok_user");
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    queryClient.clear();
     navigate("/");
   }
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
       <header className="bg-white border-b sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -87,7 +101,6 @@ export default function Dashboard() {
       </header>
 
       <div className="container mx-auto px-6 py-8">
-        {/* Status Banner */}
         <div className={`rounded-2xl p-6 mb-8 flex items-center gap-4 ${status.color}`}>
           {status.icon}
           <div>
@@ -98,12 +111,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Link Parent if not linked */}
-        {!dashboard?.parent && <LinkParentCard userId={user.id} />}
+        {!dashboard?.parent && <LinkParentCard />}
 
-        {/* Main Tabs */}
-        <Tabs defaultValue="events" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6 h-auto">
+        <Tabs defaultValue="chat" className="w-full">
+          <TabsList className="grid w-full grid-cols-5 mb-6 h-auto">
+            <TabsTrigger value="chat" className="flex flex-col gap-1 py-3" data-testid="tab-chat">
+              <MessageCircle className="w-4 h-4" />
+              <span className="text-xs">Чат</span>
+            </TabsTrigger>
             <TabsTrigger value="events" className="flex flex-col gap-1 py-3" data-testid="tab-events">
               <Bell className="w-4 h-4" />
               <span className="text-xs">Лента</span>
@@ -122,23 +137,18 @@ export default function Dashboard() {
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="chat">
+            <AIChatTab parentName={dashboard?.parent?.name} />
+          </TabsContent>
           <TabsContent value="events">
             <EventsFeed events={dashboard?.recentEvents || []} />
           </TabsContent>
-
           <TabsContent value="health">
-            <HealthTab
-              reminders={dashboard?.reminders || []}
-              healthLogs={dashboard?.healthLogs || []}
-              userId={user.id}
-              parentId={dashboard?.parent?.id}
-            />
+            <HealthTab reminders={dashboard?.reminders || []} healthLogs={dashboard?.healthLogs || []} />
           </TabsContent>
-
           <TabsContent value="utility">
-            <UtilityTab metrics={dashboard?.utilityMetrics || []} userId={user.id} parentId={dashboard?.parent?.id} />
+            <UtilityTab metrics={dashboard?.utilityMetrics || []} />
           </TabsContent>
-
           <TabsContent value="memoirs">
             <MemoirsTab memoirs={dashboard?.memoirs || []} />
           </TabsContent>
@@ -148,7 +158,114 @@ export default function Dashboard() {
   );
 }
 
-function LinkParentCard({ userId }: { userId: number }) {
+function AIChatTab({ parentName }: { parentName?: string }) {
+  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  async function handleSend() {
+    if (!input.trim() || loading) return;
+    const userMsg = { role: "user" as const, content: input.trim() };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMessages }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setMessages([...newMessages, { role: "assistant", content: data.reply }]);
+      if (data.hasAlert) {
+        toast({ title: "Внимание!", description: "Обнаружен сигнал тревоги. Алерт отправлен.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-3 border-b">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <MessageCircle className="w-5 h-5 text-primary" />
+          Чат с Внучком
+          {parentName && <span className="text-sm font-normal text-muted-foreground">— от лица: {parentName}</span>}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="h-[400px] overflow-y-auto p-4 space-y-4">
+          {messages.length === 0 && (
+            <div className="h-full flex items-center justify-center text-center text-muted-foreground">
+              <div>
+                <MessageCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">Начните разговор с Внучком</p>
+                <p className="text-sm mt-1">Напишите что-нибудь, как будто от лица родителя</p>
+                <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                  {["Привет, внучок!", "Расскажи, что нового?", "Как мне вывести пятно?"].map(q => (
+                    <Button key={q} variant="outline" size="sm" className="text-xs rounded-full" onClick={() => setInput(q)} data-testid={`quick-msg-${q.slice(0,10)}`}>
+                      {q}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${msg.role === "user" ? "bg-primary text-white rounded-br-sm" : "bg-slate-100 text-slate-800 rounded-bl-sm"}`}>
+                {msg.content}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-slate-100 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                <span className="text-sm text-slate-500">Внучок думает...</span>
+              </div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+        <div className="border-t p-4 flex gap-2">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Напишите сообщение..."
+            className="resize-none min-h-[44px] max-h-[100px]"
+            data-testid="input-chat-message"
+          />
+          <Button onClick={handleSend} disabled={!input.trim() || loading} size="icon" className="shrink-0 h-[44px] w-[44px]" data-testid="button-send-chat">
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LinkParentCard() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -160,7 +277,7 @@ function LinkParentCard({ userId }: { userId: number }) {
       const res = await fetch("/api/link-parent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ childId: userId, linkCode: code.toUpperCase() }),
+        body: JSON.stringify({ linkCode: code.toUpperCase() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
@@ -181,12 +298,12 @@ function LinkParentCard({ userId }: { userId: number }) {
           <h3 className="font-semibold">Привяжите родителя</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Попросите родителя зарегистрироваться в боте — он получит код привязки. Введите этот код здесь.
+          Попросите родителя зарегистрироваться — он получит код привязки. Введите этот код здесь.
         </p>
         <div className="flex gap-2">
           <Input placeholder="Код, например: A1B2C3" value={code} onChange={(e) => setCode(e.target.value)} data-testid="input-link-code" className="uppercase" />
           <Button onClick={handleLink} disabled={loading || code.length < 4} data-testid="button-link-parent">
-            Привязать
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Привязать"}
           </Button>
         </div>
       </CardContent>
@@ -244,7 +361,7 @@ function EventsFeed({ events }: { events: any[] }) {
   );
 }
 
-function HealthTab({ reminders, healthLogs, userId, parentId }: { reminders: any[]; healthLogs: any[]; userId: number; parentId?: number }) {
+function HealthTab({ reminders, healthLogs }: { reminders: any[]; healthLogs: any[] }) {
   const [addOpen, setAddOpen] = useState(false);
   const [medName, setMedName] = useState("");
   const [timeH, setTimeH] = useState("9");
@@ -253,17 +370,13 @@ function HealthTab({ reminders, healthLogs, userId, parentId }: { reminders: any
   const queryClient = useQueryClient();
 
   async function handleAddReminder() {
-    if (!parentId) {
-      toast({ title: "Ошибка", description: "Сначала привяжите родителя", variant: "destructive" });
-      return;
-    }
     try {
       const res = await fetch("/api/reminders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, parentId, medicineName: medName, timeHour: parseInt(timeH), timeMinute: parseInt(timeM), status: "pending", isActive: true }),
+        body: JSON.stringify({ medicineName: medName, timeHour: parseInt(timeH), timeMinute: parseInt(timeM), status: "pending", isActive: true }),
       });
-      if (!res.ok) throw new Error("Ошибка создания");
+      if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
       toast({ title: "Напоминание добавлено" });
       setMedName("");
       setAddOpen(false);
@@ -278,9 +391,14 @@ function HealthTab({ reminders, healthLogs, userId, parentId }: { reminders: any
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   }
 
+  const chartData = [...healthLogs].reverse().map((log: any) => ({
+    date: log.createdAt ? new Date(log.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }) : "",
+    sys: log.systolic,
+    dia: log.diastolic,
+  }));
+
   return (
     <div className="space-y-6">
-      {/* Reminders */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -291,9 +409,7 @@ function HealthTab({ reminders, healthLogs, userId, parentId }: { reminders: any
               <Button size="sm" data-testid="button-add-reminder"><Plus className="w-4 h-4 mr-1" /> Добавить</Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Новое напоминание</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>Новое напоминание</DialogTitle></DialogHeader>
               <div className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <Label>Название лекарства</Label>
@@ -309,9 +425,7 @@ function HealthTab({ reminders, healthLogs, userId, parentId }: { reminders: any
                     <Input type="number" min="0" max="59" value={timeM} onChange={(e) => setTimeM(e.target.value)} data-testid="input-time-minute" />
                   </div>
                 </div>
-                <Button onClick={handleAddReminder} className="w-full" disabled={!medName} data-testid="button-save-reminder">
-                  Сохранить напоминание
-                </Button>
+                <Button onClick={handleAddReminder} className="w-full" disabled={!medName} data-testid="button-save-reminder">Сохранить</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -347,7 +461,6 @@ function HealthTab({ reminders, healthLogs, userId, parentId }: { reminders: any
         </CardContent>
       </Card>
 
-      {/* Health Logs */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -355,6 +468,20 @@ function HealthTab({ reminders, healthLogs, userId, parentId }: { reminders: any
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {chartData.length > 1 ? (
+            <div className="h-[200px] w-full mb-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                  <YAxis domain={[60, 180]} tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="sys" stroke="#ef4444" strokeWidth={2} name="Верхнее" dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="dia" stroke="#3b82f6" strokeWidth={2} name="Нижнее" dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : null}
           {healthLogs.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">Родитель пока не записывал давление</p>
           ) : (
@@ -378,31 +505,59 @@ function HealthTab({ reminders, healthLogs, userId, parentId }: { reminders: any
   );
 }
 
-function UtilityTab({ metrics, userId, parentId }: { metrics: any[]; userId: number; parentId?: number }) {
+function UtilityTab({ metrics }: { metrics: any[] }) {
   const [addOpen, setAddOpen] = useState(false);
   const [meterType, setMeterType] = useState("ХВС");
   const [value, setValue] = useState("");
+  const [photoMode, setPhotoMode] = useState(false);
+  const [recognizing, setRecognizing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   async function handleAdd() {
-    if (!parentId) {
-      toast({ title: "Ошибка", description: "Сначала привяжите родителя", variant: "destructive" });
-      return;
-    }
     try {
       const res = await fetch("/api/utility-metrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, parentId, meterType, value }),
+        body: JSON.stringify({ meterType, value }),
       });
-      if (!res.ok) throw new Error("Ошибка сохранения");
+      if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
       toast({ title: "Показания сохранены" });
       setValue("");
       setAddOpen(false);
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     } catch (err: any) {
       toast({ title: "Ошибка", description: err.message, variant: "destructive" });
+    }
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRecognizing(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(",")[1];
+        const res = await fetch("/api/ai/recognize-meter", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64: base64 }),
+        });
+        const data = await res.json();
+        if (data.value) {
+          setValue(data.value);
+          toast({ title: "Распознано!", description: `Значение: ${data.value}` });
+        } else {
+          toast({ title: "Не удалось распознать", description: data.raw, variant: "destructive" });
+        }
+        setRecognizing(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
+      setRecognizing(false);
     }
   }
 
@@ -423,9 +578,7 @@ function UtilityTab({ metrics, userId, parentId }: { metrics: any[]; userId: num
             <Button size="sm" data-testid="button-add-metric"><Plus className="w-4 h-4 mr-1" /> Добавить</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Новое показание</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Новое показание</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label>Тип счетчика</Label>
@@ -439,11 +592,16 @@ function UtilityTab({ metrics, userId, parentId }: { metrics: any[]; userId: num
               </div>
               <div className="space-y-2">
                 <Label>Значение</Label>
-                <Input type="text" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Например: 12345" data-testid="input-metric-value" />
+                <div className="flex gap-2">
+                  <Input type="text" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Например: 12345" data-testid="input-metric-value" />
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                  <Button variant="outline" size="icon" className="shrink-0" onClick={() => fileInputRef.current?.click()} disabled={recognizing} data-testid="button-upload-photo">
+                    {recognizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Или загрузите фото счетчика — AI распознает цифры</p>
               </div>
-              <Button onClick={handleAdd} className="w-full" disabled={!value} data-testid="button-save-metric">
-                Сохранить показание
-              </Button>
+              <Button onClick={handleAdd} className="w-full" disabled={!value} data-testid="button-save-metric">Сохранить показание</Button>
             </div>
           </DialogContent>
         </Dialog>
