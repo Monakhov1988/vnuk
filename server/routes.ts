@@ -41,13 +41,16 @@ export async function registerRoutes(
       }
       const hashedPassword = await bcrypt.hash(data.password, 10);
       const user = await storage.createUser({ ...data, password: hashedPassword });
+      let linkCode: string | undefined;
       if (user.role === "parent") {
-        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-        await storage.updateUserLinkCode(user.id, code);
+        linkCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        await storage.updateUserLinkCode(user.id, linkCode);
       }
       req.session.userId = user.id;
       req.session.userRole = user.role;
-      return res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+      const response: any = { id: user.id, name: user.name, email: user.email, role: user.role };
+      if (linkCode) response.linkCode = linkCode;
+      return res.json({ user: response });
     } catch (e: any) {
       return res.status(400).json({ message: e.message });
     }
@@ -80,7 +83,11 @@ export async function registerRoutes(
     if (!user) {
       return res.status(401).json({ message: "Пользователь не найден" });
     }
-    return res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role, linkedParentId: user.linkedParentId } });
+    const response: any = { id: user.id, name: user.name, email: user.email, role: user.role, linkedParentId: user.linkedParentId };
+    if (user.role === "parent" && user.linkCode) {
+      response.linkCode = user.linkCode;
+    }
+    return res.json({ user: response });
   });
 
   app.post("/api/auth/logout", (req, res) => {
@@ -116,14 +123,15 @@ export async function registerRoutes(
     try {
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
-      if (!user?.linkedParentId) {
+      const parentId = user?.role === "parent" ? user.id : user?.linkedParentId;
+      if (!parentId) {
         return res.status(400).json({ message: "Сначала привяжите родителя" });
       }
-      const parsed = insertReminderSchema.parse({ ...req.body, userId, parentId: user.linkedParentId });
+      const parsed = insertReminderSchema.parse({ ...req.body, userId, parentId });
       const reminder = await storage.createReminder(parsed);
       await storage.createEvent({
         userId,
-        parentId: user.linkedParentId,
+        parentId,
         type: "medication",
         severity: "info",
         title: `Добавлено напоминание: ${reminder.medicineName}`,
@@ -197,18 +205,19 @@ export async function registerRoutes(
     try {
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
-      if (!user?.linkedParentId) {
+      const parentId = user?.role === "parent" ? user.id : user?.linkedParentId;
+      if (!parentId) {
         return res.status(400).json({ message: "Сначала привяжите родителя" });
       }
-      const data = insertUtilityMetricSchema.parse({ ...req.body, userId, parentId: user.linkedParentId });
+      const data = insertUtilityMetricSchema.parse({ ...req.body, userId, parentId });
       const metric = await storage.createUtilityMetric(data);
       await storage.createEvent({
         userId,
-        parentId: user.linkedParentId,
+        parentId,
         type: "utility",
         severity: "info",
-        title: `Показания ${data.meterType} переданы`,
-        description: `Значение: ${data.value}`,
+        title: `Показания ${metric.meterType} переданы`,
+        description: `Значение: ${metric.value}`,
       });
       return res.json(metric);
     } catch (e: any) {
@@ -254,18 +263,19 @@ export async function registerRoutes(
     try {
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
-      if (!user?.linkedParentId) {
+      const parentId = user?.role === "parent" ? user.id : user?.linkedParentId;
+      if (!parentId) {
         return res.status(400).json({ message: "Сначала привяжите родителя" });
       }
-      const data = insertHealthLogSchema.parse({ ...req.body, parentId: user.linkedParentId });
+      const data = insertHealthLogSchema.parse({ ...req.body, parentId });
       const log = await storage.createHealthLog(data);
       await storage.createEvent({
         userId,
-        parentId: user.linkedParentId,
+        parentId,
         type: "checkin",
         severity: "info",
         title: "Давление записано",
-        description: `${data.systolic}/${data.diastolic}${data.note ? ` — ${data.note}` : ""}`,
+        description: `${log.systolic}/${log.diastolic}${log.note ? ` — ${log.note}` : ""}`,
       });
       return res.json(log);
     } catch (e: any) {
@@ -336,28 +346,42 @@ export async function registerRoutes(
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ message: "Пользователь не найден" });
 
-      const parent = await storage.getLinkedParent(userId);
+      const isParent = user.role === "parent";
+      const parentId = isParent ? user.id : (await storage.getLinkedParent(userId))?.id;
+
       const recentEvents = await storage.getEvents(userId, 10, 0);
       const unreadCount = await storage.getUnreadEventsCount(userId);
-      const remindersList = await storage.getReminders(userId);
+
+      const remindersList = isParent
+        ? await storage.getRemindersByParent(user.id)
+        : await storage.getReminders(userId);
 
       let healthLogsList: any[] = [];
       let metricsList: any[] = [];
       let memoirsList: any[] = [];
 
-      if (parent) {
-        healthLogsList = await storage.getHealthLogs(parent.id, 7);
-        metricsList = await storage.getUtilityMetrics(parent.id);
-        memoirsList = await storage.getMemoirs(parent.id);
+      if (parentId) {
+        healthLogsList = await storage.getHealthLogs(parentId, 7);
+        metricsList = await storage.getUtilityMetrics(parentId);
+        memoirsList = await storage.getMemoirs(parentId);
       }
 
       const hasCritical = recentEvents.some(e => e.severity === "critical" && !e.isRead);
       const hasWarning = recentEvents.some(e => e.severity === "warning" && !e.isRead);
       const overallStatus = hasCritical ? "critical" : hasWarning ? "warning" : "ok";
 
+      const userResponse: any = { id: user.id, name: user.name, email: user.email, role: user.role };
+      if (isParent && user.linkCode) {
+        userResponse.linkCode = user.linkCode;
+      }
+
+      const parent = isParent
+        ? { id: user.id, name: user.name }
+        : parentId ? { id: parentId, name: (await storage.getUser(parentId))?.name } : null;
+
       return res.json({
-        user: { id: user.id, name: user.name, email: user.email, role: user.role },
-        parent: parent ? { id: parent.id, name: parent.name } : null,
+        user: userResponse,
+        parent,
         overallStatus,
         unreadCount,
         recentEvents,

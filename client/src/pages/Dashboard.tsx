@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import {
   ShieldCheck, HeartPulse, Bell, FileText, BookHeart, LogOut, Plus, Trash2, CheckCircle2,
-  AlertTriangle, XCircle, Activity, Droplets, Zap, Link2, Clock, Send, MessageCircle, Camera, Loader2
+  AlertTriangle, XCircle, Activity, Droplets, Zap, Link2, Clock, Send, MessageCircle, Camera, Loader2, Copy, Check
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -63,6 +63,8 @@ export default function Dashboard() {
     </div>
   );
 
+  const isParent = user.role === "parent";
+
   const statusConfig: Record<string, any> = {
     ok: { label: "Все хорошо", color: "bg-green-100 text-green-700", icon: <CheckCircle2 className="w-5 h-5" /> },
     warning: { label: "Есть вопрос", color: "bg-amber-100 text-amber-700", icon: <AlertTriangle className="w-5 h-5" /> },
@@ -86,11 +88,13 @@ export default function Dashboard() {
             </div>
             <div>
               <h1 className="font-bold text-lg leading-tight">Внучок</h1>
-              <p className="text-xs text-muted-foreground">{user.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {user.name} {isParent ? "(родитель)" : "(родственник)"}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {dashboard?.unreadCount > 0 && (
+            {!isParent && dashboard?.unreadCount > 0 && (
               <Badge variant="destructive" className="rounded-full">{dashboard.unreadCount}</Badge>
             )}
             <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-logout">
@@ -101,64 +105,310 @@ export default function Dashboard() {
       </header>
 
       <div className="container mx-auto px-6 py-8">
-        <div className={`rounded-2xl p-6 mb-8 flex items-center gap-4 ${status.color}`}>
-          {status.icon}
-          <div>
-            <p className="font-semibold text-lg">{status.label}</p>
-            <p className="text-sm opacity-80">
-              {dashboard?.parent ? `Родитель: ${dashboard.parent.name}` : "Родитель не привязан"}
-            </p>
-          </div>
-        </div>
-
-        {!dashboard?.parent && <LinkParentCard />}
-
-        <Tabs defaultValue="chat" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-6 h-auto">
-            <TabsTrigger value="chat" className="flex flex-col gap-1 py-3" data-testid="tab-chat">
-              <MessageCircle className="w-4 h-4" />
-              <span className="text-xs">Чат</span>
-            </TabsTrigger>
-            <TabsTrigger value="events" className="flex flex-col gap-1 py-3" data-testid="tab-events">
-              <Bell className="w-4 h-4" />
-              <span className="text-xs">Лента</span>
-            </TabsTrigger>
-            <TabsTrigger value="health" className="flex flex-col gap-1 py-3" data-testid="tab-health">
-              <HeartPulse className="w-4 h-4" />
-              <span className="text-xs">Здоровье</span>
-            </TabsTrigger>
-            <TabsTrigger value="utility" className="flex flex-col gap-1 py-3" data-testid="tab-utility">
-              <FileText className="w-4 h-4" />
-              <span className="text-xs">ЖКХ</span>
-            </TabsTrigger>
-            <TabsTrigger value="memoirs" className="flex flex-col gap-1 py-3" data-testid="tab-memoirs">
-              <BookHeart className="w-4 h-4" />
-              <span className="text-xs">Мемуары</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="chat">
-            <AIChatTab parentName={dashboard?.parent?.name} />
-          </TabsContent>
-          <TabsContent value="events">
-            <EventsFeed events={dashboard?.recentEvents || []} />
-          </TabsContent>
-          <TabsContent value="health">
-            <HealthTab reminders={dashboard?.reminders || []} healthLogs={dashboard?.healthLogs || []} />
-          </TabsContent>
-          <TabsContent value="utility">
-            <UtilityTab metrics={dashboard?.utilityMetrics || []} />
-          </TabsContent>
-          <TabsContent value="memoirs">
-            <MemoirsTab memoirs={dashboard?.memoirs || []} />
-          </TabsContent>
-        </Tabs>
+        {isParent ? (
+          <ParentDashboard user={user} dashboard={dashboard} status={status} />
+        ) : (
+          <ChildDashboard user={user} dashboard={dashboard} status={status} />
+        )}
       </div>
     </div>
   );
 }
 
-function AIChatTab({ parentName }: { parentName?: string }) {
+function ParentDashboard({ user, dashboard, status }: { user: any; dashboard: any; status: any }) {
+  return (
+    <>
+      <div className={`rounded-2xl p-6 mb-8 flex items-center gap-4 ${status.color}`}>
+        {status.icon}
+        <div>
+          <p className="font-semibold text-lg">{status.label}</p>
+          <p className="text-sm opacity-80">Добро пожаловать, {user.name}!</p>
+        </div>
+      </div>
+
+      {user.linkCode && <LinkCodeDisplay code={user.linkCode} />}
+
+      <Tabs defaultValue="chat" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-6 h-auto">
+          <TabsTrigger value="chat" className="flex flex-col gap-1 py-3" data-testid="tab-chat">
+            <MessageCircle className="w-4 h-4" />
+            <span className="text-xs">Чат</span>
+          </TabsTrigger>
+          <TabsTrigger value="health" className="flex flex-col gap-1 py-3" data-testid="tab-health">
+            <HeartPulse className="w-4 h-4" />
+            <span className="text-xs">Здоровье</span>
+          </TabsTrigger>
+          <TabsTrigger value="utility" className="flex flex-col gap-1 py-3" data-testid="tab-utility">
+            <FileText className="w-4 h-4" />
+            <span className="text-xs">ЖКХ</span>
+          </TabsTrigger>
+          <TabsTrigger value="events" className="flex flex-col gap-1 py-3" data-testid="tab-events">
+            <Bell className="w-4 h-4" />
+            <span className="text-xs">Лента</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="chat">
+          <AIChatTab parentName={user.name} isParent />
+        </TabsContent>
+        <TabsContent value="health">
+          <ParentHealthTab reminders={dashboard?.reminders || []} healthLogs={dashboard?.healthLogs || []} />
+        </TabsContent>
+        <TabsContent value="utility">
+          <UtilityTab metrics={dashboard?.utilityMetrics || []} />
+        </TabsContent>
+        <TabsContent value="events">
+          <EventsFeed events={dashboard?.recentEvents || []} />
+        </TabsContent>
+      </Tabs>
+    </>
+  );
+}
+
+function ChildDashboard({ user, dashboard, status }: { user: any; dashboard: any; status: any }) {
+  return (
+    <>
+      <div className={`rounded-2xl p-6 mb-8 flex items-center gap-4 ${status.color}`}>
+        {status.icon}
+        <div>
+          <p className="font-semibold text-lg">{status.label}</p>
+          <p className="text-sm opacity-80">
+            {dashboard?.parent ? `Родитель: ${dashboard.parent.name}` : "Родитель не привязан"}
+          </p>
+        </div>
+      </div>
+
+      {!dashboard?.parent && <LinkParentCard />}
+
+      <Tabs defaultValue="chat" className="w-full">
+        <TabsList className="grid w-full grid-cols-5 mb-6 h-auto">
+          <TabsTrigger value="chat" className="flex flex-col gap-1 py-3" data-testid="tab-chat">
+            <MessageCircle className="w-4 h-4" />
+            <span className="text-xs">Чат</span>
+          </TabsTrigger>
+          <TabsTrigger value="events" className="flex flex-col gap-1 py-3" data-testid="tab-events">
+            <Bell className="w-4 h-4" />
+            <span className="text-xs">Лента</span>
+          </TabsTrigger>
+          <TabsTrigger value="health" className="flex flex-col gap-1 py-3" data-testid="tab-health">
+            <HeartPulse className="w-4 h-4" />
+            <span className="text-xs">Здоровье</span>
+          </TabsTrigger>
+          <TabsTrigger value="utility" className="flex flex-col gap-1 py-3" data-testid="tab-utility">
+            <FileText className="w-4 h-4" />
+            <span className="text-xs">ЖКХ</span>
+          </TabsTrigger>
+          <TabsTrigger value="memoirs" className="flex flex-col gap-1 py-3" data-testid="tab-memoirs">
+            <BookHeart className="w-4 h-4" />
+            <span className="text-xs">Мемуары</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="chat">
+          <AIChatTab parentName={dashboard?.parent?.name} />
+        </TabsContent>
+        <TabsContent value="events">
+          <EventsFeed events={dashboard?.recentEvents || []} />
+        </TabsContent>
+        <TabsContent value="health">
+          <HealthTab reminders={dashboard?.reminders || []} healthLogs={dashboard?.healthLogs || []} />
+        </TabsContent>
+        <TabsContent value="utility">
+          <UtilityTab metrics={dashboard?.utilityMetrics || []} />
+        </TabsContent>
+        <TabsContent value="memoirs">
+          <MemoirsTab memoirs={dashboard?.memoirs || []} />
+        </TabsContent>
+      </Tabs>
+    </>
+  );
+}
+
+function LinkCodeDisplay({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <Card className="mb-8 border-2 border-primary/30 bg-primary/5">
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-3 mb-3">
+          <Link2 className="w-5 h-5 text-primary" />
+          <h3 className="font-semibold">Ваш код привязки</h3>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Передайте этот код вашему ребенку (родственнику). Он введет его в своем личном кабинете, чтобы видеть ваши данные.
+        </p>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 bg-white rounded-xl border-2 border-dashed border-primary/40 px-6 py-4 text-center" data-testid="text-link-code">
+            <span className="text-3xl font-mono font-bold tracking-[0.3em] text-primary">{code}</span>
+          </div>
+          <Button variant="outline" size="icon" className="h-14 w-14 shrink-0" onClick={handleCopy} data-testid="button-copy-code">
+            {copied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ParentHealthTab({ reminders, healthLogs }: { reminders: any[]; healthLogs: any[] }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [sys, setSys] = useState("");
+  const [dia, setDia] = useState("");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleConfirm(id: number) {
+    try {
+      const res = await fetch(`/api/reminders/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "confirmed" }),
+      });
+      if (!res.ok) throw new Error("Ошибка");
+      toast({ title: "Отлично! Лекарство принято." });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    } catch {
+      toast({ title: "Ошибка", variant: "destructive" });
+    }
+  }
+
+  async function handleAddBP() {
+    if (!sys || !dia) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/health-logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ systolic: parseInt(sys), diastolic: parseInt(dia), note: note || null }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+      toast({ title: "Давление записано!" });
+      setSys("");
+      setDia("");
+      setNote("");
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    } catch (err: any) {
+      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const chartData = [...healthLogs].reverse().map((log: any) => ({
+    date: log.createdAt ? new Date(log.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }) : "",
+    sys: log.systolic,
+    dia: log.diastolic,
+  }));
+
+  return (
+    <div className="space-y-6">
+      {reminders.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <HeartPulse className="w-5 h-5 text-rose-500" /> Мои лекарства
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {reminders.map((r: any) => (
+                <div key={r.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl" data-testid={`reminder-item-${r.id}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center">
+                      <Clock className="w-4 h-4 text-rose-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{r.medicineName}</p>
+                      <p className="text-xs text-muted-foreground">{String(r.timeHour).padStart(2, "0")}:{String(r.timeMinute).padStart(2, "0")}</p>
+                    </div>
+                  </div>
+                  {r.status === "confirmed" ? (
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 px-4 py-2">
+                      <Check className="w-4 h-4 mr-1" /> Принято
+                    </Badge>
+                  ) : (
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleConfirm(r.id)} data-testid={`button-confirm-med-${r.id}`}>
+                      <Check className="w-4 h-4 mr-1" /> Принял(а)
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Activity className="w-5 h-5 text-blue-500" /> Записать давление
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Верхнее (систолическое)</Label>
+              <Input type="number" placeholder="120" value={sys} onChange={(e) => setSys(e.target.value)} data-testid="input-systolic" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Нижнее (диастолическое)</Label>
+              <Input type="number" placeholder="80" value={dia} onChange={(e) => setDia(e.target.value)} data-testid="input-diastolic" />
+            </div>
+          </div>
+          <div className="space-y-1 mb-4">
+            <Label className="text-xs">Заметка (необязательно)</Label>
+            <Input placeholder="Например: после прогулки" value={note} onChange={(e) => setNote(e.target.value)} data-testid="input-bp-note" />
+          </div>
+          <Button onClick={handleAddBP} disabled={!sys || !dia || saving} className="w-full" data-testid="button-save-bp">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            Сохранить
+          </Button>
+
+          {chartData.length > 1 && (
+            <div className="h-[200px] w-full mt-6">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                  <YAxis domain={[60, 180]} tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="sys" stroke="#ef4444" strokeWidth={2} name="Верхнее" dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="dia" stroke="#3b82f6" strokeWidth={2} name="Нижнее" dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {healthLogs.length > 0 && (
+            <div className="space-y-2 mt-4">
+              <p className="text-sm font-medium text-muted-foreground">История записей</p>
+              {healthLogs.map((log: any) => (
+                <div key={log.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-xl" data-testid={`health-log-${log.id}`}>
+                  <div>
+                    <p className="font-semibold text-sm">{log.systolic}/{log.diastolic}</p>
+                    {log.note && <p className="text-xs text-muted-foreground">{log.note}</p>}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {log.createdAt ? new Date(log.createdAt).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AIChatTab({ parentName, isParent }: { parentName?: string; isParent?: boolean }) {
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -203,13 +453,17 @@ function AIChatTab({ parentName }: { parentName?: string }) {
     }
   }
 
+  const quickMessages = isParent
+    ? ["Привет, внучок!", "У меня болит голова", "Как убрать пятно с ковра?"]
+    : ["Привет, внучок!", "Расскажи, что нового?", "Как мне вывести пятно?"];
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="pb-3 border-b">
         <CardTitle className="text-lg flex items-center gap-2">
           <MessageCircle className="w-5 h-5 text-primary" />
           Чат с Внучком
-          {parentName && <span className="text-sm font-normal text-muted-foreground">— от лица: {parentName}</span>}
+          {parentName && !isParent && <span className="text-sm font-normal text-muted-foreground">— от лица: {parentName}</span>}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
@@ -218,10 +472,14 @@ function AIChatTab({ parentName }: { parentName?: string }) {
             <div className="h-full flex items-center justify-center text-center text-muted-foreground">
               <div>
                 <MessageCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                <p className="font-medium">Начните разговор с Внучком</p>
-                <p className="text-sm mt-1">Напишите что-нибудь, как будто от лица родителя</p>
+                <p className="font-medium">
+                  {isParent ? "Поговорите с Внучком" : "Начните разговор с Внучком"}
+                </p>
+                <p className="text-sm mt-1">
+                  {isParent ? "Задайте вопрос или просто поболтайте" : "Напишите что-нибудь, как будто от лица родителя"}
+                </p>
                 <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                  {["Привет, внучок!", "Расскажи, что нового?", "Как мне вывести пятно?"].map(q => (
+                  {quickMessages.map(q => (
                     <Button key={q} variant="outline" size="sm" className="text-xs rounded-full" onClick={() => setInput(q)} data-testid={`quick-msg-${q.slice(0,10)}`}>
                       {q}
                     </Button>
@@ -509,7 +767,6 @@ function UtilityTab({ metrics }: { metrics: any[] }) {
   const [addOpen, setAddOpen] = useState(false);
   const [meterType, setMeterType] = useState("ХВС");
   const [value, setValue] = useState("");
-  const [photoMode, setPhotoMode] = useState(false);
   const [recognizing, setRecognizing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
