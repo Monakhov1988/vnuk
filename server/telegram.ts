@@ -5,6 +5,33 @@ import { chatWithGrandchild, recognizeMeter } from "./ai";
 import bcrypt from "bcrypt";
 
 let bot: Bot | null = null;
+const pendingRegistration = new Map<string, boolean>();
+
+async function registerUserFromTelegram(chatId: string, name: string): Promise<string> {
+  const email = `tg_${chatId}@vnuchok.bot`;
+  const hashedPassword = await bcrypt.hash(crypto.randomUUID(), 10);
+
+  const user = await storage.createUser({
+    name,
+    email,
+    password: hashedPassword,
+    role: "parent",
+  });
+
+  const linkCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  await storage.updateUserLinkCode(user.id, linkCode);
+  await storage.updateUserTelegramChatId(user.id, chatId);
+
+  return (
+    `Добро пожаловать, ${name}!\n\n` +
+    `Ваш код привязки: ${linkCode}\n` +
+    `Передайте этот код вашему ребёнку (родственнику), чтобы он мог видеть ваши данные в личном кабинете.\n\n` +
+    `А теперь просто напишите мне — я всегда рад поболтать!\n\n` +
+    `/pills — мои лекарства\n` +
+    `/bp 120 80 — записать давление\n` +
+    `Фото счётчика — передать показания`
+  );
+}
 
 export function startTelegramBot() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -86,34 +113,14 @@ export function startTelegramBot() {
 
     const name = ctx.match?.trim();
     if (!name || name.length < 2) {
-      await ctx.reply(`Укажите ваше имя после команды.\nНапример: /register Мария Ивановна`);
+      pendingRegistration.set(chatId, true);
+      await ctx.reply(`Напишите ваше имя (например: Мария Ивановна):`);
       return;
     }
 
-    const email = `tg_${chatId}@vnuchok.bot`;
-    const hashedPassword = await bcrypt.hash(crypto.randomUUID(), 10);
-
     try {
-      const user = await storage.createUser({
-        name,
-        email,
-        password: hashedPassword,
-        role: "parent",
-      });
-
-      const linkCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      await storage.updateUserLinkCode(user.id, linkCode);
-      await storage.updateUserTelegramChatId(user.id, chatId);
-
-      await ctx.reply(
-        `Добро пожаловать, ${name}!\n\n` +
-        `Ваш код привязки: ${linkCode}\n` +
-        `Передайте этот код вашему ребёнку (родственнику), чтобы он мог видеть ваши данные в личном кабинете.\n\n` +
-        `А теперь просто напишите мне — я всегда рад поболтать!\n\n` +
-        `/pills — мои лекарства\n` +
-        `/bp 120 80 — записать давление\n` +
-        `Фото счётчика — передать показания`
-      );
+      const reply = await registerUserFromTelegram(chatId, name);
+      await ctx.reply(reply);
     } catch (err: any) {
       console.error("[telegram] Registration error:", err);
       await ctx.reply(`Произошла ошибка при регистрации. Попробуйте позже.`);
@@ -356,6 +363,24 @@ export function startTelegramBot() {
     if (userText.startsWith("/")) return;
 
     const chatId = ctx.chat.id.toString();
+
+    if (pendingRegistration.has(chatId)) {
+      pendingRegistration.delete(chatId);
+      const name = userText.trim();
+      if (!name || name.length < 2) {
+        await ctx.reply(`Имя слишком короткое. Попробуйте ещё раз: /register`);
+        return;
+      }
+      try {
+        const reply = await registerUserFromTelegram(chatId, name);
+        await ctx.reply(reply);
+      } catch (err: any) {
+        console.error("[telegram] Registration error:", err);
+        await ctx.reply(`Произошла ошибка при регистрации. Попробуйте позже.`);
+      }
+      return;
+    }
+
     const user = await storage.getUserByTelegramChatId(chatId);
     if (!user) {
       await ctx.reply(
