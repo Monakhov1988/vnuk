@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 
 let bot: Bot | null = null;
 const pendingRegistration = new Map<string, boolean>();
+const pendingLink = new Map<string, boolean>();
 
 async function registerUserFromTelegram(chatId: string, name: string): Promise<string> {
   const email = `tg_${chatId}@vnuchok.bot`;
@@ -56,16 +57,41 @@ export function startTelegramBot() {
       return;
     }
 
+    const keyboard = new InlineKeyboard()
+      .text("Зарегистрироваться", "action_register").row()
+      .text("У меня есть код привязки", "action_link");
+
     await ctx.reply(
       `Здравствуйте! Я — Внучок, ваш заботливый помощник.\n\n` +
-      `Чтобы начать, выберите один из вариантов:\n\n` +
-      `1. Если вы уже зарегистрированы на сайте — отправьте команду:\n` +
-      `/link ВАШ_КОД\n` +
-      `(код привязки из личного кабинета)\n\n` +
-      `2. Если хотите зарегистрироваться прямо здесь:\n` +
-      `/register Ваше Имя\n` +
-      `(например: /register Мария Ивановна)`
+      `Нажмите кнопку ниже, чтобы начать:`,
+      { reply_markup: keyboard }
     );
+  });
+
+  bot.callbackQuery("action_register", async (ctx) => {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+    const existing = await storage.getUserByTelegramChatId(chatId);
+    if (existing) {
+      await ctx.answerCallbackQuery({ text: "Вы уже зарегистрированы!" });
+      return;
+    }
+    pendingRegistration.set(chatId, true);
+    await ctx.answerCallbackQuery();
+    await ctx.reply(`Напишите ваше имя (например: Мария Ивановна):`);
+  });
+
+  bot.callbackQuery("action_link", async (ctx) => {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+    const existing = await storage.getUserByTelegramChatId(chatId);
+    if (existing) {
+      await ctx.answerCallbackQuery({ text: "Вы уже привязаны!" });
+      return;
+    }
+    pendingLink.set(chatId, true);
+    await ctx.answerCallbackQuery();
+    await ctx.reply(`Введите ваш код привязки (например: A1B2C3):`);
   });
 
   bot.command("link", async (ctx) => {
@@ -381,13 +407,48 @@ export function startTelegramBot() {
       return;
     }
 
+    if (pendingLink.has(chatId)) {
+      pendingLink.delete(chatId);
+      const code = userText.trim().toUpperCase();
+      if (!code || code.length < 4) {
+        await ctx.reply(`Код слишком короткий. Попробуйте ещё раз — нажмите /start`);
+        return;
+      }
+      try {
+        const parent = await storage.getUserByLinkCode(code);
+        if (!parent) {
+          await ctx.reply(`Код не найден. Проверьте и попробуйте снова — нажмите /start`);
+          return;
+        }
+        if (parent.telegramChatId) {
+          await ctx.reply(`Этот аккаунт уже привязан к другому Telegram.`);
+          return;
+        }
+        await storage.updateUserTelegramChatId(parent.id, chatId);
+        await ctx.reply(
+          `Отлично, ${parent.name}! Я теперь ваш Внучок в Telegram.\n\n` +
+          `Просто напишите мне — поболтаем, помогу с чем нужно.\n\n` +
+          `/pills — мои лекарства\n` +
+          `/bp 120 80 — записать давление\n` +
+          `Фото счётчика — передать показания`
+        );
+      } catch (err: any) {
+        console.error("[telegram] Link error:", err);
+        await ctx.reply(`Произошла ошибка. Попробуйте позже.`);
+      }
+      return;
+    }
+
     const user = await storage.getUserByTelegramChatId(chatId);
     if (!user) {
+      const keyboard = new InlineKeyboard()
+        .text("Зарегистрироваться", "action_register").row()
+        .text("У меня есть код привязки", "action_link");
+
       await ctx.reply(
         `Здравствуйте! Я — Внучок.\n\n` +
-        `Чтобы начать, привяжите аккаунт:\n` +
-        `/link ВАШ_КОД — если есть код с сайта\n` +
-        `/register Ваше Имя — для новой регистрации`
+        `Нажмите кнопку ниже, чтобы начать:`,
+        { reply_markup: keyboard }
       );
       return;
     }
