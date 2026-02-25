@@ -294,15 +294,20 @@ export async function registerRoutes(
       const user = await storage.getUser(userId);
       const parent = user?.linkedParentId ? await storage.getUser(user.linkedParentId) : null;
 
-      const result = await chatWithGrandchild(messages, parent?.name || undefined);
+      const parentName = user?.role === "parent" ? user.name : (parent?.name || undefined);
+      const result = await chatWithGrandchild(messages, parentName, userId);
 
-      if (result.hasAlert && user?.linkedParentId) {
+      const parentId = user?.role === "parent" ? user.id : user?.linkedParentId;
+      if (result.hasAlert && parentId) {
+        const alertTitle = result.intent === "scam"
+          ? "Возможная попытка мошенничества!"
+          : "Родитель сообщил о проблеме со здоровьем!";
         await storage.createEvent({
           userId,
-          parentId: user.linkedParentId,
+          parentId,
           type: "alert",
           severity: "critical",
-          title: "Родитель сообщил о проблеме со здоровьем!",
+          title: alertTitle,
           description: messages[messages.length - 1]?.content || "",
         });
       }
@@ -319,7 +324,8 @@ export async function registerRoutes(
       if (!imageBase64) {
         return res.status(400).json({ message: "Отправьте изображение в base64" });
       }
-      const result = await recognizeMeter(imageBase64);
+      const userId = req.session.userId!;
+      const result = await recognizeMeter(imageBase64, userId);
       return res.json(result);
     } catch (e: any) {
       return res.status(500).json({ message: "Ошибка распознавания: " + e.message });

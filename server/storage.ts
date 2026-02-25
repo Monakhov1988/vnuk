@@ -10,7 +10,8 @@ import {
   type HealthLog, type InsertHealthLog,
   type Subscription, type InsertSubscription,
   type Waitlist, type InsertWaitlist,
-  users, reminders, events, utilityMetrics, memoirs, healthLogs, subscriptions, waitlist,
+  type InsertAiUsageLog,
+  users, reminders, events, utilityMetrics, memoirs, healthLogs, subscriptions, waitlist, aiUsageLogs,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -48,6 +49,8 @@ export interface IStorage {
 
   addToWaitlist(email: string): Promise<Waitlist>;
   getWaitlistCount(): Promise<number>;
+
+  logAiUsage(log: InsertAiUsageLog): Promise<void>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -179,6 +182,13 @@ export class DatabaseStorage implements IStorage {
   async getWaitlistCount(): Promise<number> {
     const result = await db.select().from(waitlist);
     return result.length;
+  }
+
+  async logAiUsage(log: InsertAiUsageLog): Promise<void> {
+    try {
+      await db.insert(aiUsageLogs).values(log);
+    } catch {
+    }
   }
 }
 

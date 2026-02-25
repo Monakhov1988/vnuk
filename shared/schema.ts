@@ -106,6 +106,19 @@ export const waitlist = pgTable("waitlist", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const aiUsageLogs = pgTable("ai_usage_logs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").references(() => users.id),
+  endpoint: text("endpoint").notNull(),
+  model: text("model").notNull(),
+  tokensIn: integer("tokens_in").notNull().default(0),
+  tokensOut: integer("tokens_out").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_ai_usage_user").on(table.userId),
+  index("idx_ai_usage_created").on(table.createdAt),
+]);
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, linkCode: true });
 export const insertReminderSchema = createInsertSchema(reminders).omit({ id: true, createdAt: true, lastTriggered: true, lastConfirmed: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true });
@@ -114,6 +127,7 @@ export const insertMemoirSchema = createInsertSchema(memoirs).omit({ id: true, c
 export const insertHealthLogSchema = createInsertSchema(healthLogs).omit({ id: true, createdAt: true });
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({ id: true, createdAt: true });
 export const insertWaitlistSchema = createInsertSchema(waitlist).omit({ id: true, createdAt: true });
+export const insertAiUsageLogSchema = createInsertSchema(aiUsageLogs).omit({ id: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -131,3 +145,5 @@ export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertWaitlist = z.infer<typeof insertWaitlistSchema>;
 export type Waitlist = typeof waitlist.$inferSelect;
+export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
+export type AiUsageLog = typeof aiUsageLogs.$inferSelect;

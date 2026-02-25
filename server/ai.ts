@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { storage } from "./storage";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -118,42 +119,108 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 ПЕРВОЕ СООБЩЕНИЕ
 ═══════════════════════════════════════
 
-Если разговор только начался, поздоровайся тепло, подстроившись под пол:
-— Утро (до 12): «Доброе утро! Как спалось?»
-— День (12-17): «Привет! Как день проходит?»
-— Вечер (после 17): «Добрый вечер! Как денёк прошёл?»
+Если разговор только начался, поздоровайся тепло, подстроившись под пол и время суток (текущее время указано ниже).
 
 Отвечай на русском языке. Всегда.`;
 
+function getMoscowTime(): { hours: number; timeOfDay: string } {
+  const now = new Date();
+  const moscowOffset = 3 * 60;
+  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const moscowMinutes = (utcMinutes + moscowOffset) % (24 * 60);
+  const hours = Math.floor(moscowMinutes / 60);
+
+  let timeOfDay: string;
+  if (hours >= 5 && hours < 12) {
+    timeOfDay = "утро";
+  } else if (hours >= 12 && hours < 17) {
+    timeOfDay = "день";
+  } else if (hours >= 17 && hours < 23) {
+    timeOfDay = "вечер";
+  } else {
+    timeOfDay = "ночь";
+  }
+
+  return { hours, timeOfDay };
+}
+
 export async function chatWithGrandchild(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
-  parentName?: string
-): Promise<{ reply: string; hasAlert: boolean }> {
+  parentName?: string,
+  userId?: number
+): Promise<{ reply: string; hasAlert: boolean; intent: string }> {
+  const { hours, timeOfDay } = getMoscowTime();
+  const timeStr = `${String(hours).padStart(2, "0")}:00`;
+
   let systemMessage = SYSTEM_PROMPT;
+  systemMessage += `\n\nСейчас ${timeOfDay}, время по Москве: ${timeStr}.`;
   if (parentName) {
-    systemMessage += `\n\nИмя собеседника: ${parentName}. Обращайся к ней/нему по имени или ласково.`;
+    systemMessage += `\nИмя собеседника: ${parentName}. Обращайся к ней/нему по имени или ласково.`;
   }
+
+  const recentMessages = messages.slice(-20);
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       { role: "system", content: systemMessage },
-      ...messages,
+      ...recentMessages,
     ],
     max_tokens: 600,
-    temperature: 0.85,
+    temperature: 0.75,
   });
 
-  const reply = response.choices[0]?.message?.content || "Ой, что-то я задумался. Повтори, пожалуйста, ба.";
+  const reply = response.choices[0]?.message?.content || "Ой, что-то я задумался. Повтори, пожалуйста.";
   const hasAlert = reply.includes("[ALERT]");
+
+  const lastUserMessage = recentMessages.filter(m => m.role === "user").pop()?.content || "";
+  const intent = detectIntentLocal(lastUserMessage, hasAlert);
+
+  const usage = response.usage;
+  if (usage) {
+    storage.logAiUsage({
+      userId: userId || null,
+      endpoint: "chat",
+      model: "gpt-4o-mini",
+      tokensIn: usage.prompt_tokens,
+      tokensOut: usage.completion_tokens,
+    });
+  }
 
   return {
     reply: reply.replace(/\[ALERT\]/g, "").trim(),
     hasAlert,
+    intent,
   };
 }
 
-export async function recognizeMeter(imageBase64: string): Promise<{ value: string | null; raw: string }> {
+function detectIntentLocal(text: string, hasAlert: boolean): string {
+  const lower = text.toLowerCase();
+
+  const emergencyPatterns = /(?:сильная боль|не могу встать|задыхаюсь|боль в груди|рука немеет|нога немеет|потеря сознания|упал[аи]?|вызовите скорую)/;
+  if (emergencyPatterns.test(lower)) return "emergency";
+
+  const scamPatterns = /(?:из банка|из полиции|следственн|перевести деньги|код из смс|безопасный сч[её]т|спасти накопления|сын попал|дочь попала|новая карта|служба безопасности)/;
+  if (scamPatterns.test(lower)) return "scam";
+
+  const healthPatterns = /(?:давлени[ея]|голова болит|плохо себя чувствую|не спал[аи]?|тошнит|болит|отекают|температур)/;
+  if (healthPatterns.test(lower)) return "health_complaint";
+
+  const reminderPatterns = /(?:напомни|не забыть|таблетк|лекарств|принять|выпить)/;
+  if (reminderPatterns.test(lower)) return "reminder";
+
+  const utilityPatterns = /(?:сч[её]тчик|показани[яй]|вод[аы]|свет|электричеств|квитанци|жкх|газ)/;
+  if (utilityPatterns.test(lower)) return "utility";
+
+  const memoirPatterns = /(?:расскажу историю|вспоминаю|в детстве|молодост|раньше было|помню как)/;
+  if (memoirPatterns.test(lower)) return "memoir";
+
+  if (hasAlert) return "emergency";
+
+  return "chat";
+}
+
+export async function recognizeMeter(imageBase64: string, userId?: number): Promise<{ value: string | null; raw: string }> {
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -174,6 +241,17 @@ export async function recognizeMeter(imageBase64: string): Promise<{ value: stri
     max_tokens: 100,
   });
 
+  const usage = response.usage;
+  if (usage) {
+    storage.logAiUsage({
+      userId: userId || null,
+      endpoint: "recognize-meter",
+      model: "gpt-4o-mini",
+      tokensIn: usage.prompt_tokens,
+      tokensOut: usage.completion_tokens,
+    });
+  }
+
   const raw = response.choices[0]?.message?.content || "НЕ РАСПОЗНАНО";
   const match = raw.match(/[\d.,]+/);
   return {
@@ -182,38 +260,14 @@ export async function recognizeMeter(imageBase64: string): Promise<{ value: stri
   };
 }
 
-export async function analyzeIntent(text: string): Promise<{
+export async function analyzeIntent(text: string, userId?: number): Promise<{
   intent: "chat" | "health_complaint" | "emergency" | "reminder" | "utility" | "memoir" | "scam";
   confidence: number;
 }> {
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `Определи намерение пожилого пользователя. Ответь JSON:
-{"intent": "одно из: chat, health_complaint, emergency, reminder, utility, memoir, scam", "confidence": 0.0-1.0}
-- emergency: острая боль, упал/упала, не могу дышать, боль в груди, вызовите скорую, рука/нога немеет, потеря сознания
-- scam: кто-то звонит из банка/полиции, просят код, перевести деньги, безопасный счёт, сын попал в аварию
-- health_complaint: жалобы на здоровье, давление, голова болит, плохо себя чувствую, не спала
-- reminder: напомни, запиши, не забыть, таблетки, лекарства
-- utility: счетчик, показания, вода, свет, квитанция, ЖКХ
-- memoir: расскажу историю, вспоминаю, в детстве, молодость, раньше
-- chat: всё остальное (разговор, новости, рецепты, советы, погода, огород)`,
-      },
-      { role: "user", content: text },
-    ],
-    max_tokens: 100,
-    response_format: { type: "json_object" },
-  });
-
-  try {
-    const parsed = JSON.parse(response.choices[0]?.message?.content || "{}");
-    return {
-      intent: parsed.intent || "chat",
-      confidence: parsed.confidence || 0.5,
-    };
-  } catch {
-    return { intent: "chat", confidence: 0.5 };
-  }
+  const intent = detectIntentLocal(text, false);
+  const confidence = intent === "chat" ? 0.6 : 0.85;
+  return {
+    intent: intent as any,
+    confidence,
+  };
 }
