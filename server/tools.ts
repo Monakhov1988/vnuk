@@ -27,45 +27,95 @@ function setCache<T>(key: string, data: T, ttlMs: number): void {
 const WEATHER_TTL = 30 * 60 * 1000;
 const SEARCH_TTL = 15 * 60 * 1000;
 
+const CITY_COORDS: Record<string, { lat: number; lon: number; name: string }> = {
+  "москва": { lat: 55.7558, lon: 37.6173, name: "Москва" },
+  "санкт-петербург": { lat: 59.9343, lon: 30.3351, name: "Санкт-Петербург" },
+  "петербург": { lat: 59.9343, lon: 30.3351, name: "Санкт-Петербург" },
+  "питер": { lat: 59.9343, lon: 30.3351, name: "Санкт-Петербург" },
+  "спб": { lat: 59.9343, lon: 30.3351, name: "Санкт-Петербург" },
+  "новосибирск": { lat: 55.0084, lon: 82.9357, name: "Новосибирск" },
+  "екатеринбург": { lat: 56.8389, lon: 60.6057, name: "Екатеринбург" },
+  "казань": { lat: 55.7887, lon: 49.1221, name: "Казань" },
+  "нижний новгород": { lat: 56.2965, lon: 43.9361, name: "Нижний Новгород" },
+  "челябинск": { lat: 55.1644, lon: 61.4368, name: "Челябинск" },
+  "самара": { lat: 53.1959, lon: 50.1002, name: "Самара" },
+  "омск": { lat: 54.9885, lon: 73.3242, name: "Омск" },
+  "ростов-на-дону": { lat: 47.2357, lon: 39.7015, name: "Ростов-на-Дону" },
+  "ростов": { lat: 47.2357, lon: 39.7015, name: "Ростов-на-Дону" },
+  "уфа": { lat: 54.7348, lon: 55.9579, name: "Уфа" },
+  "красноярск": { lat: 56.0153, lon: 92.8932, name: "Красноярск" },
+  "воронеж": { lat: 51.6683, lon: 39.1843, name: "Воронеж" },
+  "пермь": { lat: 58.0105, lon: 56.2502, name: "Пермь" },
+  "волгоград": { lat: 48.7080, lon: 44.5133, name: "Волгоград" },
+  "краснодар": { lat: 45.0353, lon: 38.9753, name: "Краснодар" },
+  "сочи": { lat: 43.6028, lon: 39.7342, name: "Сочи" },
+  "тюмень": { lat: 57.1523, lon: 65.5272, name: "Тюмень" },
+  "тула": { lat: 54.1961, lon: 37.6182, name: "Тула" },
+  "рязань": { lat: 54.6269, lon: 39.6916, name: "Рязань" },
+  "саратов": { lat: 51.5336, lon: 46.0343, name: "Саратов" },
+  "ярославль": { lat: 57.6261, lon: 39.8845, name: "Ярославль" },
+  "калининград": { lat: 54.7065, lon: 20.5110, name: "Калининград" },
+  "иркутск": { lat: 52.2978, lon: 104.2964, name: "Иркутск" },
+  "владивосток": { lat: 43.1198, lon: 131.8869, name: "Владивосток" },
+  "хабаровск": { lat: 48.4827, lon: 135.0837, name: "Хабаровск" },
+  "минск": { lat: 53.9045, lon: 27.5615, name: "Минск" },
+  "киев": { lat: 50.4501, lon: 30.5234, name: "Киев" },
+};
+
+const WMO_WEATHER_RU: Record<number, string> = {
+  0: "ясно", 1: "преимущественно ясно", 2: "переменная облачность", 3: "пасмурно",
+  45: "туман", 48: "изморозь",
+  51: "лёгкая морось", 53: "морось", 55: "сильная морось",
+  56: "ледяная морось", 57: "сильная ледяная морось",
+  61: "небольшой дождь", 63: "дождь", 65: "сильный дождь",
+  66: "ледяной дождь", 67: "сильный ледяной дождь",
+  71: "небольшой снег", 73: "снег", 75: "сильный снег", 77: "снежная крупа",
+  80: "небольшой ливень", 81: "ливень", 82: "сильный ливень",
+  85: "небольшой снегопад", 86: "сильный снегопад",
+  95: "гроза", 96: "гроза с градом", 99: "сильная гроза с градом",
+};
+
 export async function getWeather(city: string): Promise<string> {
   const cacheKey = `weather:${city.toLowerCase()}`;
   const cached = getCached<string>(cacheKey);
   if (cached) return cached;
 
+  const cityKey = city.toLowerCase().trim();
+  const coords = CITY_COORDS[cityKey] || CITY_COORDS["москва"];
+  const cityName = coords.name;
+
   try {
-    const url = `https://wttr.in/${encodeURIComponent(city)}?format=j1&lang=ru`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,apparent_temperature,weathercode,windspeed_10m,relativehumidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Europe/Moscow&forecast_days=2`;
     const response = await fetch(url, {
-      headers: { "User-Agent": "Vnuchok-Bot/1.0" },
       signal: AbortSignal.timeout(10000),
     });
 
     if (!response.ok) {
-      return `Не удалось узнать погоду для "${city}". Попробуйте указать город точнее.`;
+      return `Не удалось узнать погоду для "${cityName}".`;
     }
 
     const data = await response.json() as any;
-    const current = data.current_condition?.[0];
-    const today = data.weather?.[0];
-    const tomorrow = data.weather?.[1];
+    const current = data.current;
+    const daily = data.daily;
 
     if (!current) {
-      return `Не нашёл данных о погоде для "${city}".`;
+      return `Не нашёл данных о погоде для "${cityName}".`;
     }
 
-    const ruDesc = current.lang_ru?.[0]?.value || current.weatherDesc?.[0]?.value || "";
-    let result = `Погода в городе ${city}:\n`;
-    result += `Сейчас: ${current.temp_C}°C, ${ruDesc}. `;
-    result += `Ощущается как ${current.FeelsLikeC}°C. `;
-    result += `Влажность ${current.humidity}%, ветер ${current.windspeedKmph} км/ч.\n`;
+    const weatherDesc = WMO_WEATHER_RU[current.weathercode] || "переменная облачность";
+    let result = `Погода в городе ${cityName}:\n`;
+    result += `Сейчас: ${Math.round(current.temperature_2m)}°C, ${weatherDesc}. `;
+    result += `Ощущается как ${Math.round(current.apparent_temperature)}°C. `;
+    result += `Влажность ${current.relativehumidity_2m}%, ветер ${Math.round(current.windspeed_10m)} км/ч.\n`;
 
-    if (today) {
-      const todayDesc = today.hourly?.[4]?.lang_ru?.[0]?.value || "";
-      result += `Сегодня: от ${today.mintempC}°C до ${today.maxtempC}°C. ${todayDesc}\n`;
+    if (daily?.temperature_2m_min?.[0] !== undefined) {
+      const todayDesc = WMO_WEATHER_RU[daily.weathercode?.[0]] || "";
+      result += `Сегодня: от ${Math.round(daily.temperature_2m_min[0])}°C до ${Math.round(daily.temperature_2m_max[0])}°C. ${todayDesc}\n`;
     }
 
-    if (tomorrow) {
-      const tomDesc = tomorrow.hourly?.[4]?.lang_ru?.[0]?.value || "";
-      result += `Завтра: от ${tomorrow.mintempC}°C до ${tomorrow.maxtempC}°C. ${tomDesc}`;
+    if (daily?.temperature_2m_min?.[1] !== undefined) {
+      const tomDesc = WMO_WEATHER_RU[daily.weathercode?.[1]] || "";
+      result += `Завтра: от ${Math.round(daily.temperature_2m_min[1])}°C до ${Math.round(daily.temperature_2m_max[1])}°C. ${tomDesc}`;
     }
 
     setCache(cacheKey, result, WEATHER_TTL);
