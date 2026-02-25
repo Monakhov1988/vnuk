@@ -512,9 +512,14 @@ export function startTelegramBot() {
 
       if (result.imageUrl) {
         try {
-          await ctx.replyWithPhoto(result.imageUrl, {
-            caption: result.reply.substring(0, 1024),
-          });
+          if (result.reply.length > 1024) {
+            await ctx.reply(result.reply);
+            await ctx.replyWithPhoto(result.imageUrl);
+          } else {
+            await ctx.replyWithPhoto(result.imageUrl, {
+              caption: result.reply,
+            });
+          }
         } catch (imgErr) {
           console.error("[telegram] Failed to send image:", imgErr);
           await ctx.reply(result.reply);
