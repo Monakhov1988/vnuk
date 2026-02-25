@@ -258,6 +258,20 @@ function getMoscowTime(): { hours: number; timeOfDay: string } {
   return { hours, timeOfDay };
 }
 
+function stripMarkdown(text: string): string {
+  let result = text;
+  result = result.replace(/^#{1,6}\s+/gm, "");
+  result = result.replace(/\*\*([^*]+)\*\*/g, "$1");
+  result = result.replace(/\*([^*]+)\*/g, "$1");
+  result = result.replace(/__([^_]+)__/g, "$1");
+  result = result.replace(/_([^_]+)_/g, "$1");
+  result = result.replace(/```[\s\S]*?```/g, "");
+  result = result.replace(/`([^`]+)`/g, "$1");
+  result = result.replace(/^\s*[-•]\s+/gm, "• ");
+  result = result.replace(/\n{3,}/g, "\n\n");
+  return result.trim();
+}
+
 function detectRequiredTool(message: string): string | null {
   const lower = message.toLowerCase();
 
@@ -362,7 +376,8 @@ export async function chatWithGrandchild(
     }
   }
 
-  const reply = response.choices[0]?.message?.content || "Ой, что-то я задумался. Повтори, пожалуйста.";
+  const rawReply = response.choices[0]?.message?.content || "Ой, что-то я задумался. Повтори, пожалуйста.";
+  const reply = stripMarkdown(rawReply);
   console.log(`[ai] Reply length: ${reply.length} chars, first 100: ${reply.slice(0, 100)}`);
   const hasAlert = reply.includes("[ALERT]");
 
