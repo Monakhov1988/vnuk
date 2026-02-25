@@ -1,0 +1,68 @@
+Подготовка «Секретов» (API ключей)
+Тебе понадобятся два ключа. Никогда не пиши их прямо в коде!
+1. В левой панели Replit найди иконку замка (Tools -> Secrets).
+2. Добавь два секрета:
+   - TELEGRAM_TOKEN: (получи у @BotFather в Telegram).
+   - OPENAI_API_KEY: (твой ключ от OpenAI).
+
+3. Установка библиотек
+В Replit не нужно вручную писать pip install. Просто создай файл requirements.txt и вставь туда:
+копировать
+
+
+aiogram
+openai
+python-dotenv
+
+
+4. Базовый код main.py
+Скопируй этот код в файл main.py. Это фундамент, который делает первичную регистрацию:
+
+```python
+import os
+import asyncio
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.filters import Command
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+Берем токен из Секретов Replit
+TOKEN = os.environ['TELEGRAMTOKEN']
+
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+
+@dp.message(Command("start"))
+async def starthandler(message: types.Message):
+    builder = InlineKeyboardBuilder()
+    builder.row(types.InlineKeyboardButton(text="Я Родитель 👵", callbackdata="roleparent"))
+    builder.row(types.InlineKeyboardButton(text="Я Родственник 📱", callbackdata="rolechild"))
+    
+    await message.answer(
+        "Привет! Я Внучок — твой заботливый помощник.\nВыбери свою роль:",
+        replymarkup=builder.asmarkup()
+    )
+@dp.callbackquery(F.data.startswith("role"))
+async def rolecallback(callback: types.CallbackQuery):
+    role = callback.data.split("")[1]
+    if role == "parent":
+        await callback.message.edittext("Понял! Теперь я буду присылать тебе напоминания и помогать по дому.")
+    else:
+        await callback.message.edittext("Принято! Здесь ты сможешь настраивать заботу о родителях.")
+    await callback.answer()
+
+async def main():
+    await dp.start_polling(bot)
+
+if name == "main":
+    asyncio.run(main())
+``
+
+### 5. Запуск
+Нажми большую зеленую кнопку **Run** вверху. 
+*   В консоли внизу не должно быть красных ошибок.
+*   Зайди в свой созданный бот в Telegram и нажми /start`. Он должен выдать кнопки выбора ролей.
+
+Что делать дальше:
+Как только увидишь, что кнопки работают — это значит, что «связь» установлена. Следующим шагом мы добавим базу данных, чтобы бот «запоминал» пользователей.
+
+Попробуешь запустить этот код в Реплите? Если выдаст ошибку — скидывай сюда, разберемся. 🚀
