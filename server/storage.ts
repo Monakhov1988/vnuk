@@ -1,4 +1,4 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, count } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import {
@@ -24,12 +24,14 @@ export interface IStorage {
   getLinkedParent(childId: number): Promise<User | undefined>;
   getUserByLinkCode(code: string): Promise<User | undefined>;
 
+  getReminder(id: number): Promise<Reminder | undefined>;
   getReminders(userId: number): Promise<Reminder[]>;
   getRemindersByParent(parentId: number): Promise<Reminder[]>;
   createReminder(reminder: InsertReminder): Promise<Reminder>;
-  updateReminderStatus(id: number, status: string): Promise<Reminder>;
+  updateReminderStatus(id: number, status: "pending" | "confirmed" | "missed"): Promise<Reminder>;
   deleteReminder(id: number): Promise<void>;
 
+  getEvent(id: number): Promise<Event | undefined>;
   getEvents(userId: number, limit?: number, offset?: number): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
   markEventRead(id: number): Promise<void>;
@@ -46,7 +48,7 @@ export interface IStorage {
 
   getSubscription(userId: number): Promise<Subscription | undefined>;
   createSubscription(sub: InsertSubscription): Promise<Subscription>;
-  updateSubscriptionStatus(id: number, status: string): Promise<Subscription>;
+  updateSubscriptionStatus(id: number, status: "active" | "expired" | "cancelled"): Promise<Subscription>;
 
   addToWaitlist(email: string): Promise<Waitlist>;
   getWaitlistCount(): Promise<number>;
@@ -96,6 +98,11 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getReminder(id: number): Promise<Reminder | undefined> {
+    const [r] = await db.select().from(reminders).where(eq(reminders.id, id));
+    return r;
+  }
+
   async getReminders(userId: number): Promise<Reminder[]> {
     return db.select().from(reminders).where(eq(reminders.userId, userId)).orderBy(reminders.timeHour, reminders.timeMinute);
   }
@@ -109,13 +116,18 @@ export class DatabaseStorage implements IStorage {
     return r;
   }
 
-  async updateReminderStatus(id: number, status: string): Promise<Reminder> {
-    const [r] = await db.update(reminders).set({ status: status as any }).where(eq(reminders.id, id)).returning();
+  async updateReminderStatus(id: number, status: "pending" | "confirmed" | "missed"): Promise<Reminder> {
+    const [r] = await db.update(reminders).set({ status }).where(eq(reminders.id, id)).returning();
     return r;
   }
 
   async deleteReminder(id: number): Promise<void> {
     await db.delete(reminders).where(eq(reminders.id, id));
+  }
+
+  async getEvent(id: number): Promise<Event | undefined> {
+    const [e] = await db.select().from(events).where(eq(events.id, id));
+    return e;
   }
 
   async getEvents(userId: number, limit = 50, offset = 0): Promise<Event[]> {
@@ -132,8 +144,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUnreadEventsCount(userId: number): Promise<number> {
-    const result = await db.select().from(events).where(and(eq(events.userId, userId), eq(events.isRead, false)));
-    return result.length;
+    const [result] = await db.select({ value: count() }).from(events).where(and(eq(events.userId, userId), eq(events.isRead, false)));
+    return result?.value ?? 0;
   }
 
   async getUtilityMetrics(parentId: number): Promise<UtilityMetric[]> {
@@ -173,8 +185,8 @@ export class DatabaseStorage implements IStorage {
     return s;
   }
 
-  async updateSubscriptionStatus(id: number, status: string): Promise<Subscription> {
-    const [s] = await db.update(subscriptions).set({ status: status as any }).where(eq(subscriptions.id, id)).returning();
+  async updateSubscriptionStatus(id: number, status: "active" | "expired" | "cancelled"): Promise<Subscription> {
+    const [s] = await db.update(subscriptions).set({ status }).where(eq(subscriptions.id, id)).returning();
     return s;
   }
 
@@ -184,8 +196,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWaitlistCount(): Promise<number> {
-    const result = await db.select().from(waitlist);
-    return result.length;
+    const [result] = await db.select({ value: count() }).from(waitlist);
+    return result?.value ?? 0;
   }
 
   async getChatMessages(parentId: number, limit = 50): Promise<ChatMessage[]> {
@@ -200,7 +212,8 @@ export class DatabaseStorage implements IStorage {
   async logAiUsage(log: InsertAiUsageLog): Promise<void> {
     try {
       await db.insert(aiUsageLogs).values(log);
-    } catch {
+    } catch (err) {
+      console.error("[logAiUsage] Failed to log AI usage:", err);
     }
   }
 }

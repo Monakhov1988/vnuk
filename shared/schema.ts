@@ -53,7 +53,7 @@ export const reminders = pgTable("reminders", {
 export const events = pgTable("events", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("user_id").notNull().references(() => users.id),
-  parentId: integer("parent_id").notNull(),
+  parentId: integer("parent_id").notNull().references(() => users.id),
   type: eventTypeEnum("type").notNull(),
   severity: eventSeverityEnum("severity").notNull().default("info"),
   title: text("title").notNull(),

@@ -98,6 +98,12 @@
 - Серверные сессии: express-session + connect-pg-simple (PostgreSQL session store)
 - Пароли хешируются bcrypt
 - middleware `requireAuth` на всех защищенных маршрутах (userId из сессии, не от клиента)
+- IDOR-защита: PATCH/DELETE для reminders и events проверяют ownership (userId/parentId)
+- `resolveParentId(userId)` — централизованный хелпер для определения parentId
+- Сессионный секрет: crypto.randomBytes если SESSION_SECRET не задан
+- Cookie `secure: true` в production
+- Response body не логируется (защита от утечки данных)
+- `useMutation` для всех мутаций на фронтенде (защита от double-submit, loading-состояния)
 
 ### AI-модуль (`server/ai.ts`)
 - OpenAI API (ключ в `OPENAI_API_KEY`)
@@ -119,7 +125,8 @@
 - `users` — роли parent/child, linkCode для привязки
 - `subscriptions` — тарифы (basic/standard/premium), статус, срок
 - `reminders` — напоминания о лекарствах
-- `events` — лента событий (чек-ины, алерты, ЖКХ, мемуары)
+- `events` — лента событий (чек-ины, алерты, ЖКХ, мемуары) [FK on parentId]
+- `chat_messages` — сохранение диалогов с AI (parentId, role, content, intent, hasAlert)
 - `utility_metrics` — показания счетчиков
 - `memoirs` — записи Книги жизни
 - `health_logs` — дневник давления (систолическое/диастолическое)

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -262,44 +262,45 @@ function ParentHealthTab({ reminders, healthLogs }: { reminders: any[]; healthLo
   const [sys, setSys] = useState("");
   const [dia, setDia] = useState("");
   const [note, setNote] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  async function handleConfirm(id: number) {
-    try {
+  const confirmMutation = useMutation({
+    mutationFn: async (id: number) => {
       const res = await fetch(`/api/reminders/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "confirmed" }),
       });
       if (!res.ok) throw new Error("Ошибка");
+    },
+    onSuccess: () => {
       toast({ title: "Отлично! Лекарство принято." });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    } catch {
+    },
+    onError: () => {
       toast({ title: "Ошибка", variant: "destructive" });
-    }
-  }
+    },
+  });
 
-  async function handleAddBP() {
-    if (!sys || !dia) return;
-    setSaving(true);
-    try {
+  const addBPMutation = useMutation({
+    mutationFn: async () => {
       const res = await fetch("/api/health-logs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ systolic: parseInt(sys), diastolic: parseInt(dia), note: note || null }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+    },
+    onSuccess: () => {
       toast({ title: "Давление записано!" });
       setSys("");
       setDia("");
       setNote("");
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       toast({ title: "Ошибка", description: err.message, variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
-  }
+    },
+  });
 
   const chartData = [...healthLogs].reverse().map((log: any) => ({
     date: log.createdAt ? new Date(log.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }) : "",
@@ -334,8 +335,8 @@ function ParentHealthTab({ reminders, healthLogs }: { reminders: any[]; healthLo
                       <Check className="w-4 h-4 mr-1" /> Принято
                     </Badge>
                   ) : (
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleConfirm(r.id)} data-testid={`button-confirm-med-${r.id}`}>
-                      <Check className="w-4 h-4 mr-1" /> Принял(а)
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => confirmMutation.mutate(r.id)} disabled={confirmMutation.isPending} data-testid={`button-confirm-med-${r.id}`}>
+                      {confirmMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />} Принял(а)
                     </Button>
                   )}
                 </div>
@@ -366,8 +367,8 @@ function ParentHealthTab({ reminders, healthLogs }: { reminders: any[]; healthLo
             <Label className="text-xs">Заметка (необязательно)</Label>
             <Input placeholder="Например: после прогулки" value={note} onChange={(e) => setNote(e.target.value)} data-testid="input-bp-note" />
           </div>
-          <Button onClick={handleAddBP} disabled={!sys || !dia || saving} className="w-full" data-testid="button-save-bp">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+          <Button onClick={() => addBPMutation.mutate()} disabled={!sys || !dia || addBPMutation.isPending} className="w-full" data-testid="button-save-bp">
+            {addBPMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
             Сохранить
           </Button>
 
@@ -525,13 +526,11 @@ function AIChatTab({ parentName, isParent }: { parentName?: string; isParent?: b
 
 function LinkParentCard() {
   const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  async function handleLink() {
-    setLoading(true);
-    try {
+  const linkMutation = useMutation({
+    mutationFn: async () => {
       const res = await fetch("/api/link-parent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -539,14 +538,16 @@ function LinkParentCard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
+      return data;
+    },
+    onSuccess: (data) => {
       toast({ title: "Готово!", description: `Привязан родитель: ${data.parentName}` });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       toast({ title: "Ошибка", description: err.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }
+    },
+  });
 
   return (
     <Card className="mb-8 border-dashed border-2 border-primary/30 bg-primary/5">
@@ -560,8 +561,8 @@ function LinkParentCard() {
         </p>
         <div className="flex gap-2">
           <Input placeholder="Код, например: A1B2C3" value={code} onChange={(e) => setCode(e.target.value)} data-testid="input-link-code" className="uppercase" />
-          <Button onClick={handleLink} disabled={loading || code.length < 4} data-testid="button-link-parent">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Привязать"}
+          <Button onClick={() => linkMutation.mutate()} disabled={linkMutation.isPending || code.length < 4} data-testid="button-link-parent">
+            {linkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Привязать"}
           </Button>
         </div>
       </CardContent>
@@ -627,27 +628,35 @@ function HealthTab({ reminders, healthLogs }: { reminders: any[]; healthLogs: an
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  async function handleAddReminder() {
-    try {
+  const addReminderMutation = useMutation({
+    mutationFn: async () => {
       const res = await fetch("/api/reminders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ medicineName: medName, timeHour: parseInt(timeH), timeMinute: parseInt(timeM), status: "pending", isActive: true }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+    },
+    onSuccess: () => {
       toast({ title: "Напоминание добавлено" });
       setMedName("");
       setAddOpen(false);
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       toast({ title: "Ошибка", description: err.message, variant: "destructive" });
-    }
-  }
+    },
+  });
 
-  async function handleDelete(id: number) {
-    await fetch(`/api/reminders/${id}`, { method: "DELETE" });
-    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-  }
+  const deleteReminderMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/reminders/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Ошибка удаления");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
 
   const chartData = [...healthLogs].reverse().map((log: any) => ({
     date: log.createdAt ? new Date(log.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }) : "",
@@ -683,7 +692,9 @@ function HealthTab({ reminders, healthLogs }: { reminders: any[]; healthLogs: an
                     <Input type="number" min="0" max="59" value={timeM} onChange={(e) => setTimeM(e.target.value)} data-testid="input-time-minute" />
                   </div>
                 </div>
-                <Button onClick={handleAddReminder} className="w-full" disabled={!medName} data-testid="button-save-reminder">Сохранить</Button>
+                <Button onClick={() => addReminderMutation.mutate()} className="w-full" disabled={!medName || addReminderMutation.isPending} data-testid="button-save-reminder">
+                  {addReminderMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}Сохранить
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -708,8 +719,8 @@ function HealthTab({ reminders, healthLogs }: { reminders: any[]; healthLogs: an
                     <Badge className={r.status === "confirmed" ? "bg-green-100 text-green-700 hover:bg-green-100 border-0" : r.status === "missed" ? "bg-red-100 text-red-700 hover:bg-red-100 border-0" : "bg-slate-100 text-slate-600 hover:bg-slate-100 border-0"}>
                       {r.status === "confirmed" ? "Принято" : r.status === "missed" ? "Пропущено" : "Ожидание"}
                     </Badge>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(r.id)} data-testid={`button-delete-reminder-${r.id}`}>
-                      <Trash2 className="w-4 h-4 text-muted-foreground" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteReminderMutation.mutate(r.id)} disabled={deleteReminderMutation.isPending} data-testid={`button-delete-reminder-${r.id}`}>
+                      {deleteReminderMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> : <Trash2 className="w-4 h-4 text-muted-foreground" />}
                     </Button>
                   </div>
                 </div>
@@ -767,55 +778,68 @@ function UtilityTab({ metrics }: { metrics: any[] }) {
   const [addOpen, setAddOpen] = useState(false);
   const [meterType, setMeterType] = useState("ХВС");
   const [value, setValue] = useState("");
-  const [recognizing, setRecognizing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  async function handleAdd() {
-    try {
+  const addMetricMutation = useMutation({
+    mutationFn: async () => {
       const res = await fetch("/api/utility-metrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ meterType, value }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+    },
+    onSuccess: () => {
       toast({ title: "Показания сохранены" });
       setValue("");
       setAddOpen(false);
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       toast({ title: "Ошибка", description: err.message, variant: "destructive" });
-    }
-  }
+    },
+  });
 
-  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  const recognizeMutation = useMutation({
+    mutationFn: async (file: File) => {
+      return new Promise<any>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const base64 = (reader.result as string).split(",")[1];
+            const res = await fetch("/api/ai/recognize-meter", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ imageBase64: base64 }),
+            });
+            const data = await res.json();
+            resolve(data);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    },
+    onSuccess: (data: any) => {
+      if (data.value) {
+        setValue(data.value);
+        toast({ title: "Распознано!", description: `Значение: ${data.value}` });
+      } else {
+        toast({ title: "Не удалось распознать", description: data.raw, variant: "destructive" });
+      }
+    },
+    onError: (err: any) => {
+      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
+    },
+  });
+
+  function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setRecognizing(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = (reader.result as string).split(",")[1];
-        const res = await fetch("/api/ai/recognize-meter", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: base64 }),
-        });
-        const data = await res.json();
-        if (data.value) {
-          setValue(data.value);
-          toast({ title: "Распознано!", description: `Значение: ${data.value}` });
-        } else {
-          toast({ title: "Не удалось распознать", description: data.raw, variant: "destructive" });
-        }
-        setRecognizing(false);
-      };
-      reader.readAsDataURL(file);
-    } catch (err: any) {
-      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
-      setRecognizing(false);
-    }
+    recognizeMutation.mutate(file);
   }
 
   const iconMap: Record<string, any> = {
@@ -852,13 +876,15 @@ function UtilityTab({ metrics }: { metrics: any[] }) {
                 <div className="flex gap-2">
                   <Input type="text" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Например: 12345" data-testid="input-metric-value" />
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                  <Button variant="outline" size="icon" className="shrink-0" onClick={() => fileInputRef.current?.click()} disabled={recognizing} data-testid="button-upload-photo">
-                    {recognizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                  <Button variant="outline" size="icon" className="shrink-0" onClick={() => fileInputRef.current?.click()} disabled={recognizeMutation.isPending} data-testid="button-upload-photo">
+                    {recognizeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">Или загрузите фото счетчика — AI распознает цифры</p>
               </div>
-              <Button onClick={handleAdd} className="w-full" disabled={!value} data-testid="button-save-metric">Сохранить показание</Button>
+              <Button onClick={() => addMetricMutation.mutate()} className="w-full" disabled={!value || addMetricMutation.isPending} data-testid="button-save-metric">
+                {addMetricMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}Сохранить показание
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

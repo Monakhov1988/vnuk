@@ -19,6 +19,12 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+async function resolveParentId(userId: number): Promise<number | null> {
+  const user = await storage.getUser(userId);
+  if (!user) return null;
+  return user.role === "parent" ? user.id : (user.linkedParentId ?? null);
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -122,8 +128,7 @@ export async function registerRoutes(
   app.post("/api/reminders", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      const user = await storage.getUser(userId);
-      const parentId = user?.role === "parent" ? user.id : user?.linkedParentId;
+      const parentId = await resolveParentId(userId);
       if (!parentId) {
         return res.status(400).json({ message: "Сначала привяжите родителя" });
       }
@@ -146,9 +151,15 @@ export async function registerRoutes(
   app.patch("/api/reminders/:id/status", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id as string);
+      const userId = req.session.userId!;
+      const parentId = await resolveParentId(userId);
+      const reminder = await storage.getReminder(id);
+      if (!reminder || (reminder.userId !== userId && reminder.parentId !== parentId)) {
+        return res.status(403).json({ message: "Нет доступа к этому напоминанию" });
+      }
       const { status } = req.body;
-      const reminder = await storage.updateReminderStatus(id, status);
-      return res.json(reminder);
+      const updated = await storage.updateReminderStatus(id, status);
+      return res.json(updated);
     } catch (e: any) {
       return res.status(400).json({ message: e.message });
     }
@@ -156,6 +167,12 @@ export async function registerRoutes(
 
   app.delete("/api/reminders/:id", requireAuth, async (req, res) => {
     const id = parseInt(req.params.id as string);
+    const userId = req.session.userId!;
+    const parentId = await resolveParentId(userId);
+    const reminder = await storage.getReminder(id);
+    if (!reminder || (reminder.userId !== userId && reminder.parentId !== parentId)) {
+      return res.status(403).json({ message: "Нет доступа к этому напоминанию" });
+    }
     await storage.deleteReminder(id);
     return res.json({ success: true });
   });
@@ -182,6 +199,11 @@ export async function registerRoutes(
 
   app.patch("/api/events/:id/read", requireAuth, async (req, res) => {
     const id = parseInt(req.params.id as string);
+    const userId = req.session.userId!;
+    const event = await storage.getEvent(id);
+    if (!event || event.userId !== userId) {
+      return res.status(403).json({ message: "Нет доступа к этому событию" });
+    }
     await storage.markEventRead(id);
     return res.json({ success: true });
   });
@@ -204,8 +226,7 @@ export async function registerRoutes(
   app.post("/api/utility-metrics", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      const user = await storage.getUser(userId);
-      const parentId = user?.role === "parent" ? user.id : user?.linkedParentId;
+      const parentId = await resolveParentId(userId);
       if (!parentId) {
         return res.status(400).json({ message: "Сначала привяжите родителя" });
       }
@@ -262,8 +283,7 @@ export async function registerRoutes(
   app.post("/api/health-logs", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      const user = await storage.getUser(userId);
-      const parentId = user?.role === "parent" ? user.id : user?.linkedParentId;
+      const parentId = await resolveParentId(userId);
       if (!parentId) {
         return res.status(400).json({ message: "Сначала привяжите родителя" });
       }
@@ -297,7 +317,7 @@ export async function registerRoutes(
       const parentName = user?.role === "parent" ? user.name : (parent?.name || undefined);
       const result = await chatWithGrandchild(messages, parentName, userId);
 
-      const parentId = user?.role === "parent" ? user.id : user?.linkedParentId;
+      const parentId = await resolveParentId(userId);
       if (result.hasAlert && parentId) {
         const alertTitle = result.intent === "scam"
           ? "Возможная попытка мошенничества!"
