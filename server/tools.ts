@@ -126,42 +126,139 @@ export async function getWeather(city: string): Promise<string> {
   }
 }
 
+async function fetchDuckDuckGo(query: string): Promise<Array<{ title: string; url: string; snippet: string }>> {
+  const encoded = encodeURIComponent(query);
+  const response = await fetch(`https://html.duckduckgo.com/html/?q=${encoded}`, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml",
+      "Accept-Language": "ru-RU,ru;q=0.9",
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) throw new Error(`DDG HTTP ${response.status}`);
+  const html = await response.text();
+
+  if (html.includes("anomaly-modal") || html.includes("please try again")) {
+    throw new Error("DDG CAPTCHA/rate-limited");
+  }
+
+  const results: Array<{ title: string; url: string; snippet: string }> = [];
+
+  const titleRegex = /result__a[^>]*href="[^"]*uddg=([^&"]+)[^"]*"[^>]*>([^<]+)/g;
+  const snippetRegex = /result__snippet[^>]*>([^<]+)/g;
+
+  const titles: Array<{ url: string; title: string }> = [];
+  let match;
+  while ((match = titleRegex.exec(html)) !== null) {
+    try {
+      titles.push({ url: decodeURIComponent(match[1]), title: match[2].trim() });
+    } catch {
+      titles.push({ url: match[1], title: match[2].trim() });
+    }
+  }
+
+  const snippets: string[] = [];
+  while ((match = snippetRegex.exec(html)) !== null) {
+    snippets.push(match[1].trim());
+  }
+
+  for (let i = 0; i < Math.min(titles.length, 7); i++) {
+    results.push({
+      title: titles[i].title,
+      url: titles[i].url,
+      snippet: snippets[i] || "",
+    });
+  }
+
+  console.log(`[tools] DDG parsed: ${titles.length} titles, ${snippets.length} snippets`);
+  return results;
+}
+
 export async function searchWeb(query: string): Promise<string> {
   const cacheKey = `search:${query.toLowerCase()}`;
   const cached = getCached<string>(cacheKey);
   if (cached) return cached;
 
+  let searchResults: Array<{ title: string; url: string; snippet: string }> = [];
+  let usedRealSearch = false;
+
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "Ты — помощник для поиска информации. Отвечай кратко, по-русски, только факты. Не выдумывай — если не знаешь точно, скажи что не уверен. Если спрашивают про афишу, кино, театр, мероприятия — дай конкретные рекомендации: назови популярные фильмы и спектакли которые сейчас идут. Предложи посмотреть актуальную афишу на afisha.ru, kinopoisk.ru, kassir.ru. Дата сегодня: " + new Date().toLocaleDateString("ru-RU"),
-        },
-        { role: "user", content: query },
-      ],
-      max_tokens: 500,
-      temperature: 0.3,
-    });
+    searchResults = await fetchDuckDuckGo(query);
+    usedRealSearch = searchResults.length > 0;
+    console.log(`[tools] DuckDuckGo: ${searchResults.length} results for "${query.slice(0, 50)}"`);
+  } catch (err: any) {
+    console.error("[tools] DuckDuckGo failed, falling back to GPT:", err.message);
+  }
 
-    const result = response.choices[0]?.message?.content || "Не удалось найти информацию.";
+  try {
+    let result: string;
 
-    const usage = response.usage;
-    if (usage) {
-      storage.logAiUsage({
-        userId: null,
-        endpoint: "search-web",
+    if (usedRealSearch) {
+      const searchContext = searchResults
+        .map((r, i) => `${i + 1}. ${r.title}\n   ${r.snippet}\n   ${r.url}`)
+        .join("\n\n");
+
+      const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        tokensIn: usage.prompt_tokens,
-        tokensOut: usage.completion_tokens,
+        messages: [
+          {
+            role: "system",
+            content: `Ты помогаешь пожилому человеку. Вот реальные результаты поиска по его запросу. Перескажи их тепло, понятно, по-русски. Назови конкретные названия (фильмы, спектакли, передачи, события). Не выдумывай ничего сверх того что есть в результатах. Если в результатах есть даты, расписание — назови их. Пиши простым текстом без маркдауна. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+          },
+          { role: "user", content: `Запрос: ${query}\n\nРезультаты поиска:\n${searchContext}` },
+        ],
+        max_tokens: 600,
+        temperature: 0.3,
       });
+
+      result = response.choices[0]?.message?.content || "Не удалось разобрать результаты.";
+
+      const usage = response.usage;
+      if (usage) {
+        storage.logAiUsage({
+          userId: null,
+          endpoint: "search-web-summarize",
+          model: "gpt-4o-mini",
+          tokensIn: usage.prompt_tokens,
+          tokensOut: usage.completion_tokens,
+        });
+      }
+    } else {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `Ты — помощник для поиска информации. Отвечай кратко, по-русски. Если спрашивают про кино, театр, сериалы — назови конкретные примеры фильмов/спектаклей которые скорее всего идут сейчас (недавние российские и мировые премьеры). Если не уверен в точности — честно скажи "точное расписание лучше проверить на сайте". Если спрашивают про телепрограмму — назови популярные передачи каналов. Если про праздники — используй дату. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+          },
+          { role: "user", content: query },
+        ],
+        max_tokens: 500,
+        temperature: 0.3,
+      });
+
+      result = response.choices[0]?.message?.content || "Не удалось найти информацию.";
+
+      const usage = response.usage;
+      if (usage) {
+        storage.logAiUsage({
+          userId: null,
+          endpoint: "search-web-fallback",
+          model: "gpt-4o-mini",
+          tokensIn: usage.prompt_tokens,
+          tokensOut: usage.completion_tokens,
+        });
+      }
     }
 
     const lowerQ = query.toLowerCase();
     const isCinema = ["кино", "фильм"].some(w => lowerQ.includes(w));
     const isTheatre = ["театр", "спектакл"].some(w => lowerQ.includes(w));
     const isEntertainment = isCinema || isTheatre || ["афиш", "концерт", "выставк", "мероприят", "куда сходить"].some(w => lowerQ.includes(w));
+    const isMedical = ["врач", "поликлиник", "аптек", "записаться"].some(w => lowerQ.includes(w));
+    const isGov = ["пенси", "льгот", "субсиди", "госуслуг", "мфц"].some(w => lowerQ.includes(w));
 
     if (isEntertainment) {
       let links = "\n\nГде посмотреть актуальное расписание:";
@@ -173,6 +270,14 @@ export async function searchWeb(query: string): Promise<string> {
         links += "\nhttps://www.afisha.ru/msk/\nhttps://kassir.ru/";
       }
       result += links;
+    }
+
+    if (isMedical) {
+      result += "\n\nЗаписаться к врачу:\nhttps://www.gosuslugi.ru/\nhttps://gorzdrav.org/";
+    }
+
+    if (isGov) {
+      result += "\n\nПолезные ссылки:\nhttps://www.gosuslugi.ru/\nhttps://pfr.gov.ru/";
     }
 
     setCache(cacheKey, result, SEARCH_TTL);
