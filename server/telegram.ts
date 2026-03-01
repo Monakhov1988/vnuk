@@ -9,6 +9,27 @@ let bot: Bot | null = null;
 const pendingRegistration = new Map<string, boolean>();
 const pendingLink = new Map<string, boolean>();
 
+function startTypingLoop(ctx: any, action: "typing" | "record_voice" = "typing") {
+  let running = true;
+  const loop = async () => {
+    while (running) {
+      try {
+        await ctx.replyWithChatAction(action);
+      } catch {}
+      await new Promise(r => setTimeout(r, 4000));
+    }
+  };
+  loop();
+  return () => { running = false; };
+}
+
+const TOOL_STATUS_MESSAGES: Record<string, string> = {
+  search_web: "Сейчас, ищу информацию... 🔍",
+  search_recipe: "Минуточку, ищу рецепт... 🍳",
+  generate_image: "Рисую, подожди немножко... 🎨",
+  get_weather: "Смотрю погоду... ☀️",
+};
+
 async function registerUserFromTelegram(chatId: string, name: string): Promise<string> {
   const email = `tg_${chatId}@vnuchok.bot`;
   const hashedPassword = await bcrypt.hash(crypto.randomUUID(), 10);
@@ -434,9 +455,14 @@ export function startTelegramBot() {
         hasAlert: false,
       });
 
-      await ctx.replyWithChatAction("record_voice");
+      const stopTyping = startTypingLoop(ctx, "record_voice");
 
-      const result = await chatWithGrandchild(messages, user.name, user.id);
+      let result;
+      try {
+        result = await chatWithGrandchild(messages, user.name, user.id);
+      } finally {
+        stopTyping();
+      }
 
       await storage.createChatMessage({
         parentId: user.id,
@@ -449,6 +475,10 @@ export function startTelegramBot() {
       if (result.hasAlert) {
         const alertTitle = result.intent === "scam"
           ? "Возможная попытка мошенничества!"
+          : result.intent === "home_danger"
+          ? "Опасная ситуация дома!"
+          : result.intent === "lost"
+          ? "Родитель потерялся на улице!"
           : "Родитель сообщил о проблеме со здоровьем!";
 
         await storage.createEvent({
@@ -466,7 +496,7 @@ export function startTelegramBot() {
             try {
               await bot!.api.sendMessage(
                 child.telegramChatId,
-                `Внимание! ${alertTitle}\n\n${user.name} сказал(а): "${userText}"\n\nПроверьте ситуацию.`
+                `⚠️ ${alertTitle}\n\n${user.name} сказал(а): "${userText}"\n\nПроверьте ситуацию!`
               );
             } catch (err) {
               console.error("[telegram] Failed to notify child:", err);
@@ -591,9 +621,28 @@ export function startTelegramBot() {
         hasAlert: false,
       });
 
-      await ctx.replyWithChatAction("typing");
+      const stopTyping = startTypingLoop(ctx);
+      let statusMsgId: number | null = null;
 
-      const result = await chatWithGrandchild(messages, user.name, user.id);
+      const onToolCall = async (toolName: string) => {
+        const statusText = TOOL_STATUS_MESSAGES[toolName];
+        if (statusText && !statusMsgId) {
+          try {
+            const sent = await ctx.reply(statusText);
+            statusMsgId = sent.message_id;
+          } catch {}
+        }
+      };
+
+      let result;
+      try {
+        result = await chatWithGrandchild(messages, user.name, user.id, onToolCall);
+      } finally {
+        stopTyping();
+        if (statusMsgId) {
+          try { await ctx.api.deleteMessage(ctx.chat.id, statusMsgId); } catch {}
+        }
+      }
 
       await storage.createChatMessage({
         parentId: user.id,
@@ -606,6 +655,10 @@ export function startTelegramBot() {
       if (result.hasAlert) {
         const alertTitle = result.intent === "scam"
           ? "Возможная попытка мошенничества!"
+          : result.intent === "home_danger"
+          ? "Опасная ситуация дома!"
+          : result.intent === "lost"
+          ? "Родитель потерялся на улице!"
           : "Родитель сообщил о проблеме со здоровьем!";
 
         await storage.createEvent({
@@ -623,7 +676,7 @@ export function startTelegramBot() {
             try {
               await bot!.api.sendMessage(
                 child.telegramChatId,
-                `Внимание! ${alertTitle}\n\n${user.name} написал(а): "${userText}"\n\nПроверьте ситуацию.`
+                `⚠️ ${alertTitle}\n\n${user.name} написал(а): "${userText}"\n\nПроверьте ситуацию!`
               );
             } catch (err) {
               console.error("[telegram] Failed to notify child:", err);

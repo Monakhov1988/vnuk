@@ -472,7 +472,8 @@ function detectRequiredTool(message: string): string | null {
 export async function chatWithGrandchild(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   parentName?: string,
-  userId?: number
+  userId?: number,
+  onToolCall?: (toolName: string) => void
 ): Promise<{ reply: string; hasAlert: boolean; intent: string; imageUrl?: string }> {
   const { hours, timeOfDay } = getMoscowTime();
   const timeStr = `${String(hours).padStart(2, "0")}:00`;
@@ -564,6 +565,9 @@ ${memoryLines}
       }
 
       console.log(`[ai] Calling tool: ${fnName}(${JSON.stringify(fnArgs)})`);
+      if (onToolCall) {
+        try { onToolCall(fnName); } catch {}
+      }
       const toolResult = await executeToolCall(fnName, fnArgs, userId);
 
       if (toolResult.imageUrl) {

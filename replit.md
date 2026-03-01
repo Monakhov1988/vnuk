@@ -153,6 +153,7 @@
   - Категории: family, health, preferences, pets, hobbies, home, important_dates, work
   - Дедупликация: проверяет перед записью
   - Инжекция: до 30 фактов добавляются в system prompt секцией "ЧТО ТЫ ЗНАЕШЬ О СОБЕСЕДНИКЕ"
+- **Telegram typing indicator**: `startTypingLoop()` повторяет "typing" каждые 4 сек; `onToolCall` callback показывает статус ("Ищу информацию... 🔍", "Ищу рецепт... 🍳", "Рисую... 🎨", "Смотрю погоду... ☀️") — статус-сообщение удаляется после ответа; try/finally гарантирует cleanup
 - **server/tools.ts** — серверные инструменты с in-memory кэшем (TTL: погода 30 мин, поиск 15 мин)
 
 ### База данных (PostgreSQL + Drizzle ORM)
