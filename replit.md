@@ -106,6 +106,10 @@
   - `/meter <тип> <значение>` — ручная передача показаний ЖКХ
   - Фото → AI-распознавание счётчика + inline-кнопки для сохранения
   - Любой текст → AI-чат с Внучком (с сохранением в chat_messages)
+  - Голосовое сообщение → Whisper STT → AI-чат → TTS голосовой ответ
+- Голосовые сообщения (`server/voice.ts`):
+  - `speechToText(buffer)` — OpenAI Whisper API, язык `ru`
+  - `textToSpeech(text)` — OpenAI TTS API, модель `tts-1`, голос `nova`, формат `opus`
 - Алерты: при [ALERT] от AI — уведомление ребёнку в Telegram (если привязан)
 - Поле `telegramChatId` в таблице users для привязки
 

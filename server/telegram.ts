@@ -2,6 +2,7 @@ import { Bot, InlineKeyboard, InputFile } from "grammy";
 import crypto from "crypto";
 import { storage } from "./storage";
 import { chatWithGrandchild, recognizeMeter } from "./ai";
+import { speechToText, textToSpeech } from "./voice";
 import bcrypt from "bcrypt";
 
 let bot: Bot | null = null;
@@ -381,6 +382,129 @@ export function startTelegramBot() {
     } catch (err) {
       console.error("[telegram] /meter error:", err);
       await ctx.reply("Произошла ошибка. Попробуйте позже.");
+    }
+  });
+
+  bot.on("message:voice", async (ctx) => {
+    const chatId = ctx.chat.id.toString();
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) {
+      await ctx.reply("Сначала зарегистрируйтесь — нажмите /start");
+      return;
+    }
+
+    try {
+      await ctx.replyWithChatAction("typing");
+
+      const voice = ctx.message.voice;
+      if (voice.duration > 120) {
+        await ctx.reply("Голосовое сообщение слишком длинное. Попробуйте записать покороче — до 2 минут.");
+        return;
+      }
+      const file = await ctx.api.getFile(voice.file_id);
+      if (!file.file_path) {
+        await ctx.reply("Не удалось загрузить голосовое сообщение. Попробуйте ещё раз.");
+        return;
+      }
+      const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        await ctx.reply("Не удалось загрузить голосовое сообщение. Попробуйте ещё раз.");
+        return;
+      }
+      const audioBuffer = Buffer.from(await response.arrayBuffer());
+
+      const userText = await speechToText(audioBuffer);
+      if (!userText || userText.length < 1) {
+        await ctx.reply("Не удалось разобрать, что вы сказали. Попробуйте ещё раз, говорите чётко.");
+        return;
+      }
+
+      await ctx.reply(`Я услышал: «${userText}»`);
+
+      const chatHistory = await storage.getChatMessages(user.id, 20);
+      const messages: Array<{ role: "user" | "assistant"; content: string }> = chatHistory
+        .reverse()
+        .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
+      messages.push({ role: "user", content: userText });
+
+      await storage.createChatMessage({
+        parentId: user.id,
+        role: "user",
+        content: userText,
+        intent: null,
+        hasAlert: false,
+      });
+
+      await ctx.replyWithChatAction("record_voice");
+
+      const result = await chatWithGrandchild(messages, user.name, user.id);
+
+      await storage.createChatMessage({
+        parentId: user.id,
+        role: "assistant",
+        content: result.reply,
+        intent: result.intent,
+        hasAlert: result.hasAlert,
+      });
+
+      if (result.hasAlert) {
+        const alertTitle = result.intent === "scam"
+          ? "Возможная попытка мошенничества!"
+          : "Родитель сообщил о проблеме со здоровьем!";
+
+        await storage.createEvent({
+          userId: user.id,
+          parentId: user.id,
+          type: "alert",
+          severity: "critical",
+          title: alertTitle,
+          description: userText,
+        });
+
+        const children = await storage.getChildrenByParentId(user.id);
+        for (const child of children) {
+          if (child.telegramChatId) {
+            try {
+              await bot!.api.sendMessage(
+                child.telegramChatId,
+                `Внимание! ${alertTitle}\n\n${user.name} сказал(а): "${userText}"\n\nПроверьте ситуацию.`
+              );
+            } catch (err) {
+              console.error("[telegram] Failed to notify child:", err);
+            }
+          }
+        }
+      }
+
+      if (result.imageUrl) {
+        try {
+          if (result.reply.length > 1024) {
+            await ctx.reply(result.reply);
+            await ctx.replyWithPhoto(result.imageUrl);
+          } else {
+            await ctx.replyWithPhoto(result.imageUrl, {
+              caption: result.reply,
+            });
+          }
+        } catch (imgErr) {
+          console.error("[telegram] Failed to send image:", imgErr);
+          await ctx.reply(result.reply);
+        }
+      }
+
+      try {
+        const voiceBuffer = await textToSpeech(result.reply);
+        await ctx.replyWithVoice(new InputFile(voiceBuffer, "response.ogg"));
+      } catch (ttsErr) {
+        console.error("[telegram] TTS failed, sending text:", ttsErr);
+        if (!result.imageUrl) {
+          await ctx.reply(result.reply);
+        }
+      }
+    } catch (err: any) {
+      console.error("[telegram] Voice message error:", err);
+      await ctx.reply("Ой, не получилось обработать голосовое сообщение. Попробуйте ещё раз или напишите текстом.");
     }
   });
 
