@@ -420,8 +420,6 @@ export function startTelegramBot() {
         return;
       }
 
-      await ctx.reply(`Я услышал: «${userText}»`);
-
       const chatHistory = await storage.getChatMessages(user.id, 20);
       const messages: Array<{ role: "user" | "assistant"; content: string }> = chatHistory
         .reverse()

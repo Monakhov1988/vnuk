@@ -36,8 +36,8 @@ export async function textToSpeech(text: string): Promise<Buffer> {
     const trimmedText = text.slice(0, 4096);
 
     const response = await openai.audio.speech.create({
-      model: "tts-1",
-      voice: "nova",
+      model: "tts-1-hd",
+      voice: "alloy",
       input: trimmedText,
       response_format: "opus",
     });
