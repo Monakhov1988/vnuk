@@ -738,6 +738,24 @@ export function startTelegramBot() {
       return;
     }
 
+    const RECIPE_CLARIFICATIONS: Record<string, string> = {
+      "борщ": "А какой борщ хочешь? Классический, украинский, с курицей или вегетарианский? 🍲",
+      "суп": "А какой суп? Куриный, грибной, гороховый, щи, харчо? 🍲",
+      "пирог": "А какой пирог? С яблоками, с мясом, с ягодами, с капустой, с творогом? 🥧",
+      "салат": "А какой салат? Оливье, цезарь, винегрет, овощной, с курицей? 🥗",
+      "каша": "А какая каша? Овсяная, гречневая, рисовая, манная, пшённая? 🥣",
+      "блины": "А какие блины? Тонкие на молоке, дрожжевые, с начинкой, на кефире? 🥞",
+      "пельмени": "А какие пельмени? Классические с мясом, с курицей, домашние, ленивые? 🥟",
+      "вареники": "А какие вареники? С картошкой, с вишней, с творогом, ленивые? 🥟",
+      "котлеты": "А какие котлеты? Из фарша классические, куриные, рыбные, по-киевски? 🍖",
+      "запеканка": "А какая запеканка? Творожная, картофельная, с мясом, макаронная? 🍽",
+      "пирожки": "А какие пирожки? С мясом, с капустой, с картошкой, с яблоками? 🥧",
+      "торт": "А какой торт? Наполеон, медовик, шоколадный, бисквитный, птичье молоко? 🎂",
+      "печенье": "А какое печенье? Овсяное, песочное, шоколадное, с изюмом? 🍪",
+      "оладьи": "А какие оладьи? На кефире, с яблоками, банановые, пышные? 🥞",
+      "плов": "А какой плов? Узбекский классический, с курицей, со свининой, овощной? 🍚",
+    };
+
     const chatId = ctx.chat.id.toString();
 
     if (pendingRegistration.has(chatId)) {
@@ -801,6 +819,37 @@ export function startTelegramBot() {
         `Нажмите кнопку ниже, чтобы начать:`,
         { reply_markup: keyboard }
       );
+      return;
+    }
+
+    const lowerText = userText.toLowerCase().trim().replace(/[?.!,]$/g, "");
+    const recentHistory = await storage.getChatMessages(user.id, 3);
+    const lastBotMsg = recentHistory
+      .filter(m => m.role === "assistant")
+      .pop()?.content?.toLowerCase() || "";
+    const botAskedWhatToCook = lastBotMsg.includes("что хотите приготовить") ||
+      lastBotMsg.includes("что приготовить") ||
+      lastBotMsg.includes("какое блюдо");
+
+    const dishName = lowerText.replace(/^рецепт\s+/, "").trim();
+    const clarification = RECIPE_CLARIFICATIONS[dishName];
+
+    if (clarification && (botAskedWhatToCook || lowerText.startsWith("рецепт "))) {
+      await storage.createChatMessage({
+        parentId: user.id,
+        role: "user",
+        content: userText,
+        intent: null,
+        hasAlert: false,
+      });
+      await storage.createChatMessage({
+        parentId: user.id,
+        role: "assistant",
+        content: clarification,
+        intent: "recipe",
+        hasAlert: false,
+      });
+      await ctx.reply(clarification);
       return;
     }
 

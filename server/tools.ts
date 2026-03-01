@@ -288,221 +288,46 @@ export async function searchWeb(query: string): Promise<string> {
   }
 }
 
-async function fetchRecipeFromPovarenok(dish: string): Promise<string | null> {
-  try {
-    const encoded = encodeURIComponent(dish);
-    const searchUrl = `https://www.povarenok.ru/recipes/search/?search=${encoded}`;
-    console.log(`[tools] Fetching recipe search: ${searchUrl}`);
-
-    const searchResp = await fetch(searchUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml",
-        "Accept-Language": "ru-RU,ru;q=0.9",
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!searchResp.ok) throw new Error(`Povarenok search HTTP ${searchResp.status}`);
-    const searchHtml = await searchResp.text();
-
-    const recipeLinks: Array<{ url: string; title: string }> = [];
-    const linkRegex = /class="[^"]*recipe[^"]*"[^>]*>[\s\S]*?<a[^>]*href="(\/recipes\/show\/\d+\/[^"]*)"[^>]*>([^<]+)/gi;
-    let linkMatch;
-    while ((linkMatch = linkRegex.exec(searchHtml)) !== null && recipeLinks.length < 5) {
-      const url = `https://www.povarenok.ru${linkMatch[1]}`;
-      const title = linkMatch[2].trim().replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n));
-      if (title.length > 3 && !recipeLinks.some(r => r.url === url)) {
-        recipeLinks.push({ url, title });
-      }
-    }
-
-    if (recipeLinks.length === 0) {
-      const simpleLinkRegex = /href="(\/recipes\/show\/\d+\/[^"]*)"[^>]*title="([^"]+)"/gi;
-      let simpleMatch;
-      while ((simpleMatch = simpleLinkRegex.exec(searchHtml)) !== null && recipeLinks.length < 5) {
-        const url = `https://www.povarenok.ru${simpleMatch[1]}`;
-        const title = simpleMatch[2].trim().replace(/&amp;/g, '&').replace(/&quot;/g, '"');
-        if (title.length > 3 && !recipeLinks.some(r => r.url === url)) {
-          recipeLinks.push({ url, title });
-        }
-      }
-    }
-
-    if (recipeLinks.length === 0) {
-      console.log("[tools] No recipe links found on povarenok.ru");
-      return null;
-    }
-
-    const bestRecipe = recipeLinks[0];
-    console.log(`[tools] Fetching recipe page: ${bestRecipe.url}`);
-
-    const recipeResp = await fetch(bestRecipe.url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml",
-        "Accept-Language": "ru-RU,ru;q=0.9",
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!recipeResp.ok) throw new Error(`Povarenok recipe HTTP ${recipeResp.status}`);
-    const recipeHtml = await recipeResp.text();
-
-    const titleMatch = recipeHtml.match(/<h1[^>]*>([^<]+)<\/h1>/i);
-    const recipeTitle = titleMatch ? titleMatch[1].trim() : bestRecipe.title;
-
-    const ingredients: string[] = [];
-    const ingredientRegex = /itemprop="recipeIngredient"[^>]*>([^<]+)/gi;
-    let ingMatch;
-    while ((ingMatch = ingredientRegex.exec(recipeHtml)) !== null) {
-      const ing = ingMatch[1].trim();
-      if (ing.length > 1) ingredients.push(ing);
-    }
-
-    if (ingredients.length === 0) {
-      const altIngRegex = /class="[^"]*ingredient[^"]*"[^>]*>[\s\S]*?<span[^>]*>([^<]+)/gi;
-      let altMatch;
-      while ((altMatch = altIngRegex.exec(recipeHtml)) !== null) {
-        const ing = altMatch[1].trim();
-        if (ing.length > 1) ingredients.push(ing);
-      }
-    }
-
-    const steps: string[] = [];
-    const stepRegex = /itemprop="recipeInstructions"[^>]*>([\s\S]*?)<\/div>/gi;
-    let stepMatch;
-    while ((stepMatch = stepRegex.exec(recipeHtml)) !== null) {
-      const stepText = stepMatch[1]
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      if (stepText.length > 10) steps.push(stepText);
-    }
-
-    if (steps.length === 0) {
-      const altStepRegex = /class="[^"]*instruction[^"]*"[^>]*>([\s\S]*?)<\/(?:div|p)>/gi;
-      let altStep;
-      while ((altStep = altStepRegex.exec(recipeHtml)) !== null) {
-        const text = altStep[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-        if (text.length > 10) steps.push(text);
-      }
-    }
-
-    let ratingText = "";
-    const ratingMatch = recipeHtml.match(/itemprop="ratingValue"[^>]*content="([^"]+)"/i) ||
-                        recipeHtml.match(/itemprop="ratingValue"[^>]*>([^<]+)/i);
-    const reviewCountMatch = recipeHtml.match(/itemprop="reviewCount"[^>]*content="([^"]+)"/i) ||
-                             recipeHtml.match(/itemprop="reviewCount"[^>]*>([^<]+)/i);
-    if (ratingMatch) {
-      ratingText = `Рейтинг: ${ratingMatch[1].trim()}`;
-      if (reviewCountMatch) {
-        ratingText += ` (${reviewCountMatch[1].trim()} отзывов)`;
-      }
-    }
-
-    if (ingredients.length === 0 && steps.length === 0) {
-      console.log("[tools] Could not parse recipe content from povarenok.ru");
-      return null;
-    }
-
-    let result = `Рецепт «${recipeTitle}»`;
-    if (ratingText) result += ` — ${ratingText}`;
-    result += "\n";
-
-    if (ingredients.length > 0) {
-      result += "\nИнгредиенты:\n";
-      for (const ing of ingredients) {
-        result += `${ing}\n`;
-      }
-    }
-
-    if (steps.length > 0) {
-      result += "\nПриготовление:\n";
-      for (let i = 0; i < steps.length; i++) {
-        result += `${i + 1}. ${steps[i]}\n`;
-      }
-    }
-
-    result += `\nИсточник: ${bestRecipe.url}`;
-
-    if (recipeLinks.length > 1) {
-      result += "\n\nДругие варианты этого рецепта:";
-      for (let i = 1; i < Math.min(recipeLinks.length, 4); i++) {
-        result += `\n${recipeLinks[i].title}: ${recipeLinks[i].url}`;
-      }
-    }
-
-    const encodedDish = encodeURIComponent(dish);
-    result += `\n\nЕщё рецепты «${dish}»:\nhttps://eda.ru/recepty?q=${encodedDish}`;
-
-    return result;
-  } catch (err: any) {
-    console.error("[tools] Povarenok scraping error:", err.message);
-    return null;
-  }
-}
-
-async function fallbackRecipeGPT(dish: string): Promise<string> {
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: "Ты — кулинарный помощник. Дай подробный пошаговый рецепт блюда на русском языке. Укажи ингредиенты с точными количествами и пошаговую инструкцию. Пиши просто и понятно, как для домашней хозяйки. НЕ используй маркдаун, заголовки (###), буллеты (-), звёздочки (**). Пиши обычным текстом как сообщение в мессенджере. Нумеруй шаги цифрами (1, 2, 3...). Не добавляй ссылки на сайты.",
-      },
-      { role: "user", content: `Рецепт: ${dish}` },
-    ],
-    max_tokens: 800,
-    temperature: 0.5,
-  });
-
-  let result = response.choices[0]?.message?.content || "Не удалось найти рецепт.";
-
-  const usage = response.usage;
-  if (usage) {
-    storage.logAiUsage({
-      userId: null,
-      endpoint: "search-recipe",
-      model: "gpt-4o-mini",
-      tokensIn: usage.prompt_tokens,
-      tokensOut: usage.completion_tokens,
-    });
-  }
-
-  const encodedDish = encodeURIComponent(dish);
-  result += `\n\n=== ССЫЛКИ (ОБЯЗАТЕЛЬНО ПЕРЕДАЙ В ОТВЕТЕ) ===\nhttps://www.povarenok.ru/recipes/search/?search=${encodedDish}\nhttps://eda.ru/recepty?q=${encodedDish}`;
-
-  return result;
-}
-
 export async function searchRecipe(dish: string): Promise<string> {
   const cacheKey = `recipe:${dish.toLowerCase()}`;
   const cached = getCached<string>(cacheKey);
   if (cached) return cached;
 
   try {
-    const realRecipe = await fetchRecipeFromPovarenok(dish);
-    if (realRecipe) {
-      console.log(`[tools] Got real recipe from povarenok.ru for "${dish}"`);
-      setCache(cacheKey, realRecipe, SEARCH_TTL);
-      return realRecipe;
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "Ты — кулинарный помощник. Дай подробный пошаговый рецепт блюда на русском языке. Укажи ингредиенты с точными количествами и пошаговую инструкцию. Пиши просто и понятно, как для домашней хозяйки. НЕ используй маркдаун, заголовки (###), буллеты (-), звёздочки (**). Пиши обычным текстом как сообщение в мессенджере. Нумеруй шаги цифрами (1, 2, 3...). Не добавляй ссылки на сайты.",
+        },
+        { role: "user", content: `Рецепт: ${dish}` },
+      ],
+      max_tokens: 800,
+      temperature: 0.5,
+    });
+
+    let result = response.choices[0]?.message?.content || "Не удалось найти рецепт.";
+
+    const usage = response.usage;
+    if (usage) {
+      storage.logAiUsage({
+        userId: null,
+        endpoint: "search-recipe",
+        model: "gpt-4o-mini",
+        tokensIn: usage.prompt_tokens,
+        tokensOut: usage.completion_tokens,
+      });
     }
 
-    console.log(`[tools] Falling back to GPT for recipe "${dish}"`);
-    const gptRecipe = await fallbackRecipeGPT(dish);
-    setCache(cacheKey, gptRecipe, SEARCH_TTL);
-    return gptRecipe;
+    const encodedDish = encodeURIComponent(dish);
+    result += `\n\n=== ССЫЛКИ (ОБЯЗАТЕЛЬНО ПЕРЕДАЙ В ОТВЕТЕ) ===\nПодробнее с фотографиями: https://eda.ru/recepty?q=${encodedDish}`;
+
+    setCache(cacheKey, result, SEARCH_TTL);
+    return result;
   } catch (err: any) {
     console.error("[tools] Recipe search error:", err.message);
-    try {
-      const gptRecipe = await fallbackRecipeGPT(dish);
-      setCache(cacheKey, gptRecipe, SEARCH_TTL);
-      return gptRecipe;
-    } catch (fallbackErr: any) {
-      console.error("[tools] Recipe fallback error:", fallbackErr.message);
-      return `Не удалось найти рецепт. Попробуйте позже.`;
-    }
+    return `Не удалось найти рецепт. Попробуйте позже.`;
   }
 }
 

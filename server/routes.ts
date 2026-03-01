@@ -314,6 +314,42 @@ export async function registerRoutes(
       const user = await storage.getUser(userId);
       const parent = user?.linkedParentId ? await storage.getUser(user.linkedParentId) : null;
 
+      const RECIPE_CLARIFICATIONS: Record<string, string> = {
+        "борщ": "А какой борщ хочешь? Классический, украинский, с курицей или вегетарианский? 🍲",
+        "суп": "А какой суп? Куриный, грибной, гороховый, щи, харчо? 🍲",
+        "пирог": "А какой пирог? С яблоками, с мясом, с ягодами, с капустой, с творогом? 🥧",
+        "салат": "А какой салат? Оливье, цезарь, винегрет, овощной, с курицей? 🥗",
+        "каша": "А какая каша? Овсяная, гречневая, рисовая, манная, пшённая? 🥣",
+        "блины": "А какие блины? Тонкие на молоке, дрожжевые, с начинкой, на кефире? 🥞",
+        "пельмени": "А какие пельмени? Классические с мясом, с курицей, домашние, ленивые? 🥟",
+        "вареники": "А какие вареники? С картошкой, с вишней, с творогом, ленивые? 🥟",
+        "котлеты": "А какие котлеты? Из фарша классические, куриные, рыбные, по-киевски? 🍖",
+        "запеканка": "А какая запеканка? Творожная, картофельная, с мясом, макаронная? 🍽",
+        "пирожки": "А какие пирожки? С мясом, с капустой, с картошкой, с яблоками? 🥧",
+        "торт": "А какой торт? Наполеон, медовик, шоколадный, бисквитный, птичье молоко? 🎂",
+        "печенье": "А какое печенье? Овсяное, песочное, шоколадное, с изюмом? 🍪",
+        "оладьи": "А какие оладьи? На кефире, с яблоками, банановые, пышные? 🥞",
+        "плов": "А какой плов? Узбекский классический, с курицей, со свининой, овощной? 🍚",
+      };
+
+      const lastUserMsg = messages[messages.length - 1]?.content?.toLowerCase()?.trim() || "";
+      const prevBotMsg = [...messages].reverse().find(m => m.role === "assistant")?.content?.toLowerCase() || "";
+      const isAfterRecipePrompt = prevBotMsg.includes("что хотите приготовить") ||
+        prevBotMsg.includes("что приготовить") || prevBotMsg.includes("какое блюдо");
+
+      if (isAfterRecipePrompt || lastUserMsg.startsWith("рецепт ")) {
+        const dishName = lastUserMsg.replace(/^рецепт\s+/, "").replace(/[?.!,]$/g, "").trim();
+        const clarification = RECIPE_CLARIFICATIONS[dishName];
+        if (clarification) {
+          return res.json({
+            reply: clarification,
+            hasAlert: false,
+            intent: "recipe",
+            imageUrl: null,
+          });
+        }
+      }
+
       const parentName = user?.role === "parent" ? user.name : (parent?.name || undefined);
       const result = await chatWithGrandchild(messages, parentName, userId);
 
