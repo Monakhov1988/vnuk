@@ -137,7 +137,7 @@ export async function searchWeb(query: string): Promise<string> {
       messages: [
         {
           role: "system",
-          content: "Ты — помощник для поиска информации. Отвечай кратко, по-русски, только факты. Не выдумывай — если не знаешь точно, скажи что не уверен. Дата сегодня: " + new Date().toLocaleDateString("ru-RU"),
+          content: "Ты — помощник для поиска информации. Отвечай кратко, по-русски, только факты. Не выдумывай — если не знаешь точно, скажи что не уверен. Если спрашивают про афишу, кино, театр, мероприятия — дай конкретные рекомендации: назови популярные фильмы и спектакли которые сейчас идут. Предложи посмотреть актуальную афишу на afisha.ru, kinopoisk.ru, kassir.ru. Дата сегодня: " + new Date().toLocaleDateString("ru-RU"),
         },
         { role: "user", content: query },
       ],
@@ -156,6 +156,13 @@ export async function searchWeb(query: string): Promise<string> {
         tokensIn: usage.prompt_tokens,
         tokensOut: usage.completion_tokens,
       });
+    }
+
+    const lowerQuery = query.toLowerCase();
+    const isEntertainment = ["кино", "театр", "афиш", "фильм", "спектакл", "концерт", "выставк", "мероприят"].some(w => lowerQuery.includes(w));
+    if (isEntertainment) {
+      const encodedQuery = encodeURIComponent(query);
+      result += `\n\nАктуальная афиша:\nafisha.ru — https://www.afisha.ru/msk/cinema/\nkinopoisk.ru — https://www.kinopoisk.ru/afisha/\nkassir.ru — https://kassir.ru/`;
     }
 
     setCache(cacheKey, result, SEARCH_TTL);
@@ -185,7 +192,7 @@ export async function searchRecipe(dish: string): Promise<string> {
       temperature: 0.5,
     });
 
-    const result = response.choices[0]?.message?.content || "Не удалось найти рецепт.";
+    let result = response.choices[0]?.message?.content || "Не удалось найти рецепт.";
 
     const usage = response.usage;
     if (usage) {
@@ -197,6 +204,9 @@ export async function searchRecipe(dish: string): Promise<string> {
         tokensOut: usage.completion_tokens,
       });
     }
+
+    const encodedDish = encodeURIComponent(dish);
+    result += `\n\nЕщё рецепты можно посмотреть тут:\npovarenok.ru — https://www.povarenok.ru/recipes/search/?search=${encodedDish}\neda.ru — https://eda.ru/recepty?q=${encodedDish}`;
 
     setCache(cacheKey, result, SEARCH_TTL);
     return result;
