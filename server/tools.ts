@@ -158,11 +158,21 @@ export async function searchWeb(query: string): Promise<string> {
       });
     }
 
-    const lowerQuery = query.toLowerCase();
-    const isEntertainment = ["кино", "театр", "афиш", "фильм", "спектакл", "концерт", "выставк", "мероприят"].some(w => lowerQuery.includes(w));
+    const lowerQ = query.toLowerCase();
+    const isCinema = ["кино", "фильм"].some(w => lowerQ.includes(w));
+    const isTheatre = ["театр", "спектакл"].some(w => lowerQ.includes(w));
+    const isEntertainment = isCinema || isTheatre || ["афиш", "концерт", "выставк", "мероприят", "куда сходить"].some(w => lowerQ.includes(w));
+
     if (isEntertainment) {
-      const encodedQuery = encodeURIComponent(query);
-      result += `\n\nАктуальная афиша:\nafisha.ru — https://www.afisha.ru/msk/cinema/\nkinopoisk.ru — https://www.kinopoisk.ru/afisha/\nkassir.ru — https://kassir.ru/`;
+      let links = "\n\nГде посмотреть актуальное расписание:";
+      if (isCinema) {
+        links += "\nhttps://www.afisha.ru/msk/cinema/\nhttps://www.kinopoisk.ru/afisha/";
+      } else if (isTheatre) {
+        links += "\nhttps://www.afisha.ru/msk/theatre/\nhttps://www.culture.ru/afisha/teatry";
+      } else {
+        links += "\nhttps://www.afisha.ru/msk/\nhttps://kassir.ru/";
+      }
+      result += links;
     }
 
     setCache(cacheKey, result, SEARCH_TTL);
@@ -206,7 +216,7 @@ export async function searchRecipe(dish: string): Promise<string> {
     }
 
     const encodedDish = encodeURIComponent(dish);
-    result += `\n\nЕщё рецепты можно посмотреть тут:\npovarenok.ru — https://www.povarenok.ru/recipes/search/?search=${encodedDish}\neda.ru — https://eda.ru/recepty?q=${encodedDish}`;
+    result += `\n\nЕщё рецепты «${dish}»:\nhttps://www.povarenok.ru/recipes/search/?search=${encodedDish}\nhttps://eda.ru/recepty?q=${encodedDish}`;
 
     setCache(cacheKey, result, SEARCH_TTL);
     return result;

@@ -66,10 +66,10 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 Когда спрашивают о погоде, прогнозе, температуре на улице — вызови get_weather с названием города. Если город не назван — используй «Москва». Перескажи результат тепло и по-простому: «Сегодня на улице 15 градусов, тепло! Можно погулять.»
 
 ПОИСК ИНФОРМАЦИИ (search_web):
-Когда спрашивают о новостях, событиях, актуальной информации, праздниках, датах, афише, кино, театрах, концертах, куда сходить — вызови search_web. Пересказывай результат по-своему, тепло. Рассказывай интересное. Если в результате есть ссылки — ОБЯЗАТЕЛЬНО передай их пользователю, они полезны.
+Когда спрашивают о новостях, событиях, актуальной информации, праздниках, датах, афише, кино, театрах, концертах, куда сходить — вызови search_web. Пересказывай результат по-своему, тепло. Если в результате есть ссылки — передай их ТОЧНО КАК ЕСТЬ, ничего не меняй в URL. При вопросах про кино или театр — перескажи что знаешь, и обязательно скажи: "А точное расписание можно посмотреть тут:" и передай ссылки из результата.
 
 РЕЦЕПТЫ (search_recipe):
-ВСЕГДА вызывай search_recipe когда просят рецепт, как приготовить блюдо, ссылку на рецепт, или фоторецепт. Не отвечай из памяти — используй инструмент. ВАЖНО: когда получишь результат от search_recipe — передай рецепт ЦЕЛИКОМ. Перечисли ВСЕ ингредиенты с количествами и ВСЕ шаги приготовления. НЕ сокращай, НЕ пересказывай кратко. В конце результата будут ссылки на кулинарные сайты — ОБЯЗАТЕЛЬНО передай их пользователю.
+ВСЕГДА вызывай search_recipe когда просят рецепт, как приготовить блюдо, ссылку на рецепт, или фоторецепт. Не отвечай из памяти — используй инструмент. ВАЖНО: когда получишь результат от search_recipe — передай рецепт ЦЕЛИКОМ. Перечисли ВСЕ ингредиенты с количествами и ВСЕ шаги приготовления. НЕ сокращай, НЕ пересказывай кратко. В конце результата будут ссылки на кулинарные сайты — передай их ТОЧНО КАК ЕСТЬ, ничего не меняй в URL. Не убирай ссылки, не сокращай их, не пересказывай адрес сайта — копируй как есть.
 
 КАРТИНКИ И ОТКРЫТКИ (generate_image):
 Когда просят нарисовать открытку, картинку, поздравление, красивую картинку — вызови generate_image. Если просят фото блюда или фоторецепт — тоже вызови generate_image с описанием красивой фотографии этого блюда. Опиши на английском ЧТО именно нарисовать (это важно — описание на английском для качества). Например: «A warm greeting card with spring flowers, sunlight, soft watercolor style, no text». После генерации скажи что-то тёплое, например: «Вот, нарисовал для тебя! Нравится?»
@@ -272,6 +272,94 @@ function stripMarkdown(text: string): string {
   return result.trim();
 }
 
+const MEMORY_TRIGGER_WORDS = [
+  "зовут", "зовётся", "мой ", "моя ", "моё ", "мои ", "меня зовут",
+  "люблю", "нравится", "не люблю", "обожаю", "ненавижу",
+  "живу", "живём", "квартир", "дом ", "дача", "огород",
+  "внук", "внучк", "сын ", "дочь", "дочер", "муж", "жена", "брат", "сестр",
+  "кот ", "кошк", "собак", "пёс", "попугай", "рыбк", "питом",
+  "работал", "работаю", "пенси", "профессия", "учил",
+  "родил", "день рождения", "юбилей", "годовщин",
+  "аллерги", "диабет", "давлени", "серд", "лекарств",
+  "город ", "улица", "район",
+];
+
+function shouldExtractMemory(text: string): boolean {
+  const lower = text.toLowerCase();
+  return MEMORY_TRIGGER_WORDS.some(w => lower.includes(w));
+}
+
+async function extractMemoryFacts(
+  userMessage: string,
+  parentId: number
+): Promise<void> {
+  if (!shouldExtractMemory(userMessage)) return;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `Извлеки конкретные факты о пользователе из его сообщения. Верни JSON-массив объектов.
+Каждый объект: {"category": "...", "fact": "..."}
+Категории: family (имена родных, внуков, детей), health (болезни, лекарства, аллергии), preferences (любит/не любит еду, занятия), pets (питомцы), hobbies (увлечения, хобби), home (город, адрес, дача), important_dates (дни рождения, годовщины), work (профессия, работа)
+ПРАВИЛА:
+- Только конкретные факты. НЕ настроение, НЕ действия.
+- "У меня кот Барсик" → [{"category":"pets","fact":"Кот по кличке Барсик"}]
+- "Я работала учительницей" → [{"category":"work","fact":"Работала учительницей"}]
+- "Привет, как дела" → []
+- Если фактов нет — верни пустой массив []
+Отвечай ТОЛЬКО JSON-массивом, без пояснений.`,
+        },
+        { role: "user", content: userMessage },
+      ],
+      max_tokens: 200,
+      temperature: 0.1,
+    });
+
+    const raw = response.choices[0]?.message?.content?.trim() || "[]";
+    let facts: Array<{ category: string; fact: string }> = [];
+    try {
+      facts = JSON.parse(raw);
+    } catch {
+      const match = raw.match(/\[[\s\S]*\]/);
+      if (match) {
+        try { facts = JSON.parse(match[0]); } catch { return; }
+      }
+    }
+
+    if (!Array.isArray(facts) || facts.length === 0) return;
+
+    const usage = response.usage;
+    if (usage) {
+      storage.logAiUsage({
+        userId: parentId,
+        endpoint: "extract-memory",
+        model: "gpt-4o-mini",
+        tokensIn: usage.prompt_tokens,
+        tokensOut: usage.completion_tokens,
+      });
+    }
+
+    for (const f of facts.slice(0, 3)) {
+      if (!f.fact || !f.category || f.fact.length < 3) continue;
+      const existing = await storage.findUserMemoryByFact(parentId, f.fact);
+      if (!existing) {
+        await storage.createUserMemory({
+          parentId,
+          category: f.category,
+          fact: f.fact,
+          source: "extracted",
+        });
+        console.log(`[memory] Saved for user ${parentId}: [${f.category}] ${f.fact}`);
+      }
+    }
+  } catch (err: any) {
+    console.error("[memory] Extract error:", err.message);
+  }
+}
+
 function detectRequiredTool(message: string): string | null {
   const lower = message.toLowerCase();
 
@@ -302,6 +390,23 @@ export async function chatWithGrandchild(
   systemMessage += `\n\nСейчас ${timeOfDay}, время по Москве: ${timeStr}.`;
   if (parentName) {
     systemMessage += `\nИмя собеседника: ${parentName}. Обращайся к ней/нему по имени или ласково.`;
+  }
+
+  if (userId) {
+    try {
+      const memories = await storage.getUserMemory(userId, 30);
+      if (memories.length > 0) {
+        const memoryLines = memories.map(m => `- ${m.fact}`).join("\n");
+        systemMessage += `\n\n═══════════════════════════════════════
+ЧТО ТЫ ЗНАЕШЬ О СОБЕСЕДНИКЕ (из прошлых разговоров)
+═══════════════════════════════════════
+${memoryLines}
+
+Используй эти знания ЕСТЕСТВЕННО. Не перечисляй их списком. Упоминай к месту в разговоре. Например, если знаешь что есть кот Барсик — можешь спросить "Как там Барсик?". Если знаешь имя внука — вставь в разговор. Не навязывай, но показывай что помнишь.`;
+      }
+    } catch (err: any) {
+      console.error("[ai] Failed to load memory:", err.message);
+    }
   }
 
   const recentMessages = messages.slice(-20);
@@ -383,6 +488,12 @@ export async function chatWithGrandchild(
 
   const lastUserMessage = recentMessages.filter(m => m.role === "user").pop()?.content || "";
   const intent = detectIntentLocal(lastUserMessage, hasAlert);
+
+  if (userId) {
+    extractMemoryFacts(lastUserMessage, userId).catch(err =>
+      console.error("[memory] Background extraction failed:", err.message)
+    );
+  }
 
   storage.logAiUsage({
     userId: userId || null,

@@ -133,6 +133,17 @@ export const aiUsageLogs = pgTable("ai_usage_logs", {
   index("idx_ai_usage_created").on(table.createdAt),
 ]);
 
+export const userMemory = pgTable("user_memory", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  parentId: integer("parent_id").notNull().references(() => users.id),
+  category: text("category").notNull(),
+  fact: text("fact").notNull(),
+  source: text("source").notNull().default("extracted"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_memory_parent").on(table.parentId),
+]);
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, linkCode: true });
 export const insertReminderSchema = createInsertSchema(reminders).omit({ id: true, createdAt: true, lastTriggered: true, lastConfirmed: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true });
@@ -162,5 +173,8 @@ export type InsertWaitlist = z.infer<typeof insertWaitlistSchema>;
 export type Waitlist = typeof waitlist.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+export const insertUserMemorySchema = createInsertSchema(userMemory).omit({ id: true, createdAt: true });
 export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
 export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
+export type InsertUserMemory = z.infer<typeof insertUserMemorySchema>;
+export type UserMemory = typeof userMemory.$inferSelect;

@@ -12,7 +12,8 @@ import {
   type Waitlist, type InsertWaitlist,
   type ChatMessage, type InsertChatMessage,
   type InsertAiUsageLog,
-  users, reminders, events, utilityMetrics, memoirs, healthLogs, subscriptions, waitlist, chatMessages, aiUsageLogs,
+  type UserMemory, type InsertUserMemory,
+  users, reminders, events, utilityMetrics, memoirs, healthLogs, subscriptions, waitlist, chatMessages, aiUsageLogs, userMemory,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -61,6 +62,11 @@ export interface IStorage {
 
   logAiUsage(log: InsertAiUsageLog): Promise<void>;
   countAiUsageToday(userId: number, endpoint: string): Promise<number>;
+
+  getUserMemory(parentId: number, limit?: number): Promise<UserMemory[]>;
+  createUserMemory(mem: InsertUserMemory): Promise<UserMemory>;
+  deleteUserMemory(id: number): Promise<void>;
+  findUserMemoryByFact(parentId: number, fact: string): Promise<UserMemory | undefined>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -245,6 +251,26 @@ export class DatabaseStorage implements IStorage {
         gte(aiUsageLogs.createdAt, today)
       ));
     return Number(result?.cnt) || 0;
+  }
+
+  async getUserMemory(parentId: number, limit = 30): Promise<UserMemory[]> {
+    return db.select().from(userMemory).where(eq(userMemory.parentId, parentId)).orderBy(desc(userMemory.createdAt)).limit(limit);
+  }
+
+  async createUserMemory(mem: InsertUserMemory): Promise<UserMemory> {
+    const [m] = await db.insert(userMemory).values(mem).returning();
+    return m;
+  }
+
+  async deleteUserMemory(id: number): Promise<void> {
+    await db.delete(userMemory).where(eq(userMemory.id, id));
+  }
+
+  async findUserMemoryByFact(parentId: number, fact: string): Promise<UserMemory | undefined> {
+    const [m] = await db.select().from(userMemory)
+      .where(and(eq(userMemory.parentId, parentId), eq(userMemory.fact, fact)))
+      .limit(1);
+    return m;
   }
 }
 
