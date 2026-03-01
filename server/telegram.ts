@@ -1,4 +1,4 @@
-import { Bot, InlineKeyboard, InputFile } from "grammy";
+import { Bot, InlineKeyboard, Keyboard, InputFile } from "grammy";
 import crypto from "crypto";
 import { storage } from "./storage";
 import { chatWithGrandchild, recognizeMeter } from "./ai";
@@ -30,6 +30,35 @@ const TOOL_STATUS_MESSAGES: Record<string, string> = {
   get_weather: "Смотрю погоду... ☀️",
 };
 
+const persistentKeyboard = new Keyboard()
+  .text("🌤 Погода").text("🍳 Рецепт").row()
+  .text("🧩 Загадка").text("❓ Помощь")
+  .resized()
+  .persistent();
+
+function getHintsKeyboard() {
+  return new InlineKeyboard()
+    .text("🌤 Погода", "hint_weather").text("🍳 Рецепт", "hint_recipe").row()
+    .text("📺 Что по ТВ", "hint_tv").text("🎬 Что в кино", "hint_cinema").row()
+    .text("💊 Лекарства", "hint_pills").text("📋 Давление", "hint_bp").row()
+    .text("🧩 Загадка", "hint_riddle").text("📖 Стихотворение", "hint_poem").row()
+    .text("🎨 Открытка", "hint_card").text("🙏 Молитва", "hint_prayer").row()
+    .text("📸 Фото счётчика", "hint_meter").text("🌱 Огород", "hint_garden").row()
+    .text("❓ Что ты ещё умеешь?", "hint_help");
+}
+
+const HINT_PHRASES: Record<string, string> = {
+  hint_weather: "Какая сегодня погода?",
+  hint_recipe: "Подскажи вкусный рецепт на ужин",
+  hint_tv: "Что сегодня по телевизору?",
+  hint_cinema: "Что сейчас в кино?",
+  hint_riddle: "Загадай мне загадку",
+  hint_poem: "Расскажи красивое стихотворение",
+  hint_card: "Нарисуй красивую открытку с цветами",
+  hint_prayer: "Прочитай молитву Отче наш",
+  hint_garden: "Что сейчас делать в огороде?",
+};
+
 async function registerUserFromTelegram(chatId: string, name: string): Promise<string> {
   const email = `tg_${chatId}@vnuchok.bot`;
   const hashedPassword = await bcrypt.hash(crypto.randomUUID(), 10);
@@ -52,7 +81,7 @@ async function registerUserFromTelegram(chatId: string, name: string): Promise<s
     `А теперь просто напишите мне — я всегда рад поболтать!\n\n` +
     `Я умею многое: могу рассказать погоду, найти рецепт, нарисовать открытку, ` +
     `подсказать что в кино, помочь с телефоном и просто поговорить по душам.\n\n` +
-    `Напишите /help — покажу всё, что умею!`
+    `Нажмите кнопку внизу или напишите что угодно!`
   );
 }
 
@@ -73,8 +102,12 @@ export function startTelegramBot() {
       await ctx.reply(
         `С возвращением, ${existing.name}!\n\n` +
         `Просто напишите мне — я всегда рад поболтать.\n` +
-        `Спросите меня что угодно: про погоду, рецепт, что в кино, или просто расскажите как дела.\n\n` +
-        `Напишите /help — покажу всё, что я умею!`
+        `Или нажмите кнопку внизу:`,
+        { reply_markup: persistentKeyboard }
+      );
+      await ctx.reply(
+        `А вот ещё что я умею — нажмите любую кнопку:`,
+        { reply_markup: getHintsKeyboard() }
       );
       return;
     }
@@ -163,6 +196,7 @@ export function startTelegramBot() {
 Просто напишите или наговорите — я всегда рад помочь! 😊`;
 
     await ctx.reply(helpText);
+    await ctx.reply("Нажмите кнопку — попробуйте прямо сейчас:", { reply_markup: getHintsKeyboard() });
   });
 
   bot.callbackQuery("action_register", async (ctx) => {
@@ -189,6 +223,145 @@ export function startTelegramBot() {
     pendingLink.set(chatId, true);
     await ctx.answerCallbackQuery();
     await ctx.reply(`Введите ваш код привязки (например: A1B2C3):`);
+  });
+
+  bot.callbackQuery("hint_help", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const helpText =
+`Вот что я умею! Просто напишите мне:
+
+💬 Поболтать — «Как дела?», «Мне скучно»
+🍳 Рецепты — «Как приготовить борщ?»
+🌤 Погода — «Какая погода?»
+🔍 Новости — «Что в кино?», «Какой праздник?»
+📺 ТВ — «Что по телевизору?»
+💊 Здоровье — /pills, /bp
+🏠 ЖКХ — фото счётчика
+🌱 Огород — «Что сажать?»
+🎨 Открытки — «Нарисуй открытку»
+📖 Стихи и книги — «Почитай стихотворение»
+✈️ Путешествия — «Расскажи про Суздаль»
+🙏 Молитвы — «Прочитай Отче наш»
+📝 Поздравления — «Напиши поздравление»
+🚕 Такси — «Как вызвать такси?»
+📱 Техника — «Как отправить фото?»
+🧶 Рукоделие — «Как связать носки?»
+🌿 Травы — «Чай с ромашкой от чего?»
+🧩 Загадки — «Загадай загадку»
+📸 Воспоминания — расскажите историю
+🎙 Голосовые — просто наговорите!`;
+    await ctx.reply(helpText, { reply_markup: getHintsKeyboard() });
+  });
+
+  bot.callbackQuery("hint_pills", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) { await ctx.reply("Сначала зарегистрируйтесь — /start"); return; }
+    const reminders = await storage.getRemindersByUserId(user.id);
+    if (reminders.length === 0) {
+      await ctx.reply("У вас пока нет лекарств в списке. Попросите ребёнка добавить их в личном кабинете.");
+      return;
+    }
+    let text = "💊 Ваши лекарства:\n\n";
+    for (const r of reminders) {
+      text += `• ${r.medicineName} — ${r.time}\n`;
+    }
+    await ctx.reply(text);
+  });
+
+  bot.callbackQuery("hint_bp", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await ctx.reply("Чтобы записать давление, напишите:\n/bp 120 80\n\nГде 120 — верхнее, 80 — нижнее.\nМожно добавить заметку: /bp 130 85 после прогулки");
+  });
+
+  bot.callbackQuery("hint_meter", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await ctx.reply("Сфотографируйте счётчик и отправьте мне фото — я распознаю показания и помогу сохранить!");
+  });
+
+  bot.callbackQuery(/^hint_/, async (ctx) => {
+    const action = ctx.callbackQuery.data;
+    const phrase = HINT_PHRASES[action];
+    if (!phrase) {
+      await ctx.answerCallbackQuery();
+      return;
+    }
+    await ctx.answerCallbackQuery({ text: "Сейчас..." });
+
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) {
+      await ctx.reply("Сначала зарегистрируйтесь — /start");
+      return;
+    }
+
+    try {
+      const chatHistory = await storage.getChatMessages(user.id, 20);
+      const messages: Array<{ role: "user" | "assistant"; content: string }> = chatHistory
+        .reverse()
+        .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
+      messages.push({ role: "user", content: phrase });
+
+      await storage.createChatMessage({
+        parentId: user.id,
+        role: "user",
+        content: phrase,
+        intent: null,
+        hasAlert: false,
+      });
+
+      const stopTyping = startTypingLoop(ctx);
+      let statusMsgId: number | null = null;
+
+      const onToolCall = async (toolName: string) => {
+        const statusText = TOOL_STATUS_MESSAGES[toolName];
+        if (statusText && !statusMsgId) {
+          try {
+            const sent = await ctx.reply(statusText);
+            statusMsgId = sent.message_id;
+          } catch {}
+        }
+      };
+
+      let result;
+      try {
+        result = await chatWithGrandchild(messages, user.name, user.id, onToolCall);
+      } finally {
+        stopTyping();
+        if (statusMsgId) {
+          try { await ctx.api.deleteMessage(ctx.chat!.id, statusMsgId); } catch {}
+        }
+      }
+
+      await storage.createChatMessage({
+        parentId: user.id,
+        role: "assistant",
+        content: result.reply,
+        intent: result.intent,
+        hasAlert: result.hasAlert,
+      });
+
+      if (result.imageUrl) {
+        try {
+          if (result.reply.length > 1024) {
+            await ctx.reply(result.reply);
+            await ctx.replyWithPhoto(result.imageUrl);
+          } else {
+            await ctx.replyWithPhoto(result.imageUrl, { caption: result.reply });
+          }
+        } catch {
+          await ctx.reply(result.reply);
+        }
+      } else {
+        await ctx.reply(result.reply);
+      }
+    } catch (err: any) {
+      console.error("[telegram] Hint callback error:", err);
+      await ctx.reply("Ой, что-то не получилось. Попробуйте ещё раз.");
+    }
   });
 
   bot.command("link", async (ctx) => {
@@ -243,7 +416,8 @@ export function startTelegramBot() {
 
     try {
       const reply = await registerUserFromTelegram(chatId, name);
-      await ctx.reply(reply);
+      await ctx.reply(reply, { reply_markup: persistentKeyboard });
+      await ctx.reply("Нажмите любую кнопку — попробуйте прямо сейчас:", { reply_markup: getHintsKeyboard() });
     } catch (err: any) {
       console.error("[telegram] Registration error:", err);
       await ctx.reply(`Произошла ошибка при регистрации. Попробуйте позже.`);
@@ -612,8 +786,28 @@ export function startTelegramBot() {
   });
 
   bot.on("message:text", async (ctx) => {
-    const userText = ctx.message.text;
+    let userText = ctx.message.text;
     if (userText.startsWith("/")) return;
+
+    const KEYBOARD_MAP: Record<string, string> = {
+      "🌤 Погода": "Какая сегодня погода?",
+      "🍳 Рецепт": "Подскажи вкусный рецепт на ужин",
+      "🧩 Загадка": "Загадай мне загадку",
+      "❓ Помощь": "__help__",
+    };
+    if (KEYBOARD_MAP[userText]) {
+      if (KEYBOARD_MAP[userText] === "__help__") {
+        const chatId = ctx.chat.id.toString();
+        const user = await storage.getUserByTelegramChatId(chatId);
+        if (!user) {
+          await ctx.reply("Сначала зарегистрируйтесь — /start");
+          return;
+        }
+        await ctx.reply("Вот что я умею — нажмите любую кнопку:", { reply_markup: getHintsKeyboard() });
+        return;
+      }
+      userText = KEYBOARD_MAP[userText];
+    }
 
     const chatId = ctx.chat.id.toString();
 
@@ -626,7 +820,8 @@ export function startTelegramBot() {
       }
       try {
         const reply = await registerUserFromTelegram(chatId, name);
-        await ctx.reply(reply);
+        await ctx.reply(reply, { reply_markup: persistentKeyboard });
+        await ctx.reply("Нажмите любую кнопку — попробуйте прямо сейчас:", { reply_markup: getHintsKeyboard() });
       } catch (err: any) {
         console.error("[telegram] Registration error:", err);
         await ctx.reply(`Произошла ошибка при регистрации. Попробуйте позже.`);
