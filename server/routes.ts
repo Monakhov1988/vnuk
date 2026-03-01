@@ -332,22 +332,34 @@ export async function registerRoutes(
         "плов": "А какой плов? Узбекский классический, с курицей, со свининой, овощной? 🍚",
       };
 
-      const lastUserMsg = messages[messages.length - 1]?.content?.toLowerCase()?.trim() || "";
-      const prevBotMsg = [...messages].reverse().find(m => m.role === "assistant")?.content?.toLowerCase() || "";
-      const isAfterRecipePrompt = prevBotMsg.includes("что хотите приготовить") ||
-        prevBotMsg.includes("что приготовить") || prevBotMsg.includes("какое блюдо");
-
-      if (isAfterRecipePrompt || lastUserMsg.startsWith("рецепт ")) {
-        const dishName = lastUserMsg.replace(/^рецепт\s+/, "").replace(/[?.!,]$/g, "").trim();
-        const clarification = RECIPE_CLARIFICATIONS[dishName];
-        if (clarification) {
-          return res.json({
-            reply: clarification,
-            hasAlert: false,
-            intent: "recipe",
-            imageUrl: null,
-          });
-        }
+      const lastUserMsg = messages[messages.length - 1]?.content?.toLowerCase()?.trim()?.replace(/[?.!,]$/g, "") || "";
+      const dishBase = lastUserMsg.replace(/^рецепт\s+/, "").trim();
+      const DISH_FORMS: Record<string, string> = {
+        "борща": "борщ", "борщу": "борщ", "борщом": "борщ",
+        "супа": "суп", "супу": "суп", "супом": "суп", "супчик": "суп", "супчика": "суп",
+        "пирога": "пирог", "пирогу": "пирог", "пирогом": "пирог",
+        "салата": "салат", "салату": "салат", "салатик": "салат", "салатика": "салат",
+        "каши": "каша", "кашу": "каша", "кашей": "каша", "кашку": "каша",
+        "блинов": "блины", "блинчики": "блины", "блинчиков": "блины",
+        "пельменей": "пельмени", "пельмешки": "пельмени",
+        "вареников": "вареники",
+        "котлет": "котлеты", "котлетки": "котлеты", "котлеток": "котлеты",
+        "запеканки": "запеканка", "запеканку": "запеканка",
+        "пирожков": "пирожки",
+        "торта": "торт", "тортик": "торт", "тортика": "торт",
+        "печенья": "печенье", "печеньки": "печенье",
+        "оладий": "оладьи", "оладушки": "оладьи",
+        "плова": "плов",
+      };
+      const normalizedDish = DISH_FORMS[dishBase] || dishBase;
+      const clarification = RECIPE_CLARIFICATIONS[normalizedDish];
+      if (clarification) {
+        return res.json({
+          reply: clarification,
+          hasAlert: false,
+          intent: "recipe",
+          imageUrl: null,
+        });
       }
 
       const parentName = user?.role === "parent" ? user.name : (parent?.name || undefined);

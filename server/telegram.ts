@@ -204,11 +204,11 @@ export function startTelegramBot() {
     if (!chatId) return;
     const existing = await storage.getUserByTelegramChatId(chatId);
     if (existing) {
-      await ctx.answerCallbackQuery({ text: "Вы уже зарегистрированы!" });
+      try { await ctx.answerCallbackQuery({ text: "Вы уже зарегистрированы!" }); } catch {}
       return;
     }
     pendingRegistration.set(chatId, true);
-    await ctx.answerCallbackQuery();
+    try { await ctx.answerCallbackQuery(); } catch {}
     await ctx.reply(`Напишите ваше имя (например: Мария Ивановна):`);
   });
 
@@ -217,16 +217,16 @@ export function startTelegramBot() {
     if (!chatId) return;
     const existing = await storage.getUserByTelegramChatId(chatId);
     if (existing) {
-      await ctx.answerCallbackQuery({ text: "Вы уже привязаны!" });
+      try { await ctx.answerCallbackQuery({ text: "Вы уже привязаны!" }); } catch {}
       return;
     }
     pendingLink.set(chatId, true);
-    await ctx.answerCallbackQuery();
+    try { await ctx.answerCallbackQuery(); } catch {}
     await ctx.reply(`Введите ваш код привязки (например: A1B2C3):`);
   });
 
   bot.callbackQuery("hint_help", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    try { await ctx.answerCallbackQuery(); } catch {}
     const helpText =
 `Вот что я умею! Просто напишите мне:
 
@@ -254,7 +254,7 @@ export function startTelegramBot() {
   });
 
   bot.callbackQuery("hint_pills", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    try { await ctx.answerCallbackQuery(); } catch {}
     const chatId = ctx.chat?.id.toString();
     if (!chatId) return;
     const user = await storage.getUserByTelegramChatId(chatId);
@@ -272,12 +272,12 @@ export function startTelegramBot() {
   });
 
   bot.callbackQuery("hint_bp", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    try { await ctx.answerCallbackQuery(); } catch {}
     await ctx.reply("Чтобы записать давление, напишите:\n/bp 120 80\n\nГде 120 — верхнее, 80 — нижнее.\nМожно добавить заметку: /bp 130 85 после прогулки");
   });
 
   bot.callbackQuery("hint_meter", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    try { await ctx.answerCallbackQuery(); } catch {}
     await ctx.reply("Сфотографируйте счётчик и отправьте мне фото — я распознаю показания и помогу сохранить!");
   });
 
@@ -285,10 +285,10 @@ export function startTelegramBot() {
     const action = ctx.callbackQuery.data;
     const question = HINT_QUESTIONS[action];
     if (!question) {
-      await ctx.answerCallbackQuery();
+      try { await ctx.answerCallbackQuery(); } catch {}
       return;
     }
-    await ctx.answerCallbackQuery();
+    try { await ctx.answerCallbackQuery(); } catch {}
     await ctx.reply(question);
   });
 
@@ -398,7 +398,7 @@ export function startTelegramBot() {
       const reminderId = parseInt(ctx.match[1]);
       const reminder = await storage.getReminder(reminderId);
       if (!reminder || reminder.parentId !== user.id) {
-        await ctx.answerCallbackQuery({ text: "Напоминание не найдено" });
+        try { await ctx.answerCallbackQuery({ text: "Напоминание не найдено" }); } catch {}
         return;
       }
 
@@ -412,12 +412,12 @@ export function startTelegramBot() {
         description: `Подтверждено через Telegram`,
       });
 
-      await ctx.answerCallbackQuery({ text: "Отлично! Записано." });
+      try { await ctx.answerCallbackQuery({ text: "Отлично! Записано." }); } catch {}
       const msgText = ctx.callbackQuery.message?.text || "Лекарства";
       await ctx.editMessageText(msgText + `\n\n${reminder.medicineName} — принято!`);
     } catch (err) {
       console.error("[telegram] confirm_med error:", err);
-      await ctx.answerCallbackQuery({ text: "Ошибка, попробуйте снова" });
+      try { await ctx.answerCallbackQuery({ text: "Ошибка, попробуйте снова" }); } catch {}
     }
   });
 
@@ -535,11 +535,11 @@ export function startTelegramBot() {
         description: `Значение: ${value} (Telegram)`,
       });
 
-      await ctx.answerCallbackQuery({ text: "Сохранено!" });
+      try { await ctx.answerCallbackQuery({ text: "Сохранено!" }); } catch {}
       await ctx.editMessageText(`Показания ${meterType}: ${value} — сохранено!`);
     } catch (err) {
       console.error("[telegram] save_meter error:", err);
-      await ctx.answerCallbackQuery({ text: "Ошибка, попробуйте снова" });
+      try { await ctx.answerCallbackQuery({ text: "Ошибка, попробуйте снова" }); } catch {}
     }
   });
 
@@ -823,18 +823,28 @@ export function startTelegramBot() {
     }
 
     const lowerText = userText.toLowerCase().trim().replace(/[?.!,]$/g, "");
-    const recentHistory = await storage.getChatMessages(user.id, 3);
-    const lastBotMsg = recentHistory
-      .filter(m => m.role === "assistant")
-      .pop()?.content?.toLowerCase() || "";
-    const botAskedWhatToCook = lastBotMsg.includes("что хотите приготовить") ||
-      lastBotMsg.includes("что приготовить") ||
-      lastBotMsg.includes("какое блюдо");
+    const dishBase = lowerText.replace(/^рецепт\s+/, "").trim();
+    const DISH_FORMS: Record<string, string> = {
+      "борща": "борщ", "борщу": "борщ", "борщом": "борщ",
+      "супа": "суп", "супу": "суп", "супом": "суп", "супчик": "суп", "супчика": "суп",
+      "пирога": "пирог", "пирогу": "пирог", "пирогом": "пирог",
+      "салата": "салат", "салату": "салат", "салатик": "салат", "салатика": "салат",
+      "каши": "каша", "кашу": "каша", "кашей": "каша", "кашку": "каша",
+      "блинов": "блины", "блинчики": "блины", "блинчиков": "блины",
+      "пельменей": "пельмени", "пельмешки": "пельмени", "пельмешек": "пельмени",
+      "вареников": "вареники", "варениками": "вареники",
+      "котлет": "котлеты", "котлетки": "котлеты", "котлеток": "котлеты",
+      "запеканки": "запеканка", "запеканку": "запеканка",
+      "пирожков": "пирожки", "пирожками": "пирожки",
+      "торта": "торт", "тортик": "торт", "тортика": "торт",
+      "печенья": "печенье", "печеньки": "печенье",
+      "оладий": "оладьи", "оладушки": "оладьи", "оладушек": "оладьи",
+      "плова": "плов", "пловом": "плов",
+    };
+    const normalizedDish = DISH_FORMS[dishBase] || dishBase;
+    const clarification = RECIPE_CLARIFICATIONS[normalizedDish];
 
-    const dishName = lowerText.replace(/^рецепт\s+/, "").trim();
-    const clarification = RECIPE_CLARIFICATIONS[dishName];
-
-    if (clarification && (botAskedWhatToCook || lowerText.startsWith("рецепт "))) {
+    if (clarification) {
       await storage.createChatMessage({
         parentId: user.id,
         role: "user",
