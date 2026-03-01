@@ -320,8 +320,8 @@ export async function searchRecipe(dish: string): Promise<string> {
       });
     }
 
-    const encodedDish = encodeURIComponent(dish);
-    result += `\n\n=== ССЫЛКИ (ОБЯЗАТЕЛЬНО ПЕРЕДАЙ В ОТВЕТЕ) ===\nПодробнее с фотографиями: https://eda.ru/recepty?q=${encodedDish}`;
+    const encodedDish = encodeURIComponent(dish + " рецепт с фото");
+    result += `\n\n=== ССЫЛКИ (ОБЯЗАТЕЛЬНО ПЕРЕДАЙ В ОТВЕТЕ) ===\nПодробнее с фотографиями: https://yandex.ru/search/?text=${encodedDish}`;
 
     setCache(cacheKey, result, SEARCH_TTL);
     return result;
