@@ -47,16 +47,16 @@ function getHintsKeyboard() {
     .text("❓ Что ты ещё умеешь?", "hint_help");
 }
 
-const HINT_PHRASES: Record<string, string> = {
-  hint_weather: "Какая сегодня погода?",
-  hint_recipe: "Подскажи вкусный рецепт на ужин",
-  hint_tv: "Что сегодня по телевизору?",
-  hint_cinema: "Что сейчас в кино?",
-  hint_riddle: "Загадай мне загадку",
-  hint_poem: "Расскажи красивое стихотворение",
-  hint_card: "Нарисуй красивую открытку с цветами",
-  hint_prayer: "Прочитай молитву Отче наш",
-  hint_garden: "Что сейчас делать в огороде?",
+const HINT_QUESTIONS: Record<string, string> = {
+  hint_weather: "🌤 Какой город интересует? Напишите название, например: Москва, Сочи, Казань",
+  hint_recipe: "🍳 Что хотите приготовить? Напишите блюдо, например: борщ, шарлотка, блины",
+  hint_tv: "📺 Какой канал интересует? Напишите, например: Первый канал, Россия 1, НТВ.\nИли просто напишите «что по ТВ» — покажу общую программу",
+  hint_cinema: "🎬 Хотите узнать что сейчас в кино? Просто напишите «что в кино» или назовите город",
+  hint_riddle: "🧩 Какую загадку хотите? Напишите: лёгкую, сложную, для детей, про природу — или просто «загадку»",
+  hint_poem: "📖 Какое стихотворение прочитать? Напишите автора или тему, например: Пушкин, про осень, про любовь",
+  hint_card: "🎨 Какую открытку нарисовать? Напишите повод и для кого, например: с днём рождения маме, с 8 марта, просто красивую с цветами",
+  hint_prayer: "🙏 Какую молитву прочитать? Напишите, например: Отче наш, Богородице Дево, утреннюю молитву",
+  hint_garden: "🌱 Что вас интересует в огороде? Напишите, например: что сажать сейчас, лунный календарь, борьба с вредителями",
 };
 
 async function registerUserFromTelegram(chatId: string, name: string): Promise<string> {
@@ -283,85 +283,13 @@ export function startTelegramBot() {
 
   bot.callbackQuery(/^hint_/, async (ctx) => {
     const action = ctx.callbackQuery.data;
-    const phrase = HINT_PHRASES[action];
-    if (!phrase) {
+    const question = HINT_QUESTIONS[action];
+    if (!question) {
       await ctx.answerCallbackQuery();
       return;
     }
-    await ctx.answerCallbackQuery({ text: "Сейчас..." });
-
-    const chatId = ctx.chat?.id.toString();
-    if (!chatId) return;
-    const user = await storage.getUserByTelegramChatId(chatId);
-    if (!user) {
-      await ctx.reply("Сначала зарегистрируйтесь — /start");
-      return;
-    }
-
-    try {
-      const chatHistory = await storage.getChatMessages(user.id, 20);
-      const messages: Array<{ role: "user" | "assistant"; content: string }> = chatHistory
-        .reverse()
-        .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
-      messages.push({ role: "user", content: phrase });
-
-      await storage.createChatMessage({
-        parentId: user.id,
-        role: "user",
-        content: phrase,
-        intent: null,
-        hasAlert: false,
-      });
-
-      const stopTyping = startTypingLoop(ctx);
-      let statusMsgId: number | null = null;
-
-      const onToolCall = async (toolName: string) => {
-        const statusText = TOOL_STATUS_MESSAGES[toolName];
-        if (statusText && !statusMsgId) {
-          try {
-            const sent = await ctx.reply(statusText);
-            statusMsgId = sent.message_id;
-          } catch {}
-        }
-      };
-
-      let result;
-      try {
-        result = await chatWithGrandchild(messages, user.name, user.id, onToolCall);
-      } finally {
-        stopTyping();
-        if (statusMsgId) {
-          try { await ctx.api.deleteMessage(ctx.chat!.id, statusMsgId); } catch {}
-        }
-      }
-
-      await storage.createChatMessage({
-        parentId: user.id,
-        role: "assistant",
-        content: result.reply,
-        intent: result.intent,
-        hasAlert: result.hasAlert,
-      });
-
-      if (result.imageUrl) {
-        try {
-          if (result.reply.length > 1024) {
-            await ctx.reply(result.reply);
-            await ctx.replyWithPhoto(result.imageUrl);
-          } else {
-            await ctx.replyWithPhoto(result.imageUrl, { caption: result.reply });
-          }
-        } catch {
-          await ctx.reply(result.reply);
-        }
-      } else {
-        await ctx.reply(result.reply);
-      }
-    } catch (err: any) {
-      console.error("[telegram] Hint callback error:", err);
-      await ctx.reply("Ой, что-то не получилось. Попробуйте ещё раз.");
-    }
+    await ctx.answerCallbackQuery();
+    await ctx.reply(question);
   });
 
   bot.command("link", async (ctx) => {
@@ -789,14 +717,14 @@ export function startTelegramBot() {
     let userText = ctx.message.text;
     if (userText.startsWith("/")) return;
 
-    const KEYBOARD_MAP: Record<string, string> = {
-      "🌤 Погода": "Какая сегодня погода?",
-      "🍳 Рецепт": "Подскажи вкусный рецепт на ужин",
-      "🧩 Загадка": "Загадай мне загадку",
+    const KEYBOARD_QUESTIONS: Record<string, string> = {
+      "🌤 Погода": "🌤 Какой город интересует? Напишите название, например: Москва, Сочи, Казань",
+      "🍳 Рецепт": "🍳 Что хотите приготовить? Напишите блюдо, например: борщ, шарлотка, блины",
+      "🧩 Загадка": "🧩 Какую загадку хотите? Напишите: лёгкую, сложную, для детей, про природу — или просто «загадку»",
       "❓ Помощь": "__help__",
     };
-    if (KEYBOARD_MAP[userText]) {
-      if (KEYBOARD_MAP[userText] === "__help__") {
+    if (KEYBOARD_QUESTIONS[userText]) {
+      if (KEYBOARD_QUESTIONS[userText] === "__help__") {
         const chatId = ctx.chat.id.toString();
         const user = await storage.getUserByTelegramChatId(chatId);
         if (!user) {
@@ -806,7 +734,8 @@ export function startTelegramBot() {
         await ctx.reply("Вот что я умею — нажмите любую кнопку:", { reply_markup: getHintsKeyboard() });
         return;
       }
-      userText = KEYBOARD_MAP[userText];
+      await ctx.reply(KEYBOARD_QUESTIONS[userText]);
+      return;
     }
 
     const chatId = ctx.chat.id.toString();
