@@ -95,6 +95,7 @@ export function startTelegramBot() {
   bot = new Bot(token);
 
   bot.command("start", async (ctx) => {
+    console.log("[telegram] /start command received from chat:", ctx.chat.id);
     const chatId = ctx.chat.id.toString();
     const existing = await storage.getUserByTelegramChatId(chatId);
 
@@ -124,6 +125,7 @@ export function startTelegramBot() {
   });
 
   bot.command("help", async (ctx) => {
+    console.log("[telegram] /help command received from chat:", ctx.chat.id);
     const helpText =
 `Вот что я умею! Просто напишите мне:
 
@@ -971,8 +973,9 @@ export function startTelegramBot() {
   });
 
   bot.start({
+    drop_pending_updates: true,
     onStart: () => {
-      console.log("[telegram] Bot started successfully");
+      console.log("[telegram] Bot started successfully (pending updates dropped)");
     },
   });
 
