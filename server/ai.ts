@@ -99,7 +99,7 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 
 Когда вызываешь search_recipe — передай КОНКРЕТНОЕ название блюда. Не передавай общие фразы.
 ВАЖНО: когда получишь результат от search_recipe — передай рецепт ЦЕЛИКОМ. Перечисли ВСЕ ингредиенты с количествами и ВСЕ шаги приготовления. НЕ сокращай, НЕ пересказывай кратко. Если есть рейтинг — упомяни его. Скажи что-то тёплое: «Вот нашёл отличный рецепт с хорошими отзывами!»
-В конце результата будут ссылки — передай их ТОЧНО КАК ЕСТЬ, ничего не меняй в URL. Не убирай ссылки, не сокращай их — копируй как есть. Скажи: «А вот тут подробнее с фотографиями:» перед ссылкой на источник.
+ССЫЛКИ ОБЯЗАТЕЛЬНЫ: В конце результата от search_recipe ВСЕГДА есть ссылки на кулинарные сайты. Ты ОБЯЗАН включить их в свой ответ. Без ссылок ответ считается НЕПОЛНЫМ. Скопируй ссылки ТОЧНО КАК ЕСТЬ — ничего не меняй в URL. Перед ссылками напиши: «Подробнее с фотографиями:» и вставь все ссылки из результата.
 
 КАРТИНКИ И ОТКРЫТКИ (generate_image):
 Когда просят нарисовать открытку, картинку, поздравление, красивую картинку — вызови generate_image. Если просят фото блюда или фоторецепт — тоже вызови generate_image с описанием красивой фотографии этого блюда. Опиши на английском ЧТО именно нарисовать (это важно — описание на английском для качества). Например: «A warm greeting card with spring flowers, sunlight, soft watercolor style, no text». После генерации скажи что-то тёплое, например: «Вот, нарисовал для тебя! Нравится?»
@@ -449,8 +449,6 @@ async function extractMemoryFacts(
 function detectRequiredTool(message: string): string | null {
   const lower = message.toLowerCase();
 
-  const explicitRecipeWords = ["рецепт", "приготов", "готовить", "испечь", "сварить", "запечь", "пожарить", "потушить", "как сделать торт", "как сделать пирог", "как печь", "фоторецепт"];
-  if (explicitRecipeWords.some(w => lower.includes(w))) return "search_recipe";
 
   const weatherWords = ["погод", "температур", "градус", "на улице", "дождь будет", "снег будет", "прогноз"];
   if (weatherWords.some(w => lower.includes(w))) return "get_weather";
@@ -536,11 +534,12 @@ ${memoryLines}
   let iterations = 0;
   const MAX_TOOL_ITERATIONS = 3;
   let forceToolUsed = false;
+  let recipeToolResult: string | null = null;
 
   while (iterations < MAX_TOOL_ITERATIONS) {
     iterations++;
 
-    const needsLongResponse = forceToolUsed && (requiredTool === "search_recipe" || requiredTool === "search_web");
+    const needsLongResponse = forceToolUsed && (requiredTool === "search_recipe" || requiredTool === "search_web" || recipeToolResult !== null);
     response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: apiMessages,
@@ -582,6 +581,10 @@ ${memoryLines}
         imageUrl = toolResult.imageUrl;
       }
 
+      if (fnName === "search_recipe") {
+        recipeToolResult = toolResult.text;
+      }
+
       apiMessages.push({
         role: "tool",
         tool_call_id: toolCall.id,
@@ -591,7 +594,14 @@ ${memoryLines}
   }
 
   const rawReply = response.choices[0]?.message?.content || "Ой, что-то я задумался. Повтори, пожалуйста.";
-  const reply = stripMarkdown(rawReply);
+  let reply = stripMarkdown(rawReply);
+
+  if (recipeToolResult && !reply.includes("http")) {
+    const urlMatches = recipeToolResult.match(/https?:\/\/[^\s]+/g);
+    if (urlMatches && urlMatches.length > 0) {
+      reply += "\n\nПодробнее с фотографиями:\n" + urlMatches.join("\n");
+    }
+  }
   console.log(`[ai] Reply length: ${reply.length} chars, first 100: ${reply.slice(0, 100)}`);
   const hasAlert = reply.includes("[ALERT]");
 

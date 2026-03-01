@@ -471,7 +471,7 @@ async function fallbackRecipeGPT(dish: string): Promise<string> {
   }
 
   const encodedDish = encodeURIComponent(dish);
-  result += `\n\nЕщё рецепты «${dish}»:\nhttps://www.povarenok.ru/recipes/search/?search=${encodedDish}\nhttps://eda.ru/recepty?q=${encodedDish}`;
+  result += `\n\n=== ССЫЛКИ (ОБЯЗАТЕЛЬНО ПЕРЕДАЙ В ОТВЕТЕ) ===\nhttps://www.povarenok.ru/recipes/search/?search=${encodedDish}\nhttps://eda.ru/recepty?q=${encodedDish}`;
 
   return result;
 }
