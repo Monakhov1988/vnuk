@@ -27,6 +27,82 @@ function setCache<T>(key: string, data: T, ttlMs: number): void {
 const WEATHER_TTL = 30 * 60 * 1000;
 const SEARCH_TTL = 15 * 60 * 1000;
 
+const MAX_SEARCH_PER_HOUR = 30;
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
+
+const userSearchCounts = new Map<number, { count: number; windowStart: number }>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of userSearchCounts) {
+    if (now - entry.windowStart > RATE_LIMIT_WINDOW) {
+      userSearchCounts.delete(key);
+    }
+  }
+  for (const [key, entry] of cache) {
+    if (now > entry.expiresAt) {
+      cache.delete(key);
+    }
+  }
+}, 10 * 60 * 1000);
+
+export function checkSearchRateLimit(userId: number): { allowed: boolean; message?: string } {
+  const now = Date.now();
+  const entry = userSearchCounts.get(userId);
+
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW) {
+    userSearchCounts.set(userId, { count: 1, windowStart: now });
+    return { allowed: true };
+  }
+
+  if (entry.count >= MAX_SEARCH_PER_HOUR) {
+    console.log(`[tools] RATE LIMIT: user ${userId} hit ${MAX_SEARCH_PER_HOUR} searches/hour`);
+    return { allowed: false, message: "Я уже много искал за последний час. Давайте немного подождём и попробуем позже!" };
+  }
+
+  entry.count++;
+  return { allowed: true };
+}
+
+const INJECTION_PATTERNS = [
+  /ignore\s+(all\s+)?previous\s+instructions/i,
+  /forget\s+(all\s+)?previous\s+instructions/i,
+  /disregard\s+(all\s+)?(previous|prior|above)/i,
+  /забудь\s+(все\s+)?предыдущие\s+инструкции/i,
+  /игнорируй\s+(все\s+)?предыдущие/i,
+  /новая\s+роль/i,
+  /ты\s+теперь\s+не\s+/i,
+  /\[INST\]/i,
+  /\[\/INST\]/i,
+  /<\|im_start\|>/i,
+  /<\|im_end\|>/i,
+  /<\|system\|>/i,
+  /<<SYS>>/i,
+  /system\s*:\s*you\s+are/i,
+  /SYSTEM\s*PROMPT/i,
+  /\[ALERT\]/,
+];
+
+const MAX_WEB_CONTENT_LENGTH = 3000;
+
+export function sanitizeWebContent(text: string): string {
+  let cleaned = text;
+
+  for (const pattern of INJECTION_PATTERNS) {
+    cleaned = cleaned.replace(new RegExp(pattern.source, pattern.flags + "g"), "[removed]");
+  }
+
+  cleaned = cleaned.replace(/(?:javascript|data|vbscript):/gi, "[blocked-url]:");
+  cleaned = cleaned.replace(/<script[\s\S]*?<\/script>/gi, "");
+  cleaned = cleaned.replace(/<style[\s\S]*?<\/style>/gi, "");
+
+  if (cleaned.length > MAX_WEB_CONTENT_LENGTH) {
+    cleaned = cleaned.slice(0, MAX_WEB_CONTENT_LENGTH) + "\n...[текст обрезан]";
+  }
+
+  return cleaned;
+}
+
 const CITY_COORDS: Record<string, { lat: number; lon: number; name: string }> = {
   "москва": { lat: 55.7558, lon: 37.6173, name: "Москва" },
   "санкт-петербург": { lat: 59.9343, lon: 30.3351, name: "Санкт-Петербург" },
@@ -232,16 +308,22 @@ async function fetchPerplexity(query: string): Promise<string> {
   return result;
 }
 
-export async function searchWeb(query: string): Promise<string> {
+export async function searchWeb(query: string, userId?: number): Promise<string> {
   const cacheKey = `search:${query.toLowerCase()}`;
   const cached = getCached<string>(cacheKey);
   if (cached) return cached;
+
+  if (userId) {
+    const rateCheck = checkSearchRateLimit(userId);
+    if (!rateCheck.allowed) return rateCheck.message!;
+  }
 
   let result: string | null = null;
 
   if (process.env.PERPLEXITY_API_KEY) {
     try {
-      result = await fetchPerplexity(query);
+      const raw = await fetchPerplexity(query);
+      result = sanitizeWebContent(raw);
       console.log(`[tools] Search via Perplexity for "${query.slice(0, 50)}"`);
     } catch (err: any) {
       console.error("[tools] Perplexity failed, falling back:", err.message);
@@ -279,7 +361,8 @@ export async function searchWeb(query: string): Promise<string> {
           temperature: 0.3,
         });
 
-        result = response.choices[0]?.message?.content || "Не удалось разобрать результаты.";
+        const rawResult = response.choices[0]?.message?.content || "Не удалось разобрать результаты.";
+        result = sanitizeWebContent(rawResult);
 
         const usage = response.usage;
         if (usage) {
@@ -305,7 +388,8 @@ export async function searchWeb(query: string): Promise<string> {
           temperature: 0.3,
         });
 
-        result = response.choices[0]?.message?.content || "Не удалось найти информацию.";
+        const rawFallback = response.choices[0]?.message?.content || "Не удалось найти информацию.";
+        result = sanitizeWebContent(rawFallback);
 
         const usage = response.usage;
         if (usage) {
