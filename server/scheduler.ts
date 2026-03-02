@@ -31,8 +31,14 @@ async function checkReminders() {
         continue;
       }
 
+      if (reminder.status === "confirmed" && isSameDay(reminder.lastConfirmed, dateStr)) {
+        continue;
+      }
+
       const parent = await storage.getUser(reminder.parentId);
       if (!parent?.telegramChatId) continue;
+
+      await storage.updateReminderLastTriggered(reminder.id, new Date());
 
       const keyboard = new InlineKeyboard()
         .text(`Принял(а) ✅`, `confirm_med_${reminder.id}`);
@@ -42,8 +48,6 @@ async function checkReminders() {
         `Время принять ${reminder.medicineName}! 💊\n\nНажмите кнопку, когда примете:`,
         { reply_markup: keyboard }
       );
-
-      await storage.updateReminderLastTriggered(reminder.id, new Date());
 
       const children = await storage.getChildrenByParentId(reminder.parentId);
       for (const child of children) {
@@ -133,9 +137,11 @@ async function checkMissedReminders() {
 }
 
 async function resetDailyStatuses() {
-  const { hour, minute } = getMoscowTime();
-  if (hour === 0 && minute === 0) {
-    console.log("[scheduler] Midnight MSK — daily reminder statuses will reset naturally via lastConfirmed check");
+  try {
+    await storage.resetAllReminderStatuses();
+    console.log("[scheduler] Midnight MSK — all reminder statuses reset to pending");
+  } catch (err) {
+    console.error("[scheduler] Error resetting daily statuses:", err);
   }
 }
 
@@ -146,7 +152,7 @@ export function startScheduler() {
     } catch (err) {
       console.error("[scheduler] checkReminders error:", err);
     }
-  });
+  }, { timezone: "Europe/Moscow" });
 
   cron.schedule("* * * * *", async () => {
     try {
@@ -154,9 +160,9 @@ export function startScheduler() {
     } catch (err) {
       console.error("[scheduler] checkMissedReminders error:", err);
     }
-  });
+  }, { timezone: "Europe/Moscow" });
 
-  cron.schedule("0 0 * * *", resetDailyStatuses);
+  cron.schedule("0 0 * * *", resetDailyStatuses, { timezone: "Europe/Moscow" });
 
   console.log("[scheduler] Medication reminder scheduler started (MSK timezone)");
 }

@@ -135,7 +135,7 @@
 - `chatWithGrandchild` — GPT-4o-mini с **function calling** (tools), глубокая персона «Внучок»:
   - Характер: 25-летний внук, студент-медик, гендерно-адаптивный
   - Время суток + дата + месяц: передаётся для контекстных приветствий и сезонных советов
-  - 6 уровней безопасности: анти-инъекция → здоровье → тревога ([ALERT] без дублей) → мошенники → опасность дома (газ/потоп/пожар + [ALERT]) → потерялся ([ALERT])
+  - 6 уровней безопасности: анти-инъекция → здоровье → тревога ([ALERT] без дублей) → мошенники → опасность дома (газ/потоп/пожар + [ALERT]) → потерялся ([ALERT]). Все экстренные ситуации рекомендуют 112 как единый номер. Алерты упоминают «твоего родственника» вместо хардкодированного имени
   - СЕРВЕРНЫЙ ДЕТЕКТОР ОПАСНОСТИ: regex-паттерны detectIntentLocal() проверяют сообщение ДО LLM. Если обнаружен emergency/scam/home_danger/lost — hasAlert=true ГАРАНТИРОВАННО, независимо от маркера [ALERT] в ответе LLM. Алерты создаются для userId ребёнка (не родителя) — видны в дашборде
   - Защита данных: не повторяет карты, коды, пароли. PII-фильтр (stripPII) очищает номера карт, телефонов, паспортов, СНИЛС, ИНН, email из поисковых запросов перед отправкой в API
   - Защита от соц.инженерии: «внучка просит код» → алерт. Никогда не пересказывает личные данные из памяти. Память не сохраняет PII (карты, коды, паспорта)
@@ -149,9 +149,9 @@
   - **Research-lite**: для сложных запросов (>80 символов + маркеры сложности) — декомпозиция на 2-3 подзапроса через GPT-4o-mini, параллельный поиск, объединение результатов. Промежуточные статусы в Telegram через onResearchStatus callback
   - **Retry-логика**: executeToolCallWithRetry — 1 retry через 1 сек для search_web/search_recipe/get_weather (не для generate_image)
   - **Function calling tools:**
-    - `get_weather(city)` — реальная погода через wttr.in (бесплатно, кэш 30 мин)
+    - `get_weather(city)` — реальная погода через Open-Meteo API (бесплатно, кэш 30 мин). Ветер в м/с. Если город не в базе — просит уточнить (не подставляет Москву молча). Город из user_memory (категория home) автоматически подставляется в system prompt
     - `search_web(query, userId?)` — веб-поиск через Perplexity API (sonar) с актуальными данными и источниками. Fallback: DuckDuckGo HTML + GPT-4o-mini → чистый GPT-4o-mini. Дополнительные ссылки (afisha.ru, gosuslugi.ru и т.д.) по категориям запроса. **Защита**: sanitizeWebContent удаляет prompt-injection паттерны и обрезает >3000 символов. checkSearchRateLimit: max 30 запросов/час на пользователя
-    - `search_recipe(dish)` — GPT-4o-mini генерирует рецепт + ссылка Яндекс-поиск с фото. Перед поиском код-уровневый перехват в telegram.ts/routes.ts: если блюдо из RECIPE_CLARIFICATIONS (борщ, суп, пирог и др.) — бот уточняет вариант напрямую без AI. Tool description также запрещает вызов с общими названиями
+    - `search_recipe(dish)` — GPT-4o-mini генерирует рецепт + ссылка Яндекс-поиск с фото. Перед поиском код-уровневый перехват в telegram.ts/routes.ts: если блюдо из RECIPE_CLARIFICATIONS (борщ, суп, пирог и др.) — бот уточняет вариант напрямую без AI (работает и для голосовых сообщений). Tool description также запрещает вызов с общими названиями
 - **TTS (Text-to-Speech)**: основной — gpt-4o-mini-audio-preview (голос coral, формат wav, эмоциональные интонации «заботливого внука»). Fallback — tts-1 (голос alloy, формат opus). STT — whisper-1
     - `generate_image(description)` — генерация открыток/картинок через DALL-E 3 (лимит 10/день на пользователя)
   - Возвращает `imageUrl` для отправки картинок в Telegram и веб-чат
@@ -183,7 +183,7 @@
 - `shared/schema.ts` — модели данных (Drizzle + Zod), enums, insert/select types
 - `server/storage.ts` — IStorage интерфейс + DatabaseStorage реализация
 - `server/routes.ts` — API-маршруты (auth, CRUD, AI, subscriptions, waitlist) + rate limiting (express-rate-limit) + Zod-валидация на всех endpoints
-- `server/scheduler.ts` — проактивные напоминания о лекарствах (node-cron, каждую минуту MSK). Отправка push в Telegram + повторное напоминание через 30 мин + уведомление ребёнку при пропуске
+- `server/scheduler.ts` — проактивные напоминания о лекарствах (node-cron, каждую минуту MSK). Отправка push в Telegram + повторное напоминание через 30 мин + уведомление ребёнку при пропуске. Полночь МСК — сброс всех статусов в pending. Подтверждённые лекарства не дублируют push. lastTriggered обновляется ДО отправки (защита от дублей)
 - `server/ai.ts` — OpenAI интеграция + золотой промпт + regex-классификация + логирование
 - `server/index.ts` — Express + сессии + Vite dev middleware
 - `client/src/pages/` — Landing, AuthPage, Dashboard, PricingPage

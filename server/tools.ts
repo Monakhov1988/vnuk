@@ -177,7 +177,10 @@ export async function getWeather(city: string): Promise<string> {
   if (cached) return cached;
 
   const cityKey = city.toLowerCase().trim();
-  const coords = CITY_COORDS[cityKey] || CITY_COORDS["москва"];
+  const coords = CITY_COORDS[cityKey];
+  if (!coords) {
+    return `Город "${city}" не найден в моей базе. Попробуйте указать ближайший крупный город.`;
+  }
   const cityName = coords.name;
 
   try {
@@ -202,7 +205,8 @@ export async function getWeather(city: string): Promise<string> {
     let result = `Погода в городе ${cityName}:\n`;
     result += `Сейчас: ${Math.round(current.temperature_2m)}°C, ${weatherDesc}. `;
     result += `Ощущается как ${Math.round(current.apparent_temperature)}°C. `;
-    result += `Влажность ${current.relativehumidity_2m}%, ветер ${Math.round(current.windspeed_10m)} км/ч.\n`;
+    const windMs = (current.windspeed_10m / 3.6).toFixed(1);
+    result += `Влажность ${current.relativehumidity_2m}%, ветер ${windMs} м/с.\n`;
 
     if (daily?.temperature_2m_min?.[0] !== undefined) {
       const todayDesc = WMO_WEATHER_RU[daily.weathercode?.[0]] || "";
@@ -441,7 +445,7 @@ export async function searchWeb(query: string, userId?: number): Promise<string>
     if (isCinema) {
       links += "\nhttps://www.afisha.ru/msk/cinema/\nhttps://www.kinopoisk.ru/afisha/";
     } else if (isTheatre) {
-      links += "\nhttps://www.afisha.ru/msk/theatre/\nhttps://www.culture.ru/afisha/teatry";
+      links += "\nhttps://www.afisha.ru/msk/theatre/\nhttps://www.culture.ru/afisha/russia/teatry";
     } else {
       links += "\nhttps://www.afisha.ru/msk/\nhttps://kassir.ru/";
     }
@@ -453,7 +457,7 @@ export async function searchWeb(query: string, userId?: number): Promise<string>
   }
 
   if (isGov) {
-    result += "\n\nПолезные ссылки:\nhttps://www.gosuslugi.ru/\nhttps://pfr.gov.ru/";
+    result += "\n\nПолезные ссылки:\nhttps://www.gosuslugi.ru/\nhttps://sfr.gov.ru/";
   }
 
   setCache(cacheKey, result, SEARCH_TTL);
@@ -472,7 +476,7 @@ export async function searchRecipe(dish: string): Promise<string> {
       messages: [
         {
           role: "system",
-          content: "Ты — кулинарный помощник. Дай подробный пошаговый рецепт блюда на русском языке. Укажи ингредиенты с точными количествами и пошаговую инструкцию. Пиши просто и понятно, как для домашней хозяйки. НЕ используй маркдаун, заголовки (###), буллеты (-), звёздочки (**). Пиши обычным текстом как сообщение в мессенджере. Нумеруй шаги цифрами (1, 2, 3...). Не добавляй ссылки на сайты.",
+          content: "Ты — кулинарный помощник. Дай подробный пошаговый рецепт блюда на русском языке. Укажи ингредиенты с точными количествами и пошаговую инструкцию. Пиши просто и понятно, как для домашней хозяйки. НЕ используй маркдаун, заголовки (###), буллеты (-), звёздочки (**). Пиши обычным текстом как сообщение в мессенджере. Нумеруй шаги цифрами (1, 2, 3...).",
         },
         { role: "user", content: `Рецепт: ${safeDish}` },
       ],

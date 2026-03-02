@@ -70,6 +70,7 @@ export interface IStorage {
 
   getActiveRemindersForTime(hour: number, minute: number): Promise<Reminder[]>;
   updateReminderLastTriggered(id: number, date: Date): Promise<void>;
+  resetAllReminderStatuses(): Promise<void>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -293,6 +294,10 @@ export class DatabaseStorage implements IStorage {
 
   async updateReminderLastTriggered(id: number, date: Date): Promise<void> {
     await db.update(reminders).set({ lastTriggered: date }).where(eq(reminders.id, id));
+  }
+
+  async resetAllReminderStatuses(): Promise<void> {
+    await db.update(reminders).set({ status: "pending" }).where(eq(reminders.isActive, true));
   }
 }
 
