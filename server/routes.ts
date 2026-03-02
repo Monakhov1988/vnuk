@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import crypto from "crypto";
 import { storage } from "./storage";
 import { chatWithGrandchild, recognizeMeter, analyzeIntent } from "./ai";
+import { extractDishFromText, RECIPE_CLARIFICATIONS } from "./recipeUtils";
 import {
   insertReminderSchema,
   insertEventSchema,
@@ -387,45 +388,9 @@ export async function registerRoutes(
       const user = await storage.getUser(userId);
       const parent = user?.linkedParentId ? await storage.getUser(user.linkedParentId) : null;
 
-      const RECIPE_CLARIFICATIONS: Record<string, string> = {
-        "борщ": "А какой борщ хочешь? Классический, украинский, с курицей или вегетарианский? 🍲",
-        "суп": "А какой суп? Куриный, грибной, гороховый, щи, харчо? 🍲",
-        "пирог": "А какой пирог? С яблоками, с мясом, с ягодами, с капустой, с творогом? 🥧",
-        "салат": "А какой салат? Оливье, цезарь, винегрет, овощной, с курицей? 🥗",
-        "каша": "А какая каша? Овсяная, гречневая, рисовая, манная, пшённая? 🥣",
-        "блины": "А какие блины? Тонкие на молоке, дрожжевые, с начинкой, на кефире? 🥞",
-        "пельмени": "А какие пельмени? Классические с мясом, с курицей, домашние, ленивые? 🥟",
-        "вареники": "А какие вареники? С картошкой, с вишней, с творогом, ленивые? 🥟",
-        "котлеты": "А какие котлеты? Из фарша классические, куриные, рыбные, по-киевски? 🍖",
-        "запеканка": "А какая запеканка? Творожная, картофельная, с мясом, макаронная? 🍽",
-        "пирожки": "А какие пирожки? С мясом, с капустой, с картошкой, с яблоками? 🥧",
-        "торт": "А какой торт? Наполеон, медовик, шоколадный, бисквитный, птичье молоко? 🎂",
-        "печенье": "А какое печенье? Овсяное, песочное, шоколадное, с изюмом? 🍪",
-        "оладьи": "А какие оладьи? На кефире, с яблоками, банановые, пышные? 🥞",
-        "плов": "А какой плов? Узбекский классический, с курицей, со свининой, овощной? 🍚",
-      };
-
-      const lastUserMsg = messages[messages.length - 1]?.content?.toLowerCase()?.trim()?.replace(/[?.!,]$/g, "") || "";
-      const dishBase = lastUserMsg.replace(/^рецепт\s+/, "").trim();
-      const DISH_FORMS: Record<string, string> = {
-        "борща": "борщ", "борщу": "борщ", "борщом": "борщ",
-        "супа": "суп", "супу": "суп", "супом": "суп", "супчик": "суп", "супчика": "суп",
-        "пирога": "пирог", "пирогу": "пирог", "пирогом": "пирог",
-        "салата": "салат", "салату": "салат", "салатик": "салат", "салатика": "салат",
-        "каши": "каша", "кашу": "каша", "кашей": "каша", "кашку": "каша",
-        "блинов": "блины", "блинчики": "блины", "блинчиков": "блины",
-        "пельменей": "пельмени", "пельмешки": "пельмени",
-        "вареников": "вареники",
-        "котлет": "котлеты", "котлетки": "котлеты", "котлеток": "котлеты",
-        "запеканки": "запеканка", "запеканку": "запеканка",
-        "пирожков": "пирожки",
-        "торта": "торт", "тортик": "торт", "тортика": "торт",
-        "печенья": "печенье", "печеньки": "печенье",
-        "оладий": "оладьи", "оладушки": "оладьи",
-        "плова": "плов",
-      };
-      const normalizedDish = DISH_FORMS[dishBase] || dishBase;
-      const clarification = RECIPE_CLARIFICATIONS[normalizedDish];
+      const lastUserMsg = messages[messages.length - 1]?.content || "";
+      const extractedDish = extractDishFromText(lastUserMsg);
+      const clarification = extractedDish ? RECIPE_CLARIFICATIONS[extractedDish] : null;
       if (clarification) {
         return res.json({
           reply: clarification,
