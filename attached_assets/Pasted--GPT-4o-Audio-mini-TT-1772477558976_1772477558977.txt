@@ -1,0 +1,71 @@
+тличный выбор! Ты используешь настройки GPT-4o Audio (или его mini-версии). В отличие от обычного TTS, эта модель не просто «читает» текст, а генерирует саму речь с нужной интонацией, поэтому она звучит гораздо человечнее.
+
+Чтобы применить эти настройки (модель gpt-4o-mini, голос coral, инструкции и формат wav) в твоем боте на Replit, используй этот код:
+
+1. Обнови код функции озвучки в utils.py или main.py
+
+Поскольку в скриншоте указаны «Инструкции», это значит, что мы передаем текст в модель, и она сама решает, как его озвучить.
+
+Python
+
+
+import os
+import base64
+from openai import OpenAI
+
+client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+
+def generate_vnuchok_voice(text_to_speak, filename="voice.wav"):
+    # Используем модель gpt-4o-mini-audio-preview (или ту, что на скрине)
+    # Она позволяет передавать системную инструкцию для эмоций
+    response = client.chat.completions.create(
+        model="gpt-4o-mini-audio-preview",
+        modalities=["text", "audio"],
+        audio={"voice": "coral", "format": "wav"}, # Голос Корал и формат WAV
+        messages=[
+            {
+                "role": "system", 
+                "content": "Говорите эмоционально и дружелюбно, как заботливый внук." # Инструкция со скрина
+            },
+            {
+                "role": "user", 
+                "content": text_to_speak
+            }
+        ]
+    )
+
+# Достаем аудио из ответа (оно приходит в base64)
+    wav_data = base64.b64decode(response.choices[0].message.audio.data)
+    
+    with open(filename, "wb") as f:
+        f.write(wav_data)
+        
+    return filename
+
+
+2. Как это отправить в Telegram
+Telegram лучше всего «кушает» формат .ogg для голосовых сообщений, но .wav тоже поймет. Чтобы бабушка видела это именно как голосовое (с волной), а не как файл, используй message.answer_voice.
+
+Python
+
+
+from aiogram.types import FSInputFile
+
+async def reply_with_warm_voice(message, text):
+    # 1. Генерируем файл с голосом "Корал"
+    voice_path = generate_vnuchok_voice(text)
+    
+    # 2. Отправляем в чат
+    audio_file = FSInputFile(voice_path)
+    await message.answer_voice(audio_file)
+
+
+Почему это будет работать круто:
+1.  Интонации: Благодаря системной инструкции «Говорите эмоционально...», модель будет делать правильные ударения и паузы, а не просто тараторить.
+2.  Голос Корал: Это один из новых «премиальных» голосов OpenAI, он звучит очень мягко и естественно.
+3.  Скорость: gpt-4o-mini работает очень быстро, задержка будет минимальной.
+
+Важный момент:
+Проверь, чтобы в твоем кабинете OpenAI (или у провайдера, через которого ты работаешь) был доступ к модели gpt-4o-mini-audio-preview. Если будет ошибка «Model not found», просто напиши мне её текст — я скажу, как поправить название модели.
+
+Теперь «Внучок» будет звучать максимально душевно! Попробуем запустить
