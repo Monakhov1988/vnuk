@@ -701,8 +701,9 @@ export function startTelegramBot() {
       }
 
       try {
-        const voiceBuffer = await textToSpeech(result.reply);
-        await ctx.replyWithVoice(new InputFile(voiceBuffer, "response.ogg"));
+        const ttsResult = await textToSpeech(result.reply);
+        const ext = ttsResult.format === "wav" ? "wav" : "ogg";
+        await ctx.replyWithVoice(new InputFile(ttsResult.buffer, `response.${ext}`));
       } catch (ttsErr) {
         console.error("[telegram] TTS failed, sending text:", ttsErr);
         if (!result.imageUrl) {

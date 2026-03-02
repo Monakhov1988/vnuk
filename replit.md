@@ -147,6 +147,7 @@
     - `get_weather(city)` — реальная погода через wttr.in (бесплатно, кэш 30 мин)
     - `search_web(query)` — веб-поиск через Perplexity API (sonar) с актуальными данными и источниками. Fallback: DuckDuckGo HTML + GPT-4o-mini → чистый GPT-4o-mini. Дополнительные ссылки (afisha.ru, gosuslugi.ru и т.д.) по категориям запроса
     - `search_recipe(dish)` — GPT-4o-mini генерирует рецепт + ссылка Яндекс-поиск с фото. Перед поиском код-уровневый перехват в telegram.ts/routes.ts: если блюдо из RECIPE_CLARIFICATIONS (борщ, суп, пирог и др.) — бот уточняет вариант напрямую без AI. Tool description также запрещает вызов с общими названиями
+- **TTS (Text-to-Speech)**: основной — gpt-4o-mini-audio-preview (голос coral, формат wav, эмоциональные интонации «заботливого внука»). Fallback — tts-1 (голос alloy, формат opus). STT — whisper-1
     - `generate_image(description)` — генерация открыток/картинок через DALL-E 3 (лимит 10/день на пользователя)
   - Возвращает `imageUrl` для отправки картинок в Telegram и веб-чат
 - `recognizeMeter` — Vision API для распознавания фото счетчиков (с логированием)
