@@ -1,5 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { type Server } from "http";
+import rateLimit from "express-rate-limit";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { chatWithGrandchild, recognizeMeter, analyzeIntent } from "./ai";
 import {
@@ -11,6 +13,29 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
+
+function generateLinkCode(): string {
+  return crypto.randomBytes(3).toString("hex").toUpperCase();
+}
+
+function validateBody<T>(schema: z.ZodSchema<T>, req: Request, res: Response): T | null {
+  const result = schema.safeParse(req.body);
+  if (!result.success) {
+    const msg = result.error.errors.map(e => e.message).join("; ");
+    res.status(400).json({ message: `Ошибка валидации: ${msg}` });
+    return null;
+  }
+  return result.data;
+}
+
+function parseIdParam(req: Request, res: Response): number | null {
+  const id = parseInt(req.params.id as string);
+  if (isNaN(id) || id <= 0) {
+    res.status(400).json({ message: "Некорректный ID" });
+    return null;
+  }
+  return id;
+}
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
@@ -30,17 +55,48 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+  // ========== RATE LIMITERS ==========
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { message: "Слишком много попыток входа. Подождите 15 минут." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 3,
+    message: { message: "Слишком много регистраций. Подождите час." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  const linkLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { message: "Слишком много попыток привязки. Подождите 15 минут." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
   // ========== AUTH ==========
   const registerSchema = z.object({
-    name: z.string().min(1),
-    email: z.string().email(),
-    password: z.string().min(4),
+    name: z.string().min(1, "Имя обязательно"),
+    email: z.string().email("Некорректный email"),
+    password: z.string().min(4, "Пароль минимум 4 символа"),
     role: z.enum(["parent", "child"]),
   });
 
-  app.post("/api/auth/register", async (req, res) => {
+  const loginSchema = z.object({
+    email: z.string().email("Некорректный email"),
+    password: z.string().min(1, "Введите пароль"),
+  });
+
+  app.post("/api/auth/register", registerLimiter, async (req, res) => {
     try {
-      const data = registerSchema.parse(req.body);
+      const data = validateBody(registerSchema, req, res);
+      if (!data) return;
       const existing = await storage.getUserByEmail(data.email);
       if (existing) {
         return res.status(400).json({ message: "Пользователь с таким email уже существует" });
@@ -49,7 +105,7 @@ export async function registerRoutes(
       const user = await storage.createUser({ ...data, password: hashedPassword });
       let linkCode: string | undefined;
       if (user.role === "parent") {
-        linkCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        linkCode = generateLinkCode();
         await storage.updateUserLinkCode(user.id, linkCode);
       }
       req.session.userId = user.id;
@@ -62,14 +118,15 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", loginLimiter, async (req, res) => {
     try {
-      const { email, password } = req.body;
-      const user = await storage.getUserByEmail(email);
+      const data = validateBody(loginSchema, req, res);
+      if (!data) return;
+      const user = await storage.getUserByEmail(data.email);
       if (!user) {
         return res.status(401).json({ message: "Неверный email или пароль" });
       }
-      const valid = await bcrypt.compare(password, user.password);
+      const valid = await bcrypt.compare(data.password, user.password);
       if (!valid) {
         return res.status(401).json({ message: "Неверный email или пароль" });
       }
@@ -103,13 +160,21 @@ export async function registerRoutes(
   });
 
   // ========== LINK PARENT ==========
-  app.post("/api/link-parent", requireAuth, async (req, res) => {
+  const linkSchema = z.object({
+    linkCode: z.string().min(4).max(8),
+  });
+
+  app.post("/api/link-parent", requireAuth, linkLimiter, async (req, res) => {
     try {
-      const { linkCode } = req.body;
+      const data = validateBody(linkSchema, req, res);
+      if (!data) return;
       const childId = req.session.userId!;
-      const parent = await storage.getUserByLinkCode(linkCode);
+      const parent = await storage.getUserByLinkCode(data.linkCode.trim().toUpperCase());
       if (!parent) {
         return res.status(404).json({ message: "Код не найден. Проверьте и попробуйте снова." });
+      }
+      if (parent.linkCodeExpiresAt && new Date(parent.linkCodeExpiresAt) < new Date()) {
+        return res.status(400).json({ message: "Код истёк. Попросите родителя сгенерировать новый код." });
       }
       await storage.linkParent(childId, parent.id);
       return res.json({ parentId: parent.id, parentName: parent.name });
@@ -148,17 +213,23 @@ export async function registerRoutes(
     }
   });
 
+  const reminderStatusSchema = z.object({
+    status: z.enum(["confirmed", "missed", "pending"]),
+  });
+
   app.patch("/api/reminders/:id/status", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id as string);
+      const id = parseIdParam(req, res);
+      if (id === null) return;
+      const data = validateBody(reminderStatusSchema, req, res);
+      if (!data) return;
       const userId = req.session.userId!;
       const parentId = await resolveParentId(userId);
       const reminder = await storage.getReminder(id);
       if (!reminder || (reminder.userId !== userId && reminder.parentId !== parentId)) {
         return res.status(403).json({ message: "Нет доступа к этому напоминанию" });
       }
-      const { status } = req.body;
-      const updated = await storage.updateReminderStatus(id, status);
+      const updated = await storage.updateReminderStatus(id, data.status);
       return res.json(updated);
     } catch (e: any) {
       return res.status(400).json({ message: e.message });
@@ -166,7 +237,8 @@ export async function registerRoutes(
   });
 
   app.delete("/api/reminders/:id", requireAuth, async (req, res) => {
-    const id = parseInt(req.params.id as string);
+    const id = parseIdParam(req, res);
+    if (id === null) return;
     const userId = req.session.userId!;
     const parentId = await resolveParentId(userId);
     const reminder = await storage.getReminder(id);
@@ -198,7 +270,8 @@ export async function registerRoutes(
   });
 
   app.patch("/api/events/:id/read", requireAuth, async (req, res) => {
-    const id = parseInt(req.params.id as string);
+    const id = parseIdParam(req, res);
+    if (id === null) return;
     const userId = req.session.userId!;
     const event = await storage.getEvent(id);
     if (!event || event.userId !== userId) {
@@ -511,16 +584,18 @@ export async function registerRoutes(
     return res.json(sub || null);
   });
 
+  const subscriptionSchema = z.object({
+    plan: z.enum(["basic", "standard", "premium"]),
+  });
+
   app.post("/api/subscription", requireAuth, async (req, res) => {
     try {
+      const data = validateBody(subscriptionSchema, req, res);
+      if (!data) return;
       const userId = req.session.userId!;
-      const { plan } = req.body;
-      if (!["basic", "standard", "premium"].includes(plan)) {
-        return res.status(400).json({ message: "Неверный тариф" });
-      }
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
-      const sub = await storage.createSubscription({ userId, plan, status: "active", expiresAt });
+      const sub = await storage.createSubscription({ userId, plan: data.plan, status: "active", expiresAt });
       return res.json(sub);
     } catch (e: any) {
       return res.status(400).json({ message: e.message });
@@ -528,11 +603,15 @@ export async function registerRoutes(
   });
 
   // ========== WAITLIST ==========
+  const waitlistSchema = z.object({
+    email: z.string().email("Некорректный email"),
+  });
+
   app.post("/api/waitlist", async (req, res) => {
     try {
-      const { email } = req.body;
-      if (!email) return res.status(400).json({ message: "Укажите email" });
-      const entry = await storage.addToWaitlist(email);
+      const data = validateBody(waitlistSchema, req, res);
+      if (!data) return;
+      const entry = await storage.addToWaitlist(data.email);
       const count = await storage.getWaitlistCount();
       return res.json({ success: true, position: count });
     } catch (e: any) {

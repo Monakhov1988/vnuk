@@ -20,7 +20,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUserLinkCode(userId: number, code: string): Promise<User>;
+  updateUserLinkCode(userId: number, code: string, expiresAt?: Date): Promise<User>;
   linkParent(childId: number, parentId: number): Promise<void>;
   getLinkedParent(childId: number): Promise<User | undefined>;
   getUserByLinkCode(code: string): Promise<User | undefined>;
@@ -67,6 +67,9 @@ export interface IStorage {
   createUserMemory(mem: InsertUserMemory): Promise<UserMemory>;
   deleteUserMemory(id: number): Promise<void>;
   findUserMemoryByFact(parentId: number, fact: string): Promise<UserMemory | undefined>;
+
+  getActiveRemindersForTime(hour: number, minute: number): Promise<Reminder[]>;
+  updateReminderLastTriggered(id: number, date: Date): Promise<void>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -88,8 +91,9 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserLinkCode(userId: number, code: string): Promise<User> {
-    const [user] = await db.update(users).set({ linkCode: code }).where(eq(users.id, userId)).returning();
+  async updateUserLinkCode(userId: number, code: string, expiresAt?: Date): Promise<User> {
+    const expires = expiresAt || new Date(Date.now() + 72 * 60 * 60 * 1000);
+    const [user] = await db.update(users).set({ linkCode: code, linkCodeExpiresAt: expires }).where(eq(users.id, userId)).returning();
     return user;
   }
 
@@ -141,7 +145,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateReminderStatus(id: number, status: "pending" | "confirmed" | "missed"): Promise<Reminder> {
-    const [r] = await db.update(reminders).set({ status }).where(eq(reminders.id, id)).returning();
+    const updates: any = { status };
+    if (status === "confirmed") {
+      updates.lastConfirmed = new Date();
+    }
+    const [r] = await db.update(reminders).set(updates).where(eq(reminders.id, id)).returning();
     return r;
   }
 
@@ -271,6 +279,20 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(userMemory.parentId, parentId), eq(userMemory.fact, fact)))
       .limit(1);
     return m;
+  }
+
+  async getActiveRemindersForTime(hour: number, minute: number): Promise<Reminder[]> {
+    return db.select().from(reminders).where(
+      and(
+        eq(reminders.isActive, true),
+        eq(reminders.timeHour, hour),
+        eq(reminders.timeMinute, minute),
+      )
+    );
+  }
+
+  async updateReminderLastTriggered(id: number, date: Date): Promise<void> {
+    await db.update(reminders).set({ lastTriggered: date }).where(eq(reminders.id, id));
   }
 }
 

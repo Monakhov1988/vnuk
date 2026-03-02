@@ -5,7 +5,7 @@ import { chatWithGrandchild, recognizeMeter } from "./ai";
 import { speechToText, textToSpeech } from "./voice";
 import bcrypt from "bcrypt";
 
-let bot: Bot | null = null;
+export let bot: Bot | null = null;
 const pendingRegistration = new Map<string, boolean>();
 const pendingLink = new Map<string, boolean>();
 
@@ -70,7 +70,7 @@ async function registerUserFromTelegram(chatId: string, name: string): Promise<s
     role: "parent",
   });
 
-  const linkCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const linkCode = crypto.randomBytes(3).toString("hex").toUpperCase();
   await storage.updateUserLinkCode(user.id, linkCode);
   await storage.updateUserTelegramChatId(user.id, chatId);
 
@@ -312,6 +312,11 @@ export function startTelegramBot() {
     const parent = await storage.getUserByLinkCode(code);
     if (!parent) {
       await ctx.reply(`Код не найден. Проверьте и попробуйте снова.\nКод можно посмотреть в личном кабинете на сайте.`);
+      return;
+    }
+
+    if (parent.linkCodeExpiresAt && new Date(parent.linkCodeExpiresAt) < new Date()) {
+      await ctx.reply(`Код истёк. Попросите родственника сгенерировать новый код в личном кабинете.`);
       return;
     }
 
@@ -802,6 +807,10 @@ export function startTelegramBot() {
         const parent = await storage.getUserByLinkCode(code);
         if (!parent) {
           await ctx.reply(`Код не найден. Проверьте и попробуйте снова — нажмите /start`);
+          return;
+        }
+        if (parent.linkCodeExpiresAt && new Date(parent.linkCodeExpiresAt) < new Date()) {
+          await ctx.reply(`Код истёк. Попросите родственника сгенерировать новый код в личном кабинете.`);
           return;
         }
         if (parent.telegramChatId) {

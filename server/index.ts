@@ -5,9 +5,11 @@ import crypto from "crypto";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { startTelegramBot, stopTelegramBot } from "./telegram";
+import { startScheduler } from "./scheduler";
 import { createServer } from "http";
 
 const app = express();
+app.set("trust proxy", 1);
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -119,6 +121,7 @@ app.use((req, res, next) => {
     () => {
       log(`serving on port ${port}`);
       startTelegramBot();
+      startScheduler();
     },
   );
 

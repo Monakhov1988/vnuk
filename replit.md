@@ -167,7 +167,7 @@
 
 ### База данных (PostgreSQL + Drizzle ORM)
 Таблицы с FK references и индексами:
-- `users` — роли parent/child, linkCode для привязки
+- `users` — роли parent/child, linkCode (crypto-safe, TTL 72ч) + linkCodeExpiresAt для привязки
 - `subscriptions` — тарифы (basic/standard/premium), статус, срок
 - `reminders` — напоминания о лекарствах
 - `events` — лента событий (чек-ины, алерты, ЖКХ, мемуары) [FK on parentId]
@@ -182,7 +182,8 @@
 ### Ключевые файлы
 - `shared/schema.ts` — модели данных (Drizzle + Zod), enums, insert/select types
 - `server/storage.ts` — IStorage интерфейс + DatabaseStorage реализация
-- `server/routes.ts` — API-маршруты (auth, CRUD, AI, subscriptions, waitlist)
+- `server/routes.ts` — API-маршруты (auth, CRUD, AI, subscriptions, waitlist) + rate limiting (express-rate-limit) + Zod-валидация на всех endpoints
+- `server/scheduler.ts` — проактивные напоминания о лекарствах (node-cron, каждую минуту MSK). Отправка push в Telegram + повторное напоминание через 30 мин + уведомление ребёнку при пропуске
 - `server/ai.ts` — OpenAI интеграция + золотой промпт + regex-классификация + логирование
 - `server/index.ts` — Express + сессии + Vite dev middleware
 - `client/src/pages/` — Landing, AuthPage, Dashboard, PricingPage
@@ -199,6 +200,21 @@
 - `.glass-panel` утилитарный класс для стеклянных карточек
 - CSS variables в `client/src/index.css`
 
+## Безопасность API
+- **Rate limiting** (express-rate-limit):
+  - `/api/auth/login`: max 5 попыток / 15 мин
+  - `/api/auth/register`: max 3 регистрации / час
+  - `/api/link-parent`: max 10 попыток / 15 мин
+- **Zod-валидация** на всех API endpoints (login, register, link, reminders, subscription, waitlist)
+- **ID parsing**: `parseIdParam()` проверяет isNaN и >0
+
 ## Привязка родителя
-1. Родитель регистрируется → получает linkCode (6-символьный код)
-2. Ребенок вводит код в Dashboard → привязка через `/api/link-parent`
+1. Родитель регистрируется → получает linkCode (crypto.randomBytes, 6 hex символов)
+2. Код действует 72 часа (linkCodeExpiresAt)
+3. Ребенок вводит код в Dashboard → привязка через `/api/link-parent` (проверка expiry)
+
+## Проактивные напоминания (server/scheduler.ts)
+- node-cron каждую минуту проверяет активные reminders по московскому времени
+- При совпадении hour:minute → Telegram push с inline-кнопкой «Принял(а) ✅»
+- lastTriggered предотвращает повторную отправку в тот же день
+- Через 30 мин без подтверждения → повторное напоминание родителю + warning-событие для ребёнка + Telegram-уведомление ребёнку
