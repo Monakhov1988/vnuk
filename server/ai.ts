@@ -363,12 +363,13 @@ async function executeToolCallWithRetry(
   }
 }
 
-function getMoscowTime(): { hours: number; timeOfDay: string } {
+function getMoscowTime(): { hours: number; minutes: number; timeOfDay: string } {
   const now = new Date();
   const moscowOffset = 3 * 60;
   const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
   const moscowMinutes = (utcMinutes + moscowOffset) % (24 * 60);
   const hours = Math.floor(moscowMinutes / 60);
+  const minutes = moscowMinutes % 60;
 
   let timeOfDay: string;
   if (hours >= 5 && hours < 12) {
@@ -583,8 +584,8 @@ export async function chatWithGrandchild(
   onToolCall?: (toolName: string) => void,
   onResearchStatus?: (status: string) => void
 ): Promise<{ reply: string; hasAlert: boolean; intent: string; imageUrl?: string }> {
-  const { hours, timeOfDay } = getMoscowTime();
-  const timeStr = `${String(hours).padStart(2, "0")}:00`;
+  const { hours, minutes, timeOfDay } = getMoscowTime();
+  const timeStr = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 
   const monthNames = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"];
   const now = new Date();
@@ -593,7 +594,7 @@ export async function chatWithGrandchild(
   const currentDay = moscowDate.getUTCDate();
 
   let systemMessage = SYSTEM_PROMPT;
-  systemMessage += `\n\nСейчас ${timeOfDay}, время по Москве: ${timeStr}. Сегодня ${currentDay} ${currentMonth}.`;
+  systemMessage += `\n\nСейчас ${timeOfDay}, время по Москве: ${timeStr}. Сегодня ${currentDay} ${currentMonth} ${moscowDate.getUTCFullYear()} года.`;
   if (parentName) {
     systemMessage += `\nИмя собеседника: ${parentName}. Обращайся к ней/нему по имени или ласково.`;
   }
