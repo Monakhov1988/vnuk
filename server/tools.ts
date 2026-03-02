@@ -103,6 +103,26 @@ export function sanitizeWebContent(text: string): string {
   return cleaned;
 }
 
+export function stripPII(text: string): string {
+  let cleaned = text;
+
+  cleaned = cleaned.replace(/\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g, "[номер карты]");
+
+  cleaned = cleaned.replace(/(?:\+7|8)[\s(-]*\d{3}[\s)-]*\d{3}[\s-]*\d{2}[\s-]*\d{2}/g, "[телефон]");
+
+  cleaned = cleaned.replace(/(?:паспорт|серия)[:\s]*\d{4}[\s-]*\d{6}\b/gi, "[паспорт]");
+  cleaned = cleaned.replace(/\b\d{4}\s+\d{6}\b/g, "[паспорт]");
+
+  cleaned = cleaned.replace(/\b\d{3}-\d{3}-\d{3}\s*\d{2}\b/g, "[СНИЛС]");
+
+  cleaned = cleaned.replace(/(?:инн|ИНН)[:\s]*\d{10,12}\b/gi, "[ИНН]");
+  cleaned = cleaned.replace(/\b\d{12}\b/g, "[ИНН]");
+
+  cleaned = cleaned.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[email]");
+
+  return cleaned;
+}
+
 const CITY_COORDS: Record<string, { lat: number; lon: number; name: string }> = {
   "москва": { lat: 55.7558, lon: 37.6173, name: "Москва" },
   "санкт-петербург": { lat: 59.9343, lon: 30.3351, name: "Санкт-Петербург" },
@@ -309,7 +329,8 @@ async function fetchPerplexity(query: string): Promise<string> {
 }
 
 export async function searchWeb(query: string, userId?: number): Promise<string> {
-  const cacheKey = `search:${query.toLowerCase()}`;
+  const safeQuery = stripPII(query);
+  const cacheKey = `search:${safeQuery.toLowerCase()}`;
   const cached = getCached<string>(cacheKey);
   if (cached) return cached;
 
@@ -322,7 +343,7 @@ export async function searchWeb(query: string, userId?: number): Promise<string>
 
   if (process.env.PERPLEXITY_API_KEY) {
     try {
-      const raw = await fetchPerplexity(query);
+      const raw = await fetchPerplexity(safeQuery);
       result = sanitizeWebContent(raw);
       console.log(`[tools] Search via Perplexity for "${query.slice(0, 50)}"`);
     } catch (err: any) {
@@ -335,7 +356,7 @@ export async function searchWeb(query: string, userId?: number): Promise<string>
     let usedRealSearch = false;
 
     try {
-      searchResults = await fetchDuckDuckGo(query);
+      searchResults = await fetchDuckDuckGo(safeQuery);
       usedRealSearch = searchResults.length > 0;
       console.log(`[tools] DuckDuckGo: ${searchResults.length} results for "${query.slice(0, 50)}"`);
     } catch (err: any) {
@@ -355,7 +376,7 @@ export async function searchWeb(query: string, userId?: number): Promise<string>
               role: "system",
               content: `Ты помогаешь пожилому человеку. Вот реальные результаты поиска по его запросу. Перескажи их тепло, понятно, по-русски. Назови конкретные названия (фильмы, спектакли, передачи, события). Не выдумывай ничего сверх того что есть в результатах. Если в результатах есть даты, расписание — назови их. Пиши простым текстом без маркдауна. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
             },
-            { role: "user", content: `Запрос: ${query}\n\nРезультаты поиска:\n${searchContext}` },
+            { role: "user", content: `Запрос: ${safeQuery}\n\nРезультаты поиска:\n${searchContext}` },
           ],
           max_tokens: 600,
           temperature: 0.3,
@@ -382,7 +403,7 @@ export async function searchWeb(query: string, userId?: number): Promise<string>
               role: "system",
               content: `Ты — помощник для поиска информации. Отвечай кратко, по-русски. Если спрашивают про кино, театр, сериалы — назови конкретные примеры фильмов/спектаклей которые скорее всего идут сейчас (недавние российские и мировые премьеры). Если не уверен в точности — честно скажи "точное расписание лучше проверить на сайте". Если спрашивают про телепрограмму — назови популярные передачи каналов. Если про праздники — используй дату. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
             },
-            { role: "user", content: query },
+            { role: "user", content: safeQuery },
           ],
           max_tokens: 500,
           temperature: 0.3,
@@ -440,7 +461,8 @@ export async function searchWeb(query: string, userId?: number): Promise<string>
 }
 
 export async function searchRecipe(dish: string): Promise<string> {
-  const cacheKey = `recipe:${dish.toLowerCase()}`;
+  const safeDish = stripPII(dish);
+  const cacheKey = `recipe:${safeDish.toLowerCase()}`;
   const cached = getCached<string>(cacheKey);
   if (cached) return cached;
 
@@ -452,7 +474,7 @@ export async function searchRecipe(dish: string): Promise<string> {
           role: "system",
           content: "Ты — кулинарный помощник. Дай подробный пошаговый рецепт блюда на русском языке. Укажи ингредиенты с точными количествами и пошаговую инструкцию. Пиши просто и понятно, как для домашней хозяйки. НЕ используй маркдаун, заголовки (###), буллеты (-), звёздочки (**). Пиши обычным текстом как сообщение в мессенджере. Нумеруй шаги цифрами (1, 2, 3...). Не добавляй ссылки на сайты.",
         },
-        { role: "user", content: `Рецепт: ${dish}` },
+        { role: "user", content: `Рецепт: ${safeDish}` },
       ],
       max_tokens: 800,
       temperature: 0.5,
@@ -471,7 +493,7 @@ export async function searchRecipe(dish: string): Promise<string> {
       });
     }
 
-    const encodedDish = encodeURIComponent(dish + " рецепт с фото");
+    const encodedDish = encodeURIComponent(safeDish + " рецепт с фото");
     result += `\n\n=== ССЫЛКИ (ОБЯЗАТЕЛЬНО ПЕРЕДАЙ В ОТВЕТЕ) ===\nПодробнее с фотографиями: https://yandex.ru/search/?text=${encodedDish}`;
 
     setCache(cacheKey, result, SEARCH_TTL);

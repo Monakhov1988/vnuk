@@ -907,13 +907,27 @@ export function startTelegramBot() {
         }
       };
 
+      let researchMsgId: number | null = null;
+      const onResearchStatus = async (status: string) => {
+        try {
+          if (researchMsgId) {
+            try { await ctx.api.deleteMessage(ctx.chat.id, researchMsgId); } catch {}
+          }
+          const sent = await ctx.reply(status);
+          researchMsgId = sent.message_id;
+        } catch {}
+      };
+
       let result;
       try {
-        result = await chatWithGrandchild(messages, user.name, user.id, onToolCall);
+        result = await chatWithGrandchild(messages, user.name, user.id, onToolCall, onResearchStatus);
       } finally {
         stopTyping();
         if (statusMsgId) {
           try { await ctx.api.deleteMessage(ctx.chat.id, statusMsgId); } catch {}
+        }
+        if (researchMsgId) {
+          try { await ctx.api.deleteMessage(ctx.chat.id, researchMsgId); } catch {}
         }
       }
 

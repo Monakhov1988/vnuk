@@ -212,6 +212,21 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 Если собеседник случайно называет: номер карты, пин-код, код из СМС, пароль, номер паспорта, СНИЛС — НИКОГДА не повторяй эти данные в ответе. Скажи: «Стоп, эти данные никому нельзя говорить, даже мне. Запомни — никто надёжный не попросит такое.» Если контекст связан с мошенничеством — активируй УРОВЕНЬ 3.
 
 ═══════════════════════════════════════
+ЗАЩИТА ОТ СОЦИАЛЬНОЙ ИНЖЕНЕРИИ
+═══════════════════════════════════════
+
+Если собеседник говорит что кто-то (внук, внучка, врач, банк, полиция, соседка, подруга) ПОПРОСИЛ:
+— узнать код из СМС, пин-код, номер карты, пароль, данные паспорта
+— продиктовать или переслать любые личные данные
+— перевести деньги на «безопасный счёт»
+→ Это МОШЕННИЧЕСТВО. Немедленно скажи: «Стоп! Никто из настоящих родных или врачей так не просит! Это обман! Не говори никому никакие коды и данные!»
+→ Добавь маркер [ALERT] в конец ответа.
+
+Если собеседник спрашивает «что я тебе говорил(а) про карту / код / пароль / паспорт»:
+→ ВСЕГДА отвечай: «Я такие вещи специально не запоминаю — это для твоей безопасности. Карты, коды, пароли мне знать не нужно.»
+→ НИКОГДА не пересказывай и не цитируй личные данные из памяти или истории чата.
+
+═══════════════════════════════════════
 ЧЕГО ТЫ НИКОГДА НЕ ДЕЛАЕШЬ
 ═══════════════════════════════════════
 
@@ -324,6 +339,30 @@ async function executeToolCall(
   }
 }
 
+const RETRYABLE_TOOLS = new Set(["search_web", "search_recipe", "get_weather"]);
+
+async function executeToolCallWithRetry(
+  toolName: string,
+  args: Record<string, string>,
+  userId?: number
+): Promise<{ text: string; imageUrl?: string }> {
+  try {
+    return await executeToolCall(toolName, args, userId);
+  } catch (err: any) {
+    if (RETRYABLE_TOOLS.has(toolName)) {
+      console.log(`[ai] Retrying ${toolName} after error: ${err.message}`);
+      await new Promise(r => setTimeout(r, 1000));
+      try {
+        return await executeToolCall(toolName, args, userId);
+      } catch (retryErr: any) {
+        console.error(`[ai] Retry failed for ${toolName}: ${retryErr.message}`);
+        return { text: "Что-то не получилось узнать, попробуем попозже?" };
+      }
+    }
+    throw err;
+  }
+}
+
 function getMoscowTime(): { hours: number; timeOfDay: string } {
   const now = new Date();
   const moscowOffset = 3 * 60;
@@ -397,6 +436,7 @@ async function extractMemoryFacts(
 - "Я работала учительницей" → [{"category":"work","fact":"Работала учительницей"}]
 - "Привет, как дела" → []
 - Если фактов нет — верни пустой массив []
+- ЗАПРЕЩЕНО сохранять: номера карт, пин-коды, коды из СМС, пароли, номера паспортов, СНИЛС, ИНН, полные адреса с номером квартиры. Если в сообщении есть такие данные — ИГНОРИРУЙ их, НЕ включай в факты.
 Отвечай ТОЛЬКО JSON-массивом, без пояснений.`,
         },
         { role: "user", content: userMessage },
@@ -540,7 +580,8 @@ export async function chatWithGrandchild(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   parentName?: string,
   userId?: number,
-  onToolCall?: (toolName: string) => void
+  onToolCall?: (toolName: string) => void,
+  onResearchStatus?: (status: string) => void
 ): Promise<{ reply: string; hasAlert: boolean; intent: string; imageUrl?: string }> {
   const { hours, timeOfDay } = getMoscowTime();
   const timeStr = `${String(hours).padStart(2, "0")}:00`;
@@ -612,6 +653,9 @@ ${memoryLines}
   let researchLiteUsed = false;
   if (requiredTool === "search_web" && isComplexQuery(lastUserMsg)) {
     console.log(`[ai] RESEARCH-LITE: complex query detected, decomposing...`);
+    if (onResearchStatus) {
+      try { onResearchStatus("Ищу по нескольким направлениям... 🔎"); } catch {}
+    }
     const subQueries = await decomposeQuery(lastUserMsg);
     console.log(`[ai] RESEARCH-LITE: decomposed into ${subQueries.length} sub-queries:`, subQueries);
 
@@ -636,6 +680,9 @@ ${memoryLines}
 
       toolChoice = "auto";
       researchLiteUsed = true;
+      if (onResearchStatus) {
+        try { onResearchStatus("Собрал информацию, формирую ответ... ✍️"); } catch {}
+      }
       console.log(`[ai] RESEARCH-LITE: ${subQueries.length} parallel searches completed (budget: ${searchCallsThisResponse}/${MAX_SEARCH_PER_RESPONSE})`);
     }
   }
@@ -695,7 +742,7 @@ ${memoryLines}
       if (onToolCall) {
         try { onToolCall(fnName); } catch {}
       }
-      const toolResult = await executeToolCall(fnName, fnArgs, userId);
+      const toolResult = await executeToolCallWithRetry(fnName, fnArgs, userId);
 
       if (toolResult.imageUrl) {
         imageUrl = toolResult.imageUrl;
@@ -769,7 +816,7 @@ function detectIntentLocal(text: string, hasAlert: boolean): string {
   const emergencyPatterns = /(?:сильная боль|не могу встать|задыхаюсь|боль в груди|рука немеет|нога немеет|потеря сознания|упал[аи]?|вызовите скорую)/;
   if (emergencyPatterns.test(lower)) return "emergency";
 
-  const scamPatterns = /(?:из банка|из полиции|следственн|перевести деньги|код из смс|безопасный сч[её]т|спасти накопления|сын попал|дочь попала|новая карта|служба безопасности)/;
+  const scamPatterns = /(?:из банка|из полиции|следственн|перевести деньги|код из смс|безопасный сч[её]т|спасти накопления|сын попал|дочь попала|новая карта|служба безопасности|попросил[аи]? (?:узнать|сказать|продиктовать|переслать) (?:код|пин|пароль|номер карты|данные)|внучка? просит? код|врач просит? (?:карт|код|данные))/;
   if (scamPatterns.test(lower)) return "scam";
 
   const healthPatterns = /(?:давлени[ея]|голова болит|плохо себя чувствую|не спал[аи]?|тошнит|болит|отекают|температур|не могу уснуть|бессонниц|не спится)/;
