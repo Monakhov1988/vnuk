@@ -521,6 +521,14 @@ ${memoryLines}
   const recentMessages = messages.slice(-20);
 
   const lastUserMsg = recentMessages.filter(m => m.role === "user").pop()?.content || "";
+
+  const DANGER_INTENTS = ["emergency", "scam", "home_danger", "lost"];
+  const serverDetectedIntent = detectIntentLocal(lastUserMsg, false);
+  const serverDetectedDanger = DANGER_INTENTS.includes(serverDetectedIntent);
+  if (serverDetectedDanger) {
+    console.log(`[ai] SERVER SAFETY: detected "${serverDetectedIntent}" in user message — alert will be forced`);
+  }
+
   const requiredTool = detectRequiredTool(lastUserMsg);
   const toolChoice: OpenAI.Chat.Completions.ChatCompletionToolChoiceOption = requiredTool
     ? { type: "function", function: { name: requiredTool } }
@@ -608,13 +616,16 @@ ${memoryLines}
     }
   }
   console.log(`[ai] Reply length: ${reply.length} chars, first 100: ${reply.slice(0, 100)}`);
-  const hasAlert = reply.includes("[ALERT]");
+  const llmAlert = reply.includes("[ALERT]");
+  const hasAlert = llmAlert || serverDetectedDanger;
+  if (hasAlert && !llmAlert) {
+    console.log(`[ai] SERVER SAFETY: forcing alert (LLM missed [ALERT] but server detected "${serverDetectedIntent}")`);
+  }
 
-  const lastUserMessage = recentMessages.filter(m => m.role === "user").pop()?.content || "";
-  const intent = detectIntentLocal(lastUserMessage, hasAlert);
+  const intent = serverDetectedDanger ? serverDetectedIntent : detectIntentLocal(lastUserMsg, hasAlert);
 
   if (userId) {
-    extractMemoryFacts(lastUserMessage, userId).catch(err =>
+    extractMemoryFacts(lastUserMsg, userId).catch(err =>
       console.error("[memory] Background extraction failed:", err.message)
     );
   }

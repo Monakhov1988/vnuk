@@ -365,19 +365,49 @@ export async function registerRoutes(
       const parentName = user?.role === "parent" ? user.name : (parent?.name || undefined);
       const result = await chatWithGrandchild(messages, parentName, userId);
 
-      const parentId = await resolveParentId(userId);
-      if (result.hasAlert && parentId) {
+      if (result.hasAlert) {
         const alertTitle = result.intent === "scam"
           ? "Возможная попытка мошенничества!"
+          : result.intent === "home_danger"
+          ? "Опасная ситуация дома!"
+          : result.intent === "lost"
+          ? "Родитель потерялся на улице!"
           : "Родитель сообщил о проблеме со здоровьем!";
-        await storage.createEvent({
-          userId,
-          parentId,
-          type: "alert",
-          severity: "critical",
-          title: alertTitle,
-          description: messages[messages.length - 1]?.content || "",
-        });
+        const alertDescription = messages[messages.length - 1]?.content || "";
+
+        if (user?.role === "parent") {
+          const children = await storage.getChildrenByParentId(userId);
+          for (const child of children) {
+            await storage.createEvent({
+              userId: child.id,
+              parentId: userId,
+              type: "alert",
+              severity: "critical",
+              title: alertTitle,
+              description: alertDescription,
+            });
+          }
+          if (children.length === 0) {
+            await storage.createEvent({
+              userId,
+              parentId: userId,
+              type: "alert",
+              severity: "critical",
+              title: alertTitle,
+              description: alertDescription,
+            });
+          }
+        } else {
+          const parentId = await resolveParentId(userId);
+          await storage.createEvent({
+            userId,
+            parentId: parentId || userId,
+            type: "alert",
+            severity: "critical",
+            title: alertTitle,
+            description: alertDescription,
+          });
+        }
       }
 
       return res.json({

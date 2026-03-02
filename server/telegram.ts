@@ -261,14 +261,15 @@ export function startTelegramBot() {
     if (!chatId) return;
     const user = await storage.getUserByTelegramChatId(chatId);
     if (!user) { await ctx.reply("Сначала зарегистрируйтесь — /start"); return; }
-    const reminders = await storage.getRemindersByUserId(user.id);
+    const reminders = await storage.getRemindersByParent(user.id);
     if (reminders.length === 0) {
       await ctx.reply("У вас пока нет лекарств в списке. Попросите ребёнка добавить их в личном кабинете.");
       return;
     }
     let text = "💊 Ваши лекарства:\n\n";
     for (const r of reminders) {
-      text += `• ${r.medicineName} — ${r.time}\n`;
+      const time = `${String(r.timeHour).padStart(2, '0')}:${String(r.timeMinute).padStart(2, '0')}`;
+      text += `• ${r.medicineName} — ${time}\n`;
     }
     await ctx.reply(text);
   });
@@ -660,17 +661,17 @@ export function startTelegramBot() {
           ? "Родитель потерялся на улице!"
           : "Родитель сообщил о проблеме со здоровьем!";
 
-        await storage.createEvent({
-          userId: user.id,
-          parentId: user.id,
-          type: "alert",
-          severity: "critical",
-          title: alertTitle,
-          description: userText,
-        });
-
         const children = await storage.getChildrenByParentId(user.id);
         for (const child of children) {
+          await storage.createEvent({
+            userId: child.id,
+            parentId: user.id,
+            type: "alert",
+            severity: "critical",
+            title: alertTitle,
+            description: userText,
+          });
+
           if (child.telegramChatId) {
             try {
               await bot!.api.sendMessage(
@@ -681,6 +682,17 @@ export function startTelegramBot() {
               console.error("[telegram] Failed to notify child:", err);
             }
           }
+        }
+
+        if (children.length === 0) {
+          await storage.createEvent({
+            userId: user.id,
+            parentId: user.id,
+            type: "alert",
+            severity: "critical",
+            title: alertTitle,
+            description: userText,
+          });
         }
       }
 
@@ -922,17 +934,17 @@ export function startTelegramBot() {
           ? "Родитель потерялся на улице!"
           : "Родитель сообщил о проблеме со здоровьем!";
 
-        await storage.createEvent({
-          userId: user.id,
-          parentId: user.id,
-          type: "alert",
-          severity: "critical",
-          title: alertTitle,
-          description: userText,
-        });
-
         const children = await storage.getChildrenByParentId(user.id);
         for (const child of children) {
+          await storage.createEvent({
+            userId: child.id,
+            parentId: user.id,
+            type: "alert",
+            severity: "critical",
+            title: alertTitle,
+            description: userText,
+          });
+
           if (child.telegramChatId) {
             try {
               await bot!.api.sendMessage(
@@ -943,6 +955,17 @@ export function startTelegramBot() {
               console.error("[telegram] Failed to notify child:", err);
             }
           }
+        }
+
+        if (children.length === 0) {
+          await storage.createEvent({
+            userId: user.id,
+            parentId: user.id,
+            type: "alert",
+            severity: "critical",
+            title: alertTitle,
+            description: userText,
+          });
         }
       }
 
