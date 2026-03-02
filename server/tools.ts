@@ -176,116 +176,183 @@ async function fetchDuckDuckGo(query: string): Promise<Array<{ title: string; ur
   return results;
 }
 
+async function fetchPerplexity(query: string): Promise<string> {
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+  if (!apiKey) throw new Error("PERPLEXITY_API_KEY not set");
+
+  const response = await fetch("https://api.perplexity.ai/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "sonar",
+      messages: [
+        {
+          role: "system",
+          content: `Ты помогаешь пожилому человеку найти информацию. Отвечай тепло, понятно, по-русски. Называй конкретные названия, даты, факты. Если есть расписание — укажи его. Пиши простым текстом как сообщение в мессенджере, без маркдауна (без ###, **, - списков). Нумеруй пункты цифрами если нужен список. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+        },
+        { role: "user", content: query },
+      ],
+      max_tokens: 800,
+      temperature: 0.3,
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
+  }
+
+  const data = await response.json() as any;
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Perplexity: empty response");
+
+  const tokensIn = data.usage?.prompt_tokens || 0;
+  const tokensOut = data.usage?.completion_tokens || 0;
+  storage.logAiUsage({
+    userId: null,
+    endpoint: "search-web-perplexity",
+    model: "sonar",
+    tokensIn,
+    tokensOut,
+  });
+
+  let result = content;
+
+  const citations = data.citations;
+  if (citations && Array.isArray(citations) && citations.length > 0) {
+    const topLinks = citations.slice(0, 3);
+    result += "\n\nИсточники:\n" + topLinks.map((url: string) => url).join("\n");
+  }
+
+  console.log(`[tools] Perplexity: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
+  return result;
+}
+
 export async function searchWeb(query: string): Promise<string> {
   const cacheKey = `search:${query.toLowerCase()}`;
   const cached = getCached<string>(cacheKey);
   if (cached) return cached;
 
-  let searchResults: Array<{ title: string; url: string; snippet: string }> = [];
-  let usedRealSearch = false;
+  let result: string | null = null;
 
-  try {
-    searchResults = await fetchDuckDuckGo(query);
-    usedRealSearch = searchResults.length > 0;
-    console.log(`[tools] DuckDuckGo: ${searchResults.length} results for "${query.slice(0, 50)}"`);
-  } catch (err: any) {
-    console.error("[tools] DuckDuckGo failed, falling back to GPT:", err.message);
+  if (process.env.PERPLEXITY_API_KEY) {
+    try {
+      result = await fetchPerplexity(query);
+      console.log(`[tools] Search via Perplexity for "${query.slice(0, 50)}"`);
+    } catch (err: any) {
+      console.error("[tools] Perplexity failed, falling back:", err.message);
+    }
   }
 
-  try {
-    let result: string;
+  if (!result) {
+    let searchResults: Array<{ title: string; url: string; snippet: string }> = [];
+    let usedRealSearch = false;
 
-    if (usedRealSearch) {
-      const searchContext = searchResults
-        .map((r, i) => `${i + 1}. ${r.title}\n   ${r.snippet}\n   ${r.url}`)
-        .join("\n\n");
-
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `Ты помогаешь пожилому человеку. Вот реальные результаты поиска по его запросу. Перескажи их тепло, понятно, по-русски. Назови конкретные названия (фильмы, спектакли, передачи, события). Не выдумывай ничего сверх того что есть в результатах. Если в результатах есть даты, расписание — назови их. Пиши простым текстом без маркдауна. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
-          },
-          { role: "user", content: `Запрос: ${query}\n\nРезультаты поиска:\n${searchContext}` },
-        ],
-        max_tokens: 600,
-        temperature: 0.3,
-      });
-
-      result = response.choices[0]?.message?.content || "Не удалось разобрать результаты.";
-
-      const usage = response.usage;
-      if (usage) {
-        storage.logAiUsage({
-          userId: null,
-          endpoint: "search-web-summarize",
-          model: "gpt-4o-mini",
-          tokensIn: usage.prompt_tokens,
-          tokensOut: usage.completion_tokens,
-        });
-      }
-    } else {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `Ты — помощник для поиска информации. Отвечай кратко, по-русски. Если спрашивают про кино, театр, сериалы — назови конкретные примеры фильмов/спектаклей которые скорее всего идут сейчас (недавние российские и мировые премьеры). Если не уверен в точности — честно скажи "точное расписание лучше проверить на сайте". Если спрашивают про телепрограмму — назови популярные передачи каналов. Если про праздники — используй дату. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
-          },
-          { role: "user", content: query },
-        ],
-        max_tokens: 500,
-        temperature: 0.3,
-      });
-
-      result = response.choices[0]?.message?.content || "Не удалось найти информацию.";
-
-      const usage = response.usage;
-      if (usage) {
-        storage.logAiUsage({
-          userId: null,
-          endpoint: "search-web-fallback",
-          model: "gpt-4o-mini",
-          tokensIn: usage.prompt_tokens,
-          tokensOut: usage.completion_tokens,
-        });
-      }
+    try {
+      searchResults = await fetchDuckDuckGo(query);
+      usedRealSearch = searchResults.length > 0;
+      console.log(`[tools] DuckDuckGo: ${searchResults.length} results for "${query.slice(0, 50)}"`);
+    } catch (err: any) {
+      console.error("[tools] DuckDuckGo failed, falling back to GPT:", err.message);
     }
 
-    const lowerQ = query.toLowerCase();
-    const isCinema = ["кино", "фильм"].some(w => lowerQ.includes(w));
-    const isTheatre = ["театр", "спектакл"].some(w => lowerQ.includes(w));
-    const isEntertainment = isCinema || isTheatre || ["афиш", "концерт", "выставк", "мероприят", "куда сходить"].some(w => lowerQ.includes(w));
-    const isMedical = ["врач", "поликлиник", "аптек", "записаться"].some(w => lowerQ.includes(w));
-    const isGov = ["пенси", "льгот", "субсиди", "госуслуг", "мфц"].some(w => lowerQ.includes(w));
+    try {
+      if (usedRealSearch) {
+        const searchContext = searchResults
+          .map((r, i) => `${i + 1}. ${r.title}\n   ${r.snippet}\n   ${r.url}`)
+          .join("\n\n");
 
-    if (isEntertainment) {
-      let links = "\n\nГде посмотреть актуальное расписание:";
-      if (isCinema) {
-        links += "\nhttps://www.afisha.ru/msk/cinema/\nhttps://www.kinopoisk.ru/afisha/";
-      } else if (isTheatre) {
-        links += "\nhttps://www.afisha.ru/msk/theatre/\nhttps://www.culture.ru/afisha/teatry";
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: `Ты помогаешь пожилому человеку. Вот реальные результаты поиска по его запросу. Перескажи их тепло, понятно, по-русски. Назови конкретные названия (фильмы, спектакли, передачи, события). Не выдумывай ничего сверх того что есть в результатах. Если в результатах есть даты, расписание — назови их. Пиши простым текстом без маркдауна. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+            },
+            { role: "user", content: `Запрос: ${query}\n\nРезультаты поиска:\n${searchContext}` },
+          ],
+          max_tokens: 600,
+          temperature: 0.3,
+        });
+
+        result = response.choices[0]?.message?.content || "Не удалось разобрать результаты.";
+
+        const usage = response.usage;
+        if (usage) {
+          storage.logAiUsage({
+            userId: null,
+            endpoint: "search-web-summarize",
+            model: "gpt-4o-mini",
+            tokensIn: usage.prompt_tokens,
+            tokensOut: usage.completion_tokens,
+          });
+        }
       } else {
-        links += "\nhttps://www.afisha.ru/msk/\nhttps://kassir.ru/";
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: `Ты — помощник для поиска информации. Отвечай кратко, по-русски. Если спрашивают про кино, театр, сериалы — назови конкретные примеры фильмов/спектаклей которые скорее всего идут сейчас (недавние российские и мировые премьеры). Если не уверен в точности — честно скажи "точное расписание лучше проверить на сайте". Если спрашивают про телепрограмму — назови популярные передачи каналов. Если про праздники — используй дату. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+            },
+            { role: "user", content: query },
+          ],
+          max_tokens: 500,
+          temperature: 0.3,
+        });
+
+        result = response.choices[0]?.message?.content || "Не удалось найти информацию.";
+
+        const usage = response.usage;
+        if (usage) {
+          storage.logAiUsage({
+            userId: null,
+            endpoint: "search-web-fallback",
+            model: "gpt-4o-mini",
+            tokensIn: usage.prompt_tokens,
+            tokensOut: usage.completion_tokens,
+          });
+        }
       }
-      result += links;
+    } catch (err: any) {
+      console.error("[tools] Search error:", err.message);
+      return `Не удалось выполнить поиск. Попробуйте позже.`;
     }
-
-    if (isMedical) {
-      result += "\n\nЗаписаться к врачу:\nhttps://www.gosuslugi.ru/\nhttps://gorzdrav.org/";
-    }
-
-    if (isGov) {
-      result += "\n\nПолезные ссылки:\nhttps://www.gosuslugi.ru/\nhttps://pfr.gov.ru/";
-    }
-
-    setCache(cacheKey, result, SEARCH_TTL);
-    return result;
-  } catch (err: any) {
-    console.error("[tools] Search error:", err.message);
-    return `Не удалось выполнить поиск. Попробуйте позже.`;
   }
+
+  const lowerQ = query.toLowerCase();
+  const isCinema = ["кино", "фильм"].some(w => lowerQ.includes(w));
+  const isTheatre = ["театр", "спектакл"].some(w => lowerQ.includes(w));
+  const isEntertainment = isCinema || isTheatre || ["афиш", "концерт", "выставк", "мероприят", "куда сходить"].some(w => lowerQ.includes(w));
+  const isMedical = ["врач", "поликлиник", "аптек", "записаться"].some(w => lowerQ.includes(w));
+  const isGov = ["пенси", "льгот", "субсиди", "госуслуг", "мфц"].some(w => lowerQ.includes(w));
+
+  if (isEntertainment) {
+    let links = "\n\nГде посмотреть актуальное расписание:";
+    if (isCinema) {
+      links += "\nhttps://www.afisha.ru/msk/cinema/\nhttps://www.kinopoisk.ru/afisha/";
+    } else if (isTheatre) {
+      links += "\nhttps://www.afisha.ru/msk/theatre/\nhttps://www.culture.ru/afisha/teatry";
+    } else {
+      links += "\nhttps://www.afisha.ru/msk/\nhttps://kassir.ru/";
+    }
+    result += links;
+  }
+
+  if (isMedical) {
+    result += "\n\nЗаписаться к врачу:\nhttps://www.gosuslugi.ru/\nhttps://gorzdrav.org/";
+  }
+
+  if (isGov) {
+    result += "\n\nПолезные ссылки:\nhttps://www.gosuslugi.ru/\nhttps://pfr.gov.ru/";
+  }
+
+  setCache(cacheKey, result, SEARCH_TTL);
+  return result;
 }
 
 export async function searchRecipe(dish: string): Promise<string> {
