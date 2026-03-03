@@ -148,7 +148,8 @@ const TOOL_STATUS_MESSAGES: Record<string, string> = {
 
 const persistentKeyboard = new Keyboard()
   .text("🌤 Погода").text("🍳 Рецепт").row()
-  .text("🧩 Загадка").text("❓ Помощь")
+  .text("🧩 Загадка").text("❓ Помощь").row()
+  .text("⚙️ Настройки")
   .resized()
   .persistent();
 
@@ -670,6 +671,53 @@ export function startTelegramBot() {
     }
   });
 
+  function getSettingsMenuKeyboard() {
+    return new InlineKeyboard()
+      .text("📚 Темы и экспертиза", "settings_topics").row()
+      .text("🎭 Личность бота", "settings_personality").row();
+  }
+
+  async function showSettingsMenu(ctx: any, edit = false) {
+    const text = "⚙️ Настройки\n\nВыберите, что хотите настроить:";
+    const keyboard = getSettingsMenuKeyboard();
+    if (edit) {
+      try { await ctx.editMessageText(text, { reply_markup: keyboard }); return; } catch {}
+    }
+    await ctx.reply(text, { reply_markup: keyboard });
+  }
+
+  bot.callbackQuery("settings_menu", async (ctx) => {
+    try { await ctx.answerCallbackQuery(); } catch {}
+    await showSettingsMenu(ctx, true);
+  });
+
+  bot.callbackQuery("settings_topics", async (ctx) => {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) { try { await ctx.answerCallbackQuery({ text: "Сначала /start" }); } catch {} return; }
+    const keyboard = new InlineKeyboard();
+    for (const cat of TOPIC_CATEGORIES) {
+      keyboard.text(`${cat.icon} ${cat.name}`, `tcat_${cat.id}`).row();
+    }
+    keyboard.text("⬅️ Назад к настройкам", "settings_menu").row();
+    try { await ctx.answerCallbackQuery(); } catch {}
+    try {
+      await ctx.editMessageText("📚 Выберите категорию тем:", { reply_markup: keyboard });
+    } catch {
+      await ctx.reply("📚 Выберите категорию тем:", { reply_markup: keyboard });
+    }
+  });
+
+  bot.callbackQuery("settings_personality", async (ctx) => {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) { try { await ctx.answerCallbackQuery({ text: "Сначала /start" }); } catch {} return; }
+    try { await ctx.answerCallbackQuery(); } catch {}
+    await refreshSettingsMessage(ctx, user.id);
+  });
+
   bot.command("topics", async (ctx) => {
     const chatId = ctx.chat.id.toString();
     const user = await storage.getUserByTelegramChatId(chatId);
@@ -681,6 +729,7 @@ export function startTelegramBot() {
     for (const cat of TOPIC_CATEGORIES) {
       keyboard.text(`${cat.icon} ${cat.name}`, `tcat_${cat.id}`).row();
     }
+    keyboard.text("⬅️ Назад к настройкам", "settings_menu").row();
     await ctx.reply("📚 Выберите категорию тем:", { reply_markup: keyboard });
   });
 
@@ -716,6 +765,7 @@ export function startTelegramBot() {
     for (const cat of TOPIC_CATEGORIES) {
       keyboard.text(`${cat.icon} ${cat.name}`, `tcat_${cat.id}`).row();
     }
+    keyboard.text("⬅️ Назад к настройкам", "settings_menu").row();
     try { await ctx.answerCallbackQuery(); } catch {}
     try {
       await ctx.editMessageText("📚 Выберите категорию тем:", { reply_markup: keyboard });
@@ -880,7 +930,8 @@ export function startTelegramBot() {
       .text(`🤗 Мягкость ${softness}/5 ➖`, "ps_soft_down").text(`🤗 Мягкость ${softness}/5 ➕`, "ps_soft_up").row()
       .text(`💬 Болтливость ${verbosity}/5 ➖`, "ps_verb_down").text(`💬 Болтливость ${verbosity}/5 ➕`, "ps_verb_up").row()
       .text(`😊 Эмодзи: ${useEmoji ? "вкл" : "выкл"}`, "ps_emoji").row()
-      .text(`👏 Похвала ${encouragement}/5 ➖`, "ps_enc_down").text(`👏 Похвала ${encouragement}/5 ➕`, "ps_enc_up").row();
+      .text(`👏 Похвала ${encouragement}/5 ➖`, "ps_enc_down").text(`👏 Похвала ${encouragement}/5 ➕`, "ps_enc_up").row()
+      .text("⬅️ Назад к настройкам", "settings_menu").row();
     try {
       await ctx.editMessageText(text, { reply_markup: keyboard });
     } catch {}
@@ -1191,6 +1242,7 @@ export function startTelegramBot() {
       for (const cat of TOPIC_CATEGORIES) {
         keyboard.text(`${cat.icon} ${cat.name}`, `tcat_${cat.id}`).row();
       }
+      keyboard.text("⬅️ Назад к настройкам", "settings_menu").row();
       await ctx.reply("📚 Выберите категорию тем:", { reply_markup: keyboard });
       return;
     }
@@ -1199,31 +1251,7 @@ export function startTelegramBot() {
       const chatId = ctx.chat.id.toString();
       const user = await storage.getUserByTelegramChatId(chatId);
       if (!user) { await ctx.reply("Сначала зарегистрируйтесь — /start"); return; }
-      const ps = await storage.getPersonalitySettings(user.id);
-      const formality = ps?.formality || "ты";
-      const humor = ps?.humor ?? 3;
-      const softness = ps?.softness ?? 4;
-      const verbosity = ps?.verbosity ?? 3;
-      const useEmoji = ps?.useEmoji ?? true;
-      const encouragement = ps?.encouragement ?? 4;
-      const formalityLabel = formality === "вы" ? "на «вы»" : "на «ты»";
-      const text =
-        `⚙️ Настройки личности бота\n\n` +
-        `👤 Обращение: ${formalityLabel}\n` +
-        `😄 Юмор: ${humor}/5\n` +
-        `🤗 Мягкость: ${softness}/5\n` +
-        `💬 Разговорчивость: ${verbosity}/5\n` +
-        `😊 Эмодзи: ${useEmoji ? "вкл" : "выкл"}\n` +
-        `👏 Подбадривание: ${encouragement}/5\n\n` +
-        `Нажмите кнопку, чтобы изменить:`;
-      const keyboard = new InlineKeyboard()
-        .text(`👤 ${formalityLabel}`, "ps_formality").row()
-        .text(`😄 Юмор ${humor}/5 ➖`, "ps_humor_down").text(`😄 Юмор ${humor}/5 ➕`, "ps_humor_up").row()
-        .text(`🤗 Мягкость ${softness}/5 ➖`, "ps_soft_down").text(`🤗 Мягкость ${softness}/5 ➕`, "ps_soft_up").row()
-        .text(`💬 Болтливость ${verbosity}/5 ➖`, "ps_verb_down").text(`💬 Болтливость ${verbosity}/5 ➕`, "ps_verb_up").row()
-        .text(`😊 Эмодзи: ${useEmoji ? "вкл" : "выкл"}`, "ps_emoji").row()
-        .text(`👏 Похвала ${encouragement}/5 ➖`, "ps_enc_down").text(`👏 Похвала ${encouragement}/5 ➕`, "ps_enc_up").row();
-      await ctx.reply(text, { reply_markup: keyboard });
+      await showSettingsMenu(ctx);
       return;
     }
 
