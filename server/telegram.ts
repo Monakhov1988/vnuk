@@ -147,20 +147,30 @@ const TOOL_STATUS_MESSAGES: Record<string, string> = {
 };
 
 const persistentKeyboard = new Keyboard()
-  .text("🌤 Погода").text("🍳 Рецепт").row()
-  .text("🧩 Загадка").text("❓ Помощь").row()
-  .text("⚙️ Настройки")
+  .text("⚙️ Настройки").text("💊 Здоровье").row()
+  .text("🏠 Хозяйство").text("🎭 Афиша").row()
   .resized()
   .persistent();
 
-function getHintsKeyboard() {
+function getHealthKeyboard() {
+  return new InlineKeyboard()
+    .text("💊 Лекарства", "hint_pills").text("📋 Давление", "hint_bp").row()
+    .text("🙏 Молитва", "hint_prayer").row()
+    .text("❓ Что ты ещё умеешь?", "hint_help");
+}
+
+function getHouseholdKeyboard() {
   return new InlineKeyboard()
     .text("🌤 Погода", "hint_weather").text("🍳 Рецепт", "hint_recipe").row()
-    .text("📺 Что по ТВ", "hint_tv").text("🎬 Что в кино", "hint_cinema").row()
-    .text("💊 Лекарства", "hint_pills").text("📋 Давление", "hint_bp").row()
-    .text("🧩 Загадка", "hint_riddle").text("📖 Стихотворение", "hint_poem").row()
-    .text("🎨 Открытка", "hint_card").text("🙏 Молитва", "hint_prayer").row()
     .text("📸 Фото счётчика", "hint_meter").text("🌱 Огород", "hint_garden").row()
+    .text("❓ Что ты ещё умеешь?", "hint_help");
+}
+
+function getEntertainmentKeyboard() {
+  return new InlineKeyboard()
+    .text("📺 Что по ТВ", "hint_tv").text("🎬 Что в кино", "hint_cinema").row()
+    .text("🧩 Загадка", "hint_riddle").text("📖 Стихотворение", "hint_poem").row()
+    .text("🎨 Открытка", "hint_card").row()
     .text("❓ Что ты ещё умеешь?", "hint_help");
 }
 
@@ -272,7 +282,7 @@ async function handleOnboardingStep(chatId: string, userText: string, ctx: any):
       `Просто напишите мне — я всегда рад поболтать! 😊`,
       { reply_markup: persistentKeyboard }
     );
-    await ctx.reply("Нажмите любую кнопку — попробуйте прямо сейчас:", { reply_markup: getHintsKeyboard() });
+    await ctx.reply("Нажмите кнопку внизу — выберите нужный раздел! 👇");
     return true;
   }
 
@@ -301,8 +311,7 @@ export async function startTelegramBot() {
         { reply_markup: persistentKeyboard }
       );
       await ctx.reply(
-        `А вот ещё что я умею — нажмите любую кнопку:`,
-        { reply_markup: getHintsKeyboard() }
+        `Нажмите кнопку внизу — выберите нужный раздел! 👇`
       );
       return;
     }
@@ -392,7 +401,7 @@ export async function startTelegramBot() {
 Просто напишите или наговорите — я всегда рад помочь! 😊`;
 
     await ctx.reply(helpText);
-    await ctx.reply("Нажмите кнопку — попробуйте прямо сейчас:", { reply_markup: getHintsKeyboard() });
+    await ctx.reply("Нажмите кнопку внизу — выберите нужный раздел! 👇");
   });
 
   bot.callbackQuery("action_register", async (ctx) => {
@@ -446,7 +455,7 @@ export async function startTelegramBot() {
 🧩 Загадки — «Загадай загадку»
 📸 Воспоминания — расскажите историю
 🎙 Голосовые — просто наговорите!`;
-    await ctx.reply(helpText, { reply_markup: getHintsKeyboard() });
+    await ctx.reply(helpText);
   });
 
   bot.callbackQuery("hint_pills", async (ctx) => {
@@ -1235,24 +1244,26 @@ export async function startTelegramBot() {
 
     if (userText.startsWith("/")) return;
 
-    const KEYBOARD_QUESTIONS: Record<string, string> = {
-      "🌤 Погода": "🌤 Какой город интересует? Напишите название, например: Москва, Сочи, Казань",
-      "🍳 Рецепт": "🍳 Что хотите приготовить? Напишите блюдо, например: борщ, шарлотка, блины",
-      "🧩 Загадка": "🧩 Какую загадку хотите? Напишите: лёгкую, сложную, для детей, про природу — или просто «загадку»",
-      "❓ Помощь": "__help__",
-    };
-    if (KEYBOARD_QUESTIONS[userText]) {
-      if (KEYBOARD_QUESTIONS[userText] === "__help__") {
-        const chatId = ctx.chat.id.toString();
-        const user = await storage.getUserByTelegramChatId(chatId);
-        if (!user) {
-          await ctx.reply("Сначала зарегистрируйтесь — /start");
-          return;
-        }
-        await ctx.reply("Вот что я умею — нажмите любую кнопку:", { reply_markup: getHintsKeyboard() });
-        return;
-      }
-      await ctx.reply(KEYBOARD_QUESTIONS[userText]);
+    if (userText === "⚙️ Настройки") {
+      const chatId = ctx.chat.id.toString();
+      const user = await storage.getUserByTelegramChatId(chatId);
+      if (!user) { await ctx.reply("Сначала зарегистрируйтесь — /start"); return; }
+      await showSettingsMenu(ctx);
+      return;
+    }
+
+    if (userText === "💊 Здоровье") {
+      await ctx.reply("💊 Здоровье — выберите:", { reply_markup: getHealthKeyboard() });
+      return;
+    }
+
+    if (userText === "🏠 Хозяйство") {
+      await ctx.reply("🏠 Хозяйство — выберите:", { reply_markup: getHouseholdKeyboard() });
+      return;
+    }
+
+    if (userText === "🎭 Афиша") {
+      await ctx.reply("🎭 Афиша — выберите:", { reply_markup: getEntertainmentKeyboard() });
       return;
     }
 
