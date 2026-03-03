@@ -40,7 +40,7 @@ export async function speechToText(audioBuffer: Buffer): Promise<SttResult> {
     const segments = result.segments || [];
     const noSpeechProb = segments.length > 0
       ? segments.reduce((sum: number, s: any) => sum + (s.no_speech_prob || 0), 0) / segments.length
-      : 0.5;
+      : 0;
 
     const isHallucination = WHISPER_HALLUCINATION_PATTERNS.some(p => p.test(text));
     const isTooShort = text.length < 2;

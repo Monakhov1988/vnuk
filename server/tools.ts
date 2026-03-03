@@ -541,12 +541,21 @@ export async function generateImage(description: string, userId?: number): Promi
 
   try {
     let safePrompt = description
-      .replace(/\b(with text|saying|written|inscription|caption|typography|letters|words|writing|надпись|текст|буквы|слова)\b/gi, "")
+      .replace(/\b(with text|saying|written|inscription|caption|typography|letters|words|writing|надпись|текст|буквы|слова|banner|poster|sign|placard)\b/gi, "")
       .replace(/["«»].*?["«»]/g, "")
+      .replace(/\b(Happy|Merry|Congratulations|International|Women'?s\s*Day|Mother'?s\s*Day|Father'?s\s*Day|Valentine'?s|New\s*Year|Christmas|Birthday|Holiday|Anniversary|Easter|March\s*8|8\s*March)\b/gi, "")
+      .replace(/\b(greeting\s*card|post\s*card|postcard)\b/gi, "floral illustration")
+      .replace(/\bcard\b/gi, "illustration")
+      .replace(/\s{2,}/g, " ")
       .trim();
-    if (!/no text/i.test(safePrompt)) {
-      safePrompt += ". STRICTLY no text, no letters, no numbers, no characters, no words, no signs, no typography, no writing, no captions, no inscriptions, no banners, no ribbons with text on the image. Pure visual art only, absolutely zero textual elements.";
-    }
+
+    const isPhotoStyle = /\b(photo|photograph|realistic|food|dish|блюд|фот)/i.test(safePrompt);
+    const prefix = isPhotoStyle
+      ? "Photorealistic image without any text, letters, numbers, words, or typography."
+      : "Digital painting without any text, letters, numbers, words, or typography.";
+    safePrompt = `${prefix} ${safePrompt}. The image must contain absolutely zero text, zero letters, zero inscriptions, zero banners, zero ribbons with writing. Pure visual artwork only.`;
+
+    console.log(`[tools] DALL-E sanitized prompt: "${safePrompt.slice(0, 120)}..."`);
 
     const response = await openai.images.generate({
       model: "dall-e-3",

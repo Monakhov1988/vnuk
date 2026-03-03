@@ -75,6 +75,7 @@ async function checkTelegramDailyLimit(userId: number): Promise<boolean> {
 export let bot: Bot | null = null;
 const pendingRegistration = new Map<string, { timestamp: number }>();
 const pendingLink = new Map<string, { timestamp: number }>();
+const pendingVoiceConfirm = new Map<string, { transcript: string; timestamp: number }>();
 
 interface OnboardingState {
   step: "city" | "interests";
@@ -101,6 +102,11 @@ function cleanupPendingStates() {
   Array.from(onboardingState.entries()).forEach(([chatId, state]) => {
     if (now - state.timestamp > PENDING_STATE_TTL) {
       onboardingState.delete(chatId);
+    }
+  });
+  Array.from(pendingVoiceConfirm.entries()).forEach(([chatId, state]) => {
+    if (now - state.timestamp > PENDING_STATE_TTL) {
+      pendingVoiceConfirm.delete(chatId);
     }
   });
 }
@@ -1086,14 +1092,8 @@ export async function startTelegramBot() {
 
       if (sttResult.confidence === "medium") {
         console.log(`[telegram] Voice medium confidence: "${userText.slice(0, 50)}", noSpeech=${sttResult.noSpeechProb.toFixed(2)}`);
+        pendingVoiceConfirm.set(chatId, { transcript: userText, timestamp: Date.now() });
         await ctx.reply(`Я услышал: «${userText}»\n\nПравильно? Если да — напиши «да» или повтори голосовое чётче.`);
-        await storage.createChatMessage({
-          parentId: user.id,
-          role: "assistant",
-          content: `[Подтверждение голосового] Я услышал: «${userText}». Правильно?`,
-          intent: "voice_confirm",
-          hasAlert: false,
-        });
         return;
       }
 
@@ -1360,6 +1360,102 @@ export async function startTelegramBot() {
       return;
     }
 
+    const voiceConfirm = pendingVoiceConfirm.get(chatId);
+    if (voiceConfirm) {
+      const lower = userText.toLowerCase().trim();
+      const isConfirm = /^(да|верно|правильно|ага|угу|yes|ок|ok|точно|всё верно|все верно|так и есть)/.test(lower);
+      pendingVoiceConfirm.delete(chatId);
+
+      if (isConfirm) {
+        const confirmedText = voiceConfirm.transcript;
+        console.log(`[telegram] Voice confirmed: "${confirmedText.slice(0, 50)}"`);
+
+        if (!isEmergencyMessage(confirmedText)) {
+          const allowed = await checkTelegramDailyLimit(user.id);
+          if (!allowed) {
+            await ctx.reply(RATE_LIMIT_MESSAGE);
+            return;
+          }
+        }
+
+        await storage.createChatMessage({
+          parentId: user.id,
+          role: "user",
+          content: confirmedText,
+          intent: null,
+          hasAlert: false,
+        });
+
+        const chatHistory = await storage.getChatMessages(user.id, 20);
+        const messages: Array<{ role: "user" | "assistant"; content: string }> = chatHistory
+          .reverse()
+          .filter(m => m.intent !== "voice_confirm")
+          .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
+
+        const stopTyping = startTypingLoop(ctx);
+        let result;
+        try {
+          result = await chatWithGrandchild(messages, user.name, user.id);
+        } finally {
+          stopTyping();
+        }
+
+        await storage.createChatMessage({
+          parentId: user.id,
+          role: "assistant",
+          content: result.reply,
+          intent: result.intent,
+          hasAlert: result.hasAlert,
+        });
+
+        if (result.hasAlert) {
+          const alertTitle = result.intent === "scam"
+            ? "Возможная попытка мошенничества!"
+            : result.intent === "financial_risk"
+            ? "Подозрительное финансовое решение!"
+            : result.intent === "home_danger"
+            ? "Опасная ситуация дома!"
+            : result.intent === "lost"
+            ? "Родитель потерялся на улице!"
+            : "Родитель сообщил о проблеме со здоровьем!";
+
+          const children = await storage.getChildrenByParentId(user.id);
+          for (const child of children) {
+            await storage.createEvent({
+              userId: child.id,
+              parentId: user.id,
+              type: "alert",
+              severity: "critical",
+              title: alertTitle,
+              description: confirmedText,
+            });
+            if (child.telegramChatId) {
+              try {
+                await bot!.api.sendMessage(
+                  child.telegramChatId,
+                  `⚠️ ${alertTitle}\n\n${user.name} сказал(а): "${confirmedText}"\n\nПроверьте ситуацию!`
+                );
+              } catch {}
+            }
+          }
+        }
+
+        if (result.imageUrl) {
+          try {
+            await ctx.replyWithPhoto(result.imageUrl, { caption: result.reply.slice(0, 1024) });
+          } catch {
+            await ctx.reply(result.reply);
+          }
+        } else {
+          await ctx.reply(result.reply);
+        }
+        return;
+      } else {
+        await ctx.reply("Ладно, давай попробуем ещё раз! Отправь голосовое сообщение заново 🎙");
+        return;
+      }
+    }
+
     const settingsUpdate = detectPersonalitySettingsIntent(userText);
     if (settingsUpdate) {
       try {
@@ -1405,6 +1501,7 @@ export async function startTelegramBot() {
       const chatHistory = await storage.getChatMessages(user.id, 20);
       const messages: Array<{ role: "user" | "assistant"; content: string }> = chatHistory
         .reverse()
+        .filter(m => m.intent !== "voice_confirm")
         .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
 
       messages.push({ role: "user", content: userText });

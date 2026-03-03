@@ -39,8 +39,6 @@ async function checkReminders() {
       const parent = await storage.getUser(reminder.parentId);
       if (!parent?.telegramChatId) continue;
 
-      await storage.updateReminderLastTriggered(reminder.id, new Date());
-
       const keyboard = new InlineKeyboard()
         .text(`Принял(а) ✅`, `confirm_med_${reminder.id}`);
 
@@ -49,6 +47,8 @@ async function checkReminders() {
         `Время принять ${reminder.medicineName}! 💊\n\nНажмите кнопку, когда примете:`,
         { reply_markup: keyboard }
       );
+
+      await storage.updateReminderLastTriggered(reminder.id, new Date());
 
       const children = await storage.getChildrenByParentId(reminder.parentId);
       for (const child of children) {
