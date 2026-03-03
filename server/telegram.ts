@@ -4,7 +4,34 @@ import { storage } from "./storage";
 import { chatWithGrandchild, recognizeMeter, detectIntentLocal } from "./ai";
 import { speechToText, textToSpeech } from "./voice";
 import { extractDishFromText, RECIPE_CLARIFICATIONS } from "./recipeUtils";
+import { TOPIC_CATEGORIES, TOPIC_CATALOG } from "./topicCatalog";
 import bcrypt from "bcrypt";
+
+function detectPersonalitySettingsIntent(text: string): { changes: Record<string, any>; confirmation: string } | null {
+  const lower = text.toLowerCase().trim();
+  const patterns: Array<{ test: RegExp[]; changes: Record<string, any>; confirmation: string }> = [
+    { test: [/на\s*«?вы»?/, /обращайс[яь]\s.*на\s*вы/, /говори\s.*на\s*вы/, /перейди\s.*на\s*вы/], changes: { formality: "вы" }, confirmation: "Хорошо, теперь буду обращаться к вам на «вы» 🙂" },
+    { test: [/на\s*«?ты»?/, /обращайс[яь]\s.*на\s*ты/, /говори\s.*на\s*ты/, /перейди\s.*на\s*ты/, /давай\s+на\s*ты/], changes: { formality: "ты" }, confirmation: "Отлично, переходим на «ты»! 😊" },
+    { test: [/побольше\s+шуток/, /больше\s+юмор/, /шути\s+чаще/, /добавь\s+юмор/, /будь\s+смешнее/], changes: { humor: 5 }, confirmation: "Понял, буду шутить побольше! 😄" },
+    { test: [/поменьше\s+шуток/, /меньше\s+юмор/, /не\s+шути/, /без\s+шуток/, /серь[её]зн/], changes: { humor: 1 }, confirmation: "Хорошо, буду посерьёзнее 🙂" },
+    { test: [/помягче/, /будь\s+мягче/, /нежнее/, /ласковее/, /деликатн/], changes: { softness: 5 }, confirmation: "Хорошо, буду помягче и деликатнее 🤗" },
+    { test: [/прямо/, /будь\s+прям/, /без\s+сентимент/, /конкретн/], changes: { softness: 1 }, confirmation: "Понял, буду говорить прямо и по делу 👍" },
+    { test: [/короче/, /покороче/, /кратко/, /лаконичн/, /не\s+болтай/], changes: { verbosity: 1 }, confirmation: "Буду краток! 👌" },
+    { test: [/подробн/, /поподробн/, /разверну/, /объясняй\s+больше/, /болтай\s+больше/, /разговорчив/], changes: { verbosity: 5 }, confirmation: "Хорошо, буду рассказывать подробнее! 📖" },
+    { test: [/без\s+эмодзи/, /без\s+смайл/, /убери\s+эмодзи/, /убери\s+смайл/], changes: { useEmoji: false }, confirmation: "Хорошо, убираю эмодзи." },
+    { test: [/добавь\s+эмодзи/, /добавь\s+смайл/, /побольше\s+смайл/, /побольше\s+эмодзи/, /используй\s+эмодзи/], changes: { useEmoji: true }, confirmation: "Ок, буду использовать эмодзи! 😊🎉" },
+    { test: [/хвали\s+чаще/, /побольше\s+похвал/, /подбадривай/, /хвали\s+больше/], changes: { encouragement: 5 }, confirmation: "Буду хвалить и подбадривать чаще! 🌟" },
+    { test: [/не\s+хвали/, /меньше\s+похвал/, /без\s+похвал/], changes: { encouragement: 1 }, confirmation: "Хорошо, буду скромнее с похвалой 🙂" },
+  ];
+  for (const p of patterns) {
+    for (const re of p.test) {
+      if (re.test(lower)) {
+        return { changes: p.changes, confirmation: p.confirmation };
+      }
+    }
+  }
+  return null;
+}
 
 function isEmergencyMessage(text: string): boolean {
   const intent = detectIntentLocal(text, false);
@@ -643,6 +670,222 @@ export function startTelegramBot() {
     }
   });
 
+  bot.command("topics", async (ctx) => {
+    const chatId = ctx.chat.id.toString();
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) {
+      await ctx.reply("Сначала зарегистрируйтесь — /start");
+      return;
+    }
+    const keyboard = new InlineKeyboard();
+    for (const cat of TOPIC_CATEGORIES) {
+      keyboard.text(`${cat.icon} ${cat.name}`, `tcat_${cat.id}`).row();
+    }
+    await ctx.reply("📚 Выберите категорию тем:", { reply_markup: keyboard });
+  });
+
+  bot.callbackQuery(/^tcat_(.+)$/, async (ctx) => {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) { try { await ctx.answerCallbackQuery({ text: "Сначала /start" }); } catch {} return; }
+    const categoryId = ctx.match[1];
+    const category = TOPIC_CATEGORIES.find(c => c.id === categoryId);
+    if (!category) { try { await ctx.answerCallbackQuery(); } catch {} return; }
+    const topics = TOPIC_CATALOG.filter(t => t.category === categoryId);
+    const settings = await storage.getTopicSettings(user.id);
+    const settingsMap = new Map(settings.map(s => [s.topicId, s]));
+    const keyboard = new InlineKeyboard();
+    for (const topic of topics) {
+      const s = settingsMap.get(topic.id);
+      const depthLabel = s ? (s.enabled ? ({ basic: "Базовый", detailed: "Подробный", expert: "Экспертный" } as Record<string, string>)[s.depth] || s.depth : "Выкл") : "Базовый";
+      const icon = s ? (s.enabled ? "✅" : "❌") : "✅";
+      keyboard.text(`${icon} ${topic.name} [${depthLabel}]`, `ttopic_${topic.id}`).row();
+    }
+    keyboard.text("⬅️ Назад к категориям", "tback_cats").row();
+    try { await ctx.answerCallbackQuery(); } catch {}
+    try {
+      await ctx.editMessageText(`${category.icon} ${category.name}\n\nВыберите тему для настройки:`, { reply_markup: keyboard });
+    } catch {
+      await ctx.reply(`${category.icon} ${category.name}\n\nВыберите тему для настройки:`, { reply_markup: keyboard });
+    }
+  });
+
+  bot.callbackQuery("tback_cats", async (ctx) => {
+    const keyboard = new InlineKeyboard();
+    for (const cat of TOPIC_CATEGORIES) {
+      keyboard.text(`${cat.icon} ${cat.name}`, `tcat_${cat.id}`).row();
+    }
+    try { await ctx.answerCallbackQuery(); } catch {}
+    try {
+      await ctx.editMessageText("📚 Выберите категорию тем:", { reply_markup: keyboard });
+    } catch {
+      await ctx.reply("📚 Выберите категорию тем:", { reply_markup: keyboard });
+    }
+  });
+
+  bot.callbackQuery(/^ttopic_(.+)$/, async (ctx) => {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) { try { await ctx.answerCallbackQuery({ text: "Сначала /start" }); } catch {} return; }
+    const topicId = ctx.match[1];
+    const topic = TOPIC_CATALOG.find(t => t.id === topicId);
+    if (!topic) { try { await ctx.answerCallbackQuery(); } catch {} return; }
+    const settings = await storage.getTopicSettings(user.id);
+    const s = settings.find(x => x.topicId === topicId);
+    const currentDepth = s ? (s.enabled ? s.depth : "off") : "basic";
+    const depthLabels: Record<string, string> = { basic: "Базовый", detailed: "Подробный", expert: "Экспертный", off: "Выключена" };
+    const keyboard = new InlineKeyboard();
+    for (const [key, label] of Object.entries(depthLabels)) {
+      const marker = currentDepth === key ? "● " : "○ ";
+      keyboard.text(`${marker}${label}`, `tdepth_${topicId}_${key}`).row();
+    }
+    keyboard.text("⬅️ Назад к категории", `tcat_${topic.category}`).row();
+    try { await ctx.answerCallbackQuery(); } catch {}
+    try {
+      await ctx.editMessageText(`📌 ${topic.name}\n${topic.description}\n\nТекущий уровень: ${depthLabels[currentDepth]}`, { reply_markup: keyboard });
+    } catch {
+      await ctx.reply(`📌 ${topic.name}\n${topic.description}\n\nТекущий уровень: ${depthLabels[currentDepth]}`, { reply_markup: keyboard });
+    }
+  });
+
+  bot.callbackQuery(/^tdepth_(.+)_(basic|detailed|expert|off)$/, async (ctx) => {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) { try { await ctx.answerCallbackQuery({ text: "Сначала /start" }); } catch {} return; }
+    const topicId = ctx.match[1];
+    const depth = ctx.match[2];
+    const topic = TOPIC_CATALOG.find(t => t.id === topicId);
+    if (!topic) { try { await ctx.answerCallbackQuery(); } catch {} return; }
+    if (depth === "off") {
+      await storage.upsertTopicSetting(user.id, topicId, "basic", false);
+    } else {
+      await storage.upsertTopicSetting(user.id, topicId, depth as "basic" | "detailed" | "expert", true);
+    }
+    const depthLabels: Record<string, string> = { basic: "Базовый", detailed: "Подробный", expert: "Экспертный", off: "Выключена" };
+    try { await ctx.answerCallbackQuery({ text: `${topic.name}: ${depthLabels[depth]}` }); } catch {}
+    const keyboard = new InlineKeyboard();
+    for (const [key, label] of Object.entries(depthLabels)) {
+      const marker = depth === key ? "● " : "○ ";
+      keyboard.text(`${marker}${label}`, `tdepth_${topicId}_${key}`).row();
+    }
+    keyboard.text("⬅️ Назад к категории", `tcat_${topic.category}`).row();
+    try {
+      await ctx.editMessageText(`📌 ${topic.name}\n${topic.description}\n\nТекущий уровень: ${depthLabels[depth]}`, { reply_markup: keyboard });
+    } catch {}
+  });
+
+  bot.command("settings", async (ctx) => {
+    const chatId = ctx.chat.id.toString();
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) {
+      await ctx.reply("Сначала зарегистрируйтесь — /start");
+      return;
+    }
+    const ps = await storage.getPersonalitySettings(user.id);
+    const formality = ps?.formality || "ты";
+    const humor = ps?.humor ?? 3;
+    const softness = ps?.softness ?? 4;
+    const verbosity = ps?.verbosity ?? 3;
+    const useEmoji = ps?.useEmoji ?? true;
+    const encouragement = ps?.encouragement ?? 4;
+    const formalityLabel = formality === "вы" ? "на «вы»" : "на «ты»";
+    const text =
+      `⚙️ Настройки личности бота\n\n` +
+      `👤 Обращение: ${formalityLabel}\n` +
+      `😄 Юмор: ${humor}/5\n` +
+      `🤗 Мягкость: ${softness}/5\n` +
+      `💬 Разговорчивость: ${verbosity}/5\n` +
+      `😊 Эмодзи: ${useEmoji ? "вкл" : "выкл"}\n` +
+      `👏 Подбадривание: ${encouragement}/5\n\n` +
+      `Нажмите кнопку, чтобы изменить:`;
+    const keyboard = new InlineKeyboard()
+      .text(`👤 ${formalityLabel}`, "ps_formality").row()
+      .text(`😄 Юмор ${humor}/5 ➖`, "ps_humor_down").text(`😄 Юмор ${humor}/5 ➕`, "ps_humor_up").row()
+      .text(`🤗 Мягкость ${softness}/5 ➖`, "ps_soft_down").text(`🤗 Мягкость ${softness}/5 ➕`, "ps_soft_up").row()
+      .text(`💬 Болтливость ${verbosity}/5 ➖`, "ps_verb_down").text(`💬 Болтливость ${verbosity}/5 ➕`, "ps_verb_up").row()
+      .text(`😊 Эмодзи: ${useEmoji ? "вкл" : "выкл"}`, "ps_emoji").row()
+      .text(`👏 Похвала ${encouragement}/5 ➖`, "ps_enc_down").text(`👏 Похвала ${encouragement}/5 ➕`, "ps_enc_up").row();
+    await ctx.reply(text, { reply_markup: keyboard });
+  });
+
+  bot.callbackQuery("ps_formality", async (ctx) => {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) return;
+    const ps = await storage.getPersonalitySettings(user.id);
+    const newFormality = (ps?.formality === "вы") ? "ты" : "вы";
+    await storage.upsertPersonalitySettings(user.id, { formality: newFormality });
+    try { await ctx.answerCallbackQuery({ text: `Теперь обращаюсь на «${newFormality}»` }); } catch {}
+    await refreshSettingsMessage(ctx, user.id);
+  });
+
+  bot.callbackQuery("ps_emoji", async (ctx) => {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) return;
+    const ps = await storage.getPersonalitySettings(user.id);
+    const newEmoji = !(ps?.useEmoji ?? true);
+    await storage.upsertPersonalitySettings(user.id, { useEmoji: newEmoji });
+    try { await ctx.answerCallbackQuery({ text: `Эмодзи ${newEmoji ? "включены" : "выключены"}` }); } catch {}
+    await refreshSettingsMessage(ctx, user.id);
+  });
+
+  bot.callbackQuery(/^ps_(humor|soft|verb|enc)_(up|down)$/, async (ctx) => {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+    const user = await storage.getUserByTelegramChatId(chatId);
+    if (!user) return;
+    const field = ctx.match[1];
+    const dir = ctx.match[2];
+    const ps = await storage.getPersonalitySettings(user.id);
+    const fieldMap: Record<string, keyof NonNullable<typeof ps>> = {
+      humor: "humor", soft: "softness", verb: "verbosity", enc: "encouragement"
+    };
+    const dbField = fieldMap[field];
+    if (!dbField) return;
+    const current = (ps?.[dbField] as number) ?? 3;
+    const newVal = dir === "up" ? Math.min(5, current + 1) : Math.max(0, current - 1);
+    await storage.upsertPersonalitySettings(user.id, { [dbField]: newVal });
+    const nameMap: Record<string, string> = { humor: "Юмор", soft: "Мягкость", verb: "Болтливость", enc: "Похвала" };
+    try { await ctx.answerCallbackQuery({ text: `${nameMap[field]}: ${newVal}/5` }); } catch {}
+    await refreshSettingsMessage(ctx, user.id);
+  });
+
+  async function refreshSettingsMessage(ctx: any, userId: number) {
+    const ps = await storage.getPersonalitySettings(userId);
+    const formality = ps?.formality || "ты";
+    const humor = ps?.humor ?? 3;
+    const softness = ps?.softness ?? 4;
+    const verbosity = ps?.verbosity ?? 3;
+    const useEmoji = ps?.useEmoji ?? true;
+    const encouragement = ps?.encouragement ?? 4;
+    const formalityLabel = formality === "вы" ? "на «вы»" : "на «ты»";
+    const text =
+      `⚙️ Настройки личности бота\n\n` +
+      `👤 Обращение: ${formalityLabel}\n` +
+      `😄 Юмор: ${humor}/5\n` +
+      `🤗 Мягкость: ${softness}/5\n` +
+      `💬 Разговорчивость: ${verbosity}/5\n` +
+      `😊 Эмодзи: ${useEmoji ? "вкл" : "выкл"}\n` +
+      `👏 Подбадривание: ${encouragement}/5\n\n` +
+      `Нажмите кнопку, чтобы изменить:`;
+    const keyboard = new InlineKeyboard()
+      .text(`👤 ${formalityLabel}`, "ps_formality").row()
+      .text(`😄 Юмор ${humor}/5 ➖`, "ps_humor_down").text(`😄 Юмор ${humor}/5 ➕`, "ps_humor_up").row()
+      .text(`🤗 Мягкость ${softness}/5 ➖`, "ps_soft_down").text(`🤗 Мягкость ${softness}/5 ➕`, "ps_soft_up").row()
+      .text(`💬 Болтливость ${verbosity}/5 ➖`, "ps_verb_down").text(`💬 Болтливость ${verbosity}/5 ➕`, "ps_verb_up").row()
+      .text(`😊 Эмодзи: ${useEmoji ? "вкл" : "выкл"}`, "ps_emoji").row()
+      .text(`👏 Похвала ${encouragement}/5 ➖`, "ps_enc_down").text(`👏 Похвала ${encouragement}/5 ➕`, "ps_enc_up").row();
+    try {
+      await ctx.editMessageText(text, { reply_markup: keyboard });
+    } catch {}
+  }
+
   bot.on("message:photo", async (ctx) => {
     const chatId = ctx.chat.id.toString();
     const user = await storage.getUserByTelegramChatId(chatId);
@@ -939,6 +1182,51 @@ export function startTelegramBot() {
 
   bot.on("message:text", async (ctx) => {
     let userText = ctx.message.text;
+
+    if (userText === "/темы" || userText === "/topics") {
+      const chatId = ctx.chat.id.toString();
+      const user = await storage.getUserByTelegramChatId(chatId);
+      if (!user) { await ctx.reply("Сначала зарегистрируйтесь — /start"); return; }
+      const keyboard = new InlineKeyboard();
+      for (const cat of TOPIC_CATEGORIES) {
+        keyboard.text(`${cat.icon} ${cat.name}`, `tcat_${cat.id}`).row();
+      }
+      await ctx.reply("📚 Выберите категорию тем:", { reply_markup: keyboard });
+      return;
+    }
+
+    if (userText === "/настройки" || userText === "/settings") {
+      const chatId = ctx.chat.id.toString();
+      const user = await storage.getUserByTelegramChatId(chatId);
+      if (!user) { await ctx.reply("Сначала зарегистрируйтесь — /start"); return; }
+      const ps = await storage.getPersonalitySettings(user.id);
+      const formality = ps?.formality || "ты";
+      const humor = ps?.humor ?? 3;
+      const softness = ps?.softness ?? 4;
+      const verbosity = ps?.verbosity ?? 3;
+      const useEmoji = ps?.useEmoji ?? true;
+      const encouragement = ps?.encouragement ?? 4;
+      const formalityLabel = formality === "вы" ? "на «вы»" : "на «ты»";
+      const text =
+        `⚙️ Настройки личности бота\n\n` +
+        `👤 Обращение: ${formalityLabel}\n` +
+        `😄 Юмор: ${humor}/5\n` +
+        `🤗 Мягкость: ${softness}/5\n` +
+        `💬 Разговорчивость: ${verbosity}/5\n` +
+        `😊 Эмодзи: ${useEmoji ? "вкл" : "выкл"}\n` +
+        `👏 Подбадривание: ${encouragement}/5\n\n` +
+        `Нажмите кнопку, чтобы изменить:`;
+      const keyboard = new InlineKeyboard()
+        .text(`👤 ${formalityLabel}`, "ps_formality").row()
+        .text(`😄 Юмор ${humor}/5 ➖`, "ps_humor_down").text(`😄 Юмор ${humor}/5 ➕`, "ps_humor_up").row()
+        .text(`🤗 Мягкость ${softness}/5 ➖`, "ps_soft_down").text(`🤗 Мягкость ${softness}/5 ➕`, "ps_soft_up").row()
+        .text(`💬 Болтливость ${verbosity}/5 ➖`, "ps_verb_down").text(`💬 Болтливость ${verbosity}/5 ➕`, "ps_verb_up").row()
+        .text(`😊 Эмодзи: ${useEmoji ? "вкл" : "выкл"}`, "ps_emoji").row()
+        .text(`👏 Похвала ${encouragement}/5 ➖`, "ps_enc_down").text(`👏 Похвала ${encouragement}/5 ➕`, "ps_enc_up").row();
+      await ctx.reply(text, { reply_markup: keyboard });
+      return;
+    }
+
     if (userText.startsWith("/")) return;
 
     const KEYBOARD_QUESTIONS: Record<string, string> = {
@@ -1034,6 +1322,17 @@ export function startTelegramBot() {
         `Нажмите кнопку ниже, чтобы начать:`,
         { reply_markup: keyboard }
       );
+      return;
+    }
+
+    const settingsUpdate = detectPersonalitySettingsIntent(userText);
+    if (settingsUpdate) {
+      try {
+        await storage.upsertPersonalitySettings(user.id, settingsUpdate.changes);
+        await ctx.reply(settingsUpdate.confirmation);
+      } catch (err) {
+        console.error("[telegram] Settings update error:", err);
+      }
       return;
     }
 

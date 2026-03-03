@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import {
   ShieldCheck, HeartPulse, Bell, FileText, BookHeart, LogOut, Plus, Trash2, CheckCircle2,
-  AlertTriangle, XCircle, Activity, Droplets, Zap, Link2, Clock, Send, MessageCircle, Camera, Loader2, Copy, Check
+  AlertTriangle, XCircle, Activity, Droplets, Zap, Link2, Clock, Send, MessageCircle, Camera, Loader2, Copy, Check, Settings
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -97,6 +97,9 @@ export default function Dashboard() {
             {!isParent && dashboard?.unreadCount > 0 && (
               <Badge variant="destructive" className="rounded-full">{dashboard.unreadCount}</Badge>
             )}
+            <Button variant="ghost" size="sm" onClick={() => navigate("/settings/topics")} data-testid="button-settings">
+              <Settings className="w-4 h-4 mr-1" /> Настройки
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-logout">
               <LogOut className="w-4 h-4 mr-1" /> Выйти
             </Button>

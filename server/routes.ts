@@ -685,6 +685,121 @@ export async function registerRoutes(
     }
   });
 
+  // ========== TOPICS & PERSONALITY SETTINGS ==========
+  app.get("/api/topics", async (_req, res) => {
+    try {
+      const { TOPIC_CATALOG, TOPIC_CATEGORIES } = await import("./topicCatalog");
+      return res.json({ categories: TOPIC_CATEGORIES, topics: TOPIC_CATALOG });
+    } catch (e: any) {
+      return res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/topic-settings/:parentId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const parentId = parseInt(req.params.parentId as string);
+      if (isNaN(parentId) || parentId <= 0) {
+        return res.status(400).json({ message: "Некорректный parentId" });
+      }
+      const resolvedParentId = await resolveParentId(userId);
+      if (resolvedParentId !== parentId) {
+        return res.status(403).json({ message: "Нет доступа к настройкам этого пользователя" });
+      }
+      const settings = await storage.getTopicSettings(parentId);
+      return res.json(settings);
+    } catch (e: any) {
+      return res.status(500).json({ message: e.message });
+    }
+  });
+
+  const topicSettingsUpdateSchema = z.object({
+    settings: z.array(z.object({
+      topicId: z.string(),
+      depth: z.enum(["basic", "detailed", "expert"]),
+      enabled: z.boolean(),
+    })),
+  });
+
+  app.put("/api/topic-settings/:parentId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const parentId = parseInt(req.params.parentId as string);
+      if (isNaN(parentId) || parentId <= 0) {
+        return res.status(400).json({ message: "Некорректный parentId" });
+      }
+      const resolvedParentId = await resolveParentId(userId);
+      if (resolvedParentId !== parentId) {
+        return res.status(403).json({ message: "Нет доступа к настройкам этого пользователя" });
+      }
+      const data = validateBody(topicSettingsUpdateSchema, req, res);
+      if (!data) return;
+      const results: any[] = [];
+      for (const s of data.settings) {
+        const result = await storage.upsertTopicSetting(parentId, s.topicId, s.depth, s.enabled);
+        results.push(result);
+      }
+      return res.json(results);
+    } catch (e: any) {
+      return res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/personality-settings/:parentId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const parentId = parseInt(req.params.parentId as string);
+      if (isNaN(parentId) || parentId <= 0) {
+        return res.status(400).json({ message: "Некорректный parentId" });
+      }
+      const resolvedParentId = await resolveParentId(userId);
+      if (resolvedParentId !== parentId) {
+        return res.status(403).json({ message: "Нет доступа к настройкам этого пользователя" });
+      }
+      const settings = await storage.getPersonalitySettings(parentId);
+      return res.json(settings || {
+        parentId,
+        formality: "ты",
+        humor: 3,
+        softness: 4,
+        verbosity: 3,
+        useEmoji: true,
+        encouragement: 4,
+      });
+    } catch (e: any) {
+      return res.status(500).json({ message: e.message });
+    }
+  });
+
+  const personalitySettingsUpdateSchema = z.object({
+    formality: z.enum(["ты", "вы"]).optional(),
+    humor: z.number().min(0).max(5).optional(),
+    softness: z.number().min(0).max(5).optional(),
+    verbosity: z.number().min(0).max(5).optional(),
+    useEmoji: z.boolean().optional(),
+    encouragement: z.number().min(0).max(5).optional(),
+  });
+
+  app.put("/api/personality-settings/:parentId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const parentId = parseInt(req.params.parentId as string);
+      if (isNaN(parentId) || parentId <= 0) {
+        return res.status(400).json({ message: "Некорректный parentId" });
+      }
+      const resolvedParentId = await resolveParentId(userId);
+      if (resolvedParentId !== parentId) {
+        return res.status(403).json({ message: "Нет доступа к настройкам этого пользователя" });
+      }
+      const data = validateBody(personalitySettingsUpdateSchema, req, res);
+      if (!data) return;
+      const result = await storage.upsertPersonalitySettings(parentId, data);
+      return res.json(result);
+    } catch (e: any) {
+      return res.status(500).json({ message: e.message });
+    }
+  });
+
   // ========== WAITLIST ==========
   const waitlistSchema = z.object({
     email: z.string().email("Некорректный email"),

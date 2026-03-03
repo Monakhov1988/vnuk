@@ -13,7 +13,9 @@ import {
   type ChatMessage, type InsertChatMessage,
   type InsertAiUsageLog,
   type UserMemory, type InsertUserMemory,
+  type TopicSetting, type PersonalitySetting,
   users, reminders, events, utilityMetrics, memoirs, healthLogs, subscriptions, waitlist, chatMessages, aiUsageLogs, userMemory,
+  topicSettings, personalitySettings,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -73,6 +75,13 @@ export interface IStorage {
   resetAllReminderStatuses(): Promise<void>;
 
   countChatMessagesToday(parentId: number): Promise<number>;
+
+  getTopicSettings(parentId: number): Promise<TopicSetting[]>;
+  upsertTopicSetting(parentId: number, topicId: string, depth: "basic" | "detailed" | "expert", enabled: boolean): Promise<TopicSetting>;
+  deleteTopicSettings(parentId: number): Promise<void>;
+
+  getPersonalitySettings(parentId: number): Promise<PersonalitySetting | undefined>;
+  upsertPersonalitySettings(parentId: number, settings: Partial<Omit<PersonalitySetting, "id" | "parentId">>): Promise<PersonalitySetting>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -310,6 +319,57 @@ export class DatabaseStorage implements IStorage {
         gte(chatMessages.createdAt, sql`(now() AT TIME ZONE 'Europe/Moscow')::date AT TIME ZONE 'Europe/Moscow'`)
       ));
     return Number(result?.cnt) || 0;
+  }
+
+  async getTopicSettings(parentId: number): Promise<TopicSetting[]> {
+    return db.select().from(topicSettings).where(eq(topicSettings.parentId, parentId));
+  }
+
+  async upsertTopicSetting(parentId: number, topicId: string, depth: "basic" | "detailed" | "expert", enabled: boolean): Promise<TopicSetting> {
+    const existing = await db.select().from(topicSettings)
+      .where(and(eq(topicSettings.parentId, parentId), eq(topicSettings.topicId, topicId)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const [updated] = await db.update(topicSettings)
+        .set({ depth, enabled })
+        .where(eq(topicSettings.id, existing[0].id))
+        .returning();
+      return updated;
+    }
+
+    const [created] = await db.insert(topicSettings)
+      .values({ parentId, topicId, depth, enabled })
+      .returning();
+    return created;
+  }
+
+  async deleteTopicSettings(parentId: number): Promise<void> {
+    await db.delete(topicSettings).where(eq(topicSettings.parentId, parentId));
+  }
+
+  async getPersonalitySettings(parentId: number): Promise<PersonalitySetting | undefined> {
+    const [result] = await db.select().from(personalitySettings)
+      .where(eq(personalitySettings.parentId, parentId))
+      .limit(1);
+    return result;
+  }
+
+  async upsertPersonalitySettings(parentId: number, settings: Partial<Omit<PersonalitySetting, "id" | "parentId">>): Promise<PersonalitySetting> {
+    const existing = await this.getPersonalitySettings(parentId);
+
+    if (existing) {
+      const [updated] = await db.update(personalitySettings)
+        .set(settings)
+        .where(eq(personalitySettings.parentId, parentId))
+        .returning();
+      return updated;
+    }
+
+    const [created] = await db.insert(personalitySettings)
+      .values({ parentId, ...settings })
+      .returning();
+    return created;
   }
 }
 

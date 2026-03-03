@@ -174,6 +174,37 @@ export type InsertWaitlist = z.infer<typeof insertWaitlistSchema>;
 export type Waitlist = typeof waitlist.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+export const topicDepthEnum = pgEnum("topic_depth", ["basic", "detailed", "expert"]);
+
+export const topicSettings = pgTable("topic_settings", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  parentId: integer("parent_id").notNull().references(() => users.id),
+  topicId: text("topic_id").notNull(),
+  depth: topicDepthEnum("depth").notNull().default("basic"),
+  enabled: boolean("enabled").notNull().default(true),
+}, (table) => [
+  index("idx_topic_settings_parent").on(table.parentId),
+]);
+
+export const personalitySettings = pgTable("personality_settings", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  parentId: integer("parent_id").notNull().references(() => users.id).unique(),
+  formality: text("formality").notNull().default("ты"),
+  humor: integer("humor").notNull().default(3),
+  softness: integer("softness").notNull().default(4),
+  verbosity: integer("verbosity").notNull().default(3),
+  useEmoji: boolean("use_emoji").notNull().default(true),
+  encouragement: integer("encouragement").notNull().default(4),
+});
+
+export const insertTopicSettingSchema = createInsertSchema(topicSettings).omit({ id: true });
+export const insertPersonalitySettingSchema = createInsertSchema(personalitySettings).omit({ id: true });
+
+export type TopicSetting = typeof topicSettings.$inferSelect;
+export type InsertTopicSetting = z.infer<typeof insertTopicSettingSchema>;
+export type PersonalitySetting = typeof personalitySettings.$inferSelect;
+export type InsertPersonalitySetting = z.infer<typeof insertPersonalitySettingSchema>;
+
 export const insertUserMemorySchema = createInsertSchema(userMemory).omit({ id: true, createdAt: true });
 export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
 export type AiUsageLog = typeof aiUsageLogs.$inferSelect;

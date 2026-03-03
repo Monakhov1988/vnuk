@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
 import { getWeather, searchWeb, searchRecipe, generateImage, checkSearchRateLimit, sanitizeWebContent } from "./tools";
+import { buildTopicPromptSection, buildPersonalityPromptSection, DEFAULT_PERSONALITY, type PersonalityConfig, type TopicDepth } from "./topicCatalog";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -26,7 +27,7 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 • Без англицизмов. Не «окей», а «хорошо» или «ладно». Не «чат», а «разговор».
 • Можешь вставить поговорку к месту: «Утро вечера мудренее», «Глаза боятся, а руки делают».
 • Не частишь вопросами — один, максимум два за сообщение.
-• Не используешь эмодзи. Никогда.
+• По умолчанию не используешь эмодзи, если не указано иначе в настройках личности ниже.
 • Отвечаешь коротко — 2-4 предложения обычно. Длиннее — только если рассказываешь историю или рецепт.
 
 ═══════════════════════════════════════
@@ -759,6 +760,43 @@ ${memoryLines}
       }
     } catch (err: any) {
       console.error("[ai] Failed to load memory:", err.message);
+    }
+
+    let settingsParentId = userId;
+    try {
+      const currentUser = await storage.getUser(userId);
+      if (currentUser?.role === "child" && currentUser.linkedParentId) {
+        settingsParentId = currentUser.linkedParentId;
+      }
+    } catch {}
+
+    try {
+      const topicSettingsData = await storage.getTopicSettings(settingsParentId);
+      const enabledTopics = topicSettingsData
+        .filter(ts => ts.enabled)
+        .map(ts => ({ topicId: ts.topicId, depth: ts.depth as TopicDepth }));
+      if (enabledTopics.length > 0) {
+        systemMessage += buildTopicPromptSection(enabledTopics);
+      }
+    } catch (err: any) {
+      console.error("[ai] Failed to load topic settings:", err.message);
+    }
+
+    try {
+      const personalityData = await storage.getPersonalitySettings(settingsParentId);
+      const personality: PersonalityConfig = personalityData
+        ? {
+            formality: personalityData.formality as "ты" | "вы",
+            humor: personalityData.humor,
+            softness: personalityData.softness,
+            verbosity: personalityData.verbosity,
+            useEmoji: personalityData.useEmoji,
+            encouragement: personalityData.encouragement,
+          }
+        : DEFAULT_PERSONALITY;
+      systemMessage += buildPersonalityPromptSection(personality);
+    } catch (err: any) {
+      console.error("[ai] Failed to load personality settings:", err.message);
     }
   }
 
