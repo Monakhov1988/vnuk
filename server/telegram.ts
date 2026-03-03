@@ -299,9 +299,10 @@ export async function startTelegramBot() {
   bot = new Bot(token);
 
   bot.command("start", async (ctx) => {
-    console.log("[telegram] /start command received from chat:", ctx.chat.id);
     const chatId = ctx.chat.id.toString();
+    console.log("[telegram] /start command received from chat:", chatId);
     const existing = await storage.getUserByTelegramChatId(chatId);
+    console.log("[telegram] /start lookup result:", existing ? `found user id=${existing.id} name=${existing.name}` : "NOT FOUND");
 
     if (existing) {
       await ctx.reply(
