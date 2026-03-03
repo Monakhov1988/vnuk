@@ -411,6 +411,42 @@ async function executeToolCall(
 
 const RETRYABLE_TOOLS = new Set(["search_web", "search_recipe", "get_weather"]);
 
+function getToolErrorMessage(toolName: string, err: any): string {
+  const errMsg = (err.message || "").toLowerCase();
+  const errStatus = err.status || 0;
+
+  if (errMsg.includes("timeout") || errMsg.includes("timed out")) {
+    switch (toolName) {
+      case "search_web": return "Поиск занял слишком много времени. Попробуем ещё раз чуть позже?";
+      case "search_recipe": return "Поиск рецепта занял слишком много времени. Попробуем ещё разок?";
+      case "get_weather": return "Сервис погоды не ответил вовремя. Попробуем через минутку?";
+      case "generate_image": return "Рисование заняло слишком много времени. Давай попробуем ещё раз?";
+      default: return "Запрос занял слишком много времени. Попробуем позже?";
+    }
+  }
+
+  if (errStatus === 429 || errMsg.includes("rate limit")) {
+    return "Сейчас слишком много запросов. Подождём пару минут и попробуем снова, хорошо?";
+  }
+
+  if (errStatus >= 500) {
+    switch (toolName) {
+      case "search_web": return "Сервис поиска сейчас перегружен. Попробуем чуть позже?";
+      case "search_recipe": return "Сервис рецептов сейчас недоступен. Попробуем через минутку?";
+      case "get_weather": return "Сервис погоды сейчас не работает. Попробуем позже?";
+      default: return "Сервис временно недоступен. Попробуем позже?";
+    }
+  }
+
+  switch (toolName) {
+    case "search_web": return "Не получилось найти информацию. Попробуем поискать чуть позже?";
+    case "search_recipe": return "Не получилось найти рецепт. Попробуем ещё раз?";
+    case "get_weather": return "Не удалось узнать погоду. Попробуем позже?";
+    case "generate_image": return "Не получилось нарисовать картинку. Попробуем ещё раз?";
+    default: return "Что-то не получилось. Попробуем позже?";
+  }
+}
+
 async function executeToolCallWithRetry(
   toolName: string,
   args: Record<string, string>,
@@ -419,6 +455,8 @@ async function executeToolCallWithRetry(
   try {
     return await executeToolCall(toolName, args, userId);
   } catch (err: any) {
+    console.error(`[ai] Tool ${toolName} failed: ${err.message} (status: ${err.status || "N/A"})`);
+
     if (RETRYABLE_TOOLS.has(toolName)) {
       console.log(`[ai] Retrying ${toolName} after error: ${err.message}`);
       await new Promise(r => setTimeout(r, 1000));
@@ -426,10 +464,11 @@ async function executeToolCallWithRetry(
         return await executeToolCall(toolName, args, userId);
       } catch (retryErr: any) {
         console.error(`[ai] Retry failed for ${toolName}: ${retryErr.message}`);
-        return { text: "Что-то не получилось узнать, попробуем попозже?" };
+        return { text: getToolErrorMessage(toolName, retryErr) };
       }
     }
-    throw err;
+
+    return { text: getToolErrorMessage(toolName, err) };
   }
 }
 
@@ -908,7 +947,7 @@ ${memoryLines}
   };
 }
 
-function detectIntentLocal(text: string, hasAlert: boolean): string {
+export function detectIntentLocal(text: string, hasAlert: boolean): string {
   const lower = text.toLowerCase();
 
   const homeDangerPatterns = /(?:запах газа|пахнет газом|газ теч[её]т|утечка газа|затопило|потоп|труба лопнул|кран сорвал|вода теч[её]т из|пожар|горит квартир|дым в квартир|огонь в квартир)/;
@@ -943,44 +982,81 @@ function detectIntentLocal(text: string, hasAlert: boolean): string {
   return "chat";
 }
 
-export async function recognizeMeter(imageBase64: string, userId?: number): Promise<{ value: string | null; raw: string }> {
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: "На этом фото — счетчик воды или электричества. Распознай показания (только цифры). Ответь ТОЛЬКО числом (целым или дробным). Если не можешь распознать, ответь 'НЕ РАСПОЗНАНО'.",
-          },
-          {
-            type: "image_url",
-            image_url: { url: `data:image/jpeg;base64,${imageBase64}` },
-          },
-        ],
-      },
-    ],
-    max_tokens: 100,
-  });
-
-  const usage = response.usage;
-  if (usage) {
-    storage.logAiUsage({
-      userId: userId || null,
-      endpoint: "recognize-meter",
+export async function recognizeMeter(imageBase64: string, userId?: number): Promise<{ value: string | null; raw: string; hint?: string }> {
+  try {
+    const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      tokensIn: usage.prompt_tokens,
-      tokensOut: usage.completion_tokens,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "На этом фото — счетчик воды или электричества. Распознай показания (только цифры). Ответь ТОЛЬКО числом (целым или дробным). Если фото нечёткое, тёмное или не видно цифр — ответь 'НЕЧЁТКОЕ'. Если на фото нет счётчика — ответь 'НЕ СЧЁТЧИК'. Если не можешь распознать по другой причине — ответь 'НЕ РАСПОЗНАНО'.",
+            },
+            {
+              type: "image_url",
+              image_url: { url: `data:image/jpeg;base64,${imageBase64}` },
+            },
+          ],
+        },
+      ],
+      max_tokens: 100,
     });
-  }
 
-  const raw = response.choices[0]?.message?.content || "НЕ РАСПОЗНАНО";
-  const match = raw.match(/[\d.,]+/);
-  return {
-    value: match ? match[0].replace(",", ".") : null,
-    raw,
-  };
+    const usage = response.usage;
+    if (usage) {
+      storage.logAiUsage({
+        userId: userId || null,
+        endpoint: "recognize-meter",
+        model: "gpt-4o-mini",
+        tokensIn: usage.prompt_tokens,
+        tokensOut: usage.completion_tokens,
+      });
+    }
+
+    const raw = response.choices[0]?.message?.content || "НЕ РАСПОЗНАНО";
+    const upperRaw = raw.toUpperCase();
+    const match = raw.match(/[\d.,]+/);
+
+    let hint: string | undefined;
+    if (!match) {
+      if (upperRaw.includes("НЕЧЁТКОЕ") || upperRaw.includes("НЕЧЕТКОЕ")) {
+        hint = "Фото получилось нечётким. Попробуйте переснять:\n" +
+          "— Поднесите телефон ближе к счётчику\n" +
+          "— Включите свет, чтобы цифры были хорошо видны\n" +
+          "— Держите телефон ровно, без наклона\n" +
+          "— Убедитесь, что стекло счётчика не запотело";
+      } else if (upperRaw.includes("НЕ СЧЁТЧИК") || upperRaw.includes("НЕ СЧЕТЧИК")) {
+        hint = "На фото не удалось найти счётчик. Пожалуйста, сфотографируйте именно табло счётчика с цифрами — крупным планом.";
+      } else {
+        hint = "Не удалось разобрать цифры на фото. Попробуйте переснять:\n" +
+          "— Сфотографируйте только табло с цифрами, крупным планом\n" +
+          "— Убедитесь, что на фото хорошее освещение\n" +
+          "— Держите телефон прямо перед счётчиком";
+      }
+    }
+
+    return {
+      value: match ? match[0].replace(",", ".") : null,
+      raw,
+      hint,
+    };
+  } catch (err: any) {
+    console.error("[ai] recognizeMeter error:", err.message);
+
+    const errMsg = (err.message || "").toLowerCase();
+    let hint: string;
+    if (errMsg.includes("timeout") || errMsg.includes("timed out")) {
+      hint = "Распознавание заняло слишком много времени. Попробуйте отправить фото ещё раз.";
+    } else if (errMsg.includes("rate limit") || err.status === 429) {
+      hint = "Сейчас много запросов. Подождите минутку и отправьте фото снова.";
+    } else {
+      hint = "Произошла ошибка при распознавании. Попробуйте отправить фото ещё раз через минуту.";
+    }
+
+    return { value: null, raw: "ОШИБКА", hint };
+  }
 }
 
 export async function analyzeIntent(text: string, userId?: number): Promise<{

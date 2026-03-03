@@ -45,6 +45,53 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+async function hasActiveSubscription(userId: number): Promise<boolean> {
+  const user = await storage.getUser(userId);
+  if (!user) return false;
+
+  const checkSub = async (uid: number): Promise<boolean> => {
+    const sub = await storage.getSubscription(uid);
+    if (!sub) return false;
+    if (sub.status !== "active") return false;
+    if (sub.expiresAt && new Date(sub.expiresAt) < new Date()) return false;
+    return true;
+  };
+
+  if (await checkSub(userId)) return true;
+
+  if (user.role === "child" && user.linkedParentId) {
+    return checkSub(user.linkedParentId);
+  }
+
+  if (user.role === "parent") {
+    const children = await storage.getChildrenByParentId(userId);
+    for (const child of children) {
+      if (await checkSub(child.id)) return true;
+    }
+  }
+
+  return false;
+}
+
+function requireSubscription(req: Request, res: Response, next: NextFunction) {
+  const userId = req.session.userId;
+  if (!userId) {
+    return res.status(401).json({ message: "Необходима авторизация" });
+  }
+  hasActiveSubscription(userId).then((active) => {
+    if (!active) {
+      return res.status(403).json({
+        message: "Для доступа к этой функции необходима подписка. Оформите подписку в разделе «Тарифы».",
+        code: "SUBSCRIPTION_REQUIRED",
+      });
+    }
+    next();
+  }).catch((err) => {
+    console.error("[requireSubscription] Error:", err);
+    return res.status(500).json({ message: "Ошибка проверки подписки" });
+  });
+}
+
 async function resolveParentId(userId: number): Promise<number | null> {
   const user = await storage.getUser(userId);
   if (!user) return null;
@@ -289,7 +336,7 @@ export async function registerRoutes(
   });
 
   // ========== UTILITY METRICS ==========
-  app.get("/api/utility-metrics", requireAuth, async (req, res) => {
+  app.get("/api/utility-metrics", requireAuth, requireSubscription, async (req, res) => {
     const userId = req.session.userId!;
     const user = await storage.getUser(userId);
     if (!user?.linkedParentId) return res.json([]);
@@ -297,7 +344,7 @@ export async function registerRoutes(
     return res.json(list);
   });
 
-  app.post("/api/utility-metrics", requireAuth, async (req, res) => {
+  app.post("/api/utility-metrics", requireAuth, requireSubscription, async (req, res) => {
     try {
       const userId = req.session.userId!;
       const parentId = await resolveParentId(userId);
@@ -321,7 +368,7 @@ export async function registerRoutes(
   });
 
   // ========== MEMOIRS ==========
-  app.get("/api/memoirs", requireAuth, async (req, res) => {
+  app.get("/api/memoirs", requireAuth, requireSubscription, async (req, res) => {
     const userId = req.session.userId!;
     const user = await storage.getUser(userId);
     if (!user?.linkedParentId) return res.json([]);
@@ -329,7 +376,7 @@ export async function registerRoutes(
     return res.json(list);
   });
 
-  app.post("/api/memoirs", requireAuth, async (req, res) => {
+  app.post("/api/memoirs", requireAuth, requireSubscription, async (req, res) => {
     try {
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
@@ -345,7 +392,7 @@ export async function registerRoutes(
   });
 
   // ========== HEALTH LOGS ==========
-  app.get("/api/health-logs", requireAuth, async (req, res) => {
+  app.get("/api/health-logs", requireAuth, requireSubscription, async (req, res) => {
     const userId = req.session.userId!;
     const user = await storage.getUser(userId);
     if (!user?.linkedParentId) return res.json([]);
@@ -354,7 +401,7 @@ export async function registerRoutes(
     return res.json(list);
   });
 
-  app.post("/api/health-logs", requireAuth, async (req, res) => {
+  app.post("/api/health-logs", requireAuth, requireSubscription, async (req, res) => {
     try {
       const userId = req.session.userId!;
       const parentId = await resolveParentId(userId);
@@ -378,6 +425,57 @@ export async function registerRoutes(
   });
 
   // ========== AI ENDPOINTS ==========
+  const DAILY_MESSAGE_LIMITS: Record<string, number> = {
+    none: 10,
+    basic: 30,
+    standard: 100,
+    premium: Infinity,
+  };
+
+  const RATE_LIMIT_MESSAGE = "На сегодня наши разговоры закончились, но завтра я снова буду рядом! Если нужна срочная помощь — звони 112.";
+
+  async function getEffectivePlan(userId: number): Promise<string> {
+    const checkSub = async (uid: number): Promise<string | null> => {
+      const sub = await storage.getSubscription(uid);
+      if (!sub || sub.status !== "active") return null;
+      if (sub.expiresAt && new Date(sub.expiresAt) < new Date()) return null;
+      return sub.plan;
+    };
+
+    const directPlan = await checkSub(userId);
+    if (directPlan) return directPlan;
+
+    const user = await storage.getUser(userId);
+    if (!user) return "none";
+
+    if (user.role === "child" && user.linkedParentId) {
+      const parentPlan = await checkSub(user.linkedParentId);
+      if (parentPlan) return parentPlan;
+    }
+
+    if (user.role === "parent") {
+      const children = await storage.getChildrenByParentId(userId);
+      for (const child of children) {
+        const childPlan = await checkSub(child.id);
+        if (childPlan) return childPlan;
+      }
+    }
+
+    return "none";
+  }
+
+  async function checkDailyMessageLimit(userId: number): Promise<{ allowed: boolean; remaining: number; limit: number }> {
+    const plan = await getEffectivePlan(userId);
+    const limit = DAILY_MESSAGE_LIMITS[plan] ?? DAILY_MESSAGE_LIMITS.none;
+    if (limit === Infinity) {
+      return { allowed: true, remaining: Infinity, limit };
+    }
+    const user = await storage.getUser(userId);
+    const parentId = user?.role === "parent" ? userId : (user?.linkedParentId ?? userId);
+    const todayCount = await storage.countChatMessagesToday(parentId);
+    return { allowed: todayCount < limit, remaining: Math.max(0, limit - todayCount), limit };
+  }
+
   app.post("/api/ai/chat", requireAuth, async (req, res) => {
     try {
       const { messages } = req.body;
@@ -387,6 +485,17 @@ export async function registerRoutes(
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
       const parent = user?.linkedParentId ? await storage.getUser(user.linkedParentId) : null;
+
+      const parentId = user?.role === "parent" ? userId : (user?.linkedParentId ?? userId);
+      const rateLimitCheck = await checkDailyMessageLimit(parentId);
+      if (!rateLimitCheck.allowed) {
+        return res.json({
+          reply: RATE_LIMIT_MESSAGE,
+          hasAlert: false,
+          intent: "rate_limited",
+          imageUrl: null,
+        });
+      }
 
       const lastUserMsg = messages[messages.length - 1]?.content || "";
       const extractedDish = extractDishFromText(lastUserMsg);
@@ -399,6 +508,14 @@ export async function registerRoutes(
           imageUrl: null,
         });
       }
+
+      await storage.createChatMessage({
+        parentId,
+        role: "user",
+        content: lastUserMsg,
+        intent: null,
+        hasAlert: false,
+      });
 
       const parentName = user?.role === "parent" ? user.name : (parent?.name || undefined);
       const result = await chatWithGrandchild(messages, parentName, userId);
@@ -448,6 +565,14 @@ export async function registerRoutes(
         }
       }
 
+      await storage.createChatMessage({
+        parentId,
+        role: "assistant",
+        content: result.reply,
+        intent: result.intent,
+        hasAlert: result.hasAlert,
+      });
+
       return res.json({
         reply: result.reply,
         hasAlert: result.hasAlert,
@@ -459,7 +584,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/ai/recognize-meter", requireAuth, async (req, res) => {
+  app.post("/api/ai/recognize-meter", requireAuth, requireSubscription, async (req, res) => {
     try {
       const { imageBase64 } = req.body;
       if (!imageBase64) {
@@ -473,7 +598,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/ai/analyze-intent", requireAuth, async (req, res) => {
+  app.post("/api/ai/analyze-intent", requireAuth, requireSubscription, async (req, res) => {
     try {
       const { text } = req.body;
       if (!text) {

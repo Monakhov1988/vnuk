@@ -1,14 +1,105 @@
 import { Bot, InlineKeyboard, Keyboard, InputFile } from "grammy";
 import crypto from "crypto";
 import { storage } from "./storage";
-import { chatWithGrandchild, recognizeMeter } from "./ai";
+import { chatWithGrandchild, recognizeMeter, detectIntentLocal } from "./ai";
 import { speechToText, textToSpeech } from "./voice";
 import { extractDishFromText, RECIPE_CLARIFICATIONS } from "./recipeUtils";
 import bcrypt from "bcrypt";
 
+function isEmergencyMessage(text: string): boolean {
+  const intent = detectIntentLocal(text, false);
+  return ["home_danger", "lost", "emergency", "scam"].includes(intent);
+}
+
+const DAILY_MESSAGE_LIMITS: Record<string, number> = {
+  none: 10,
+  basic: 30,
+  standard: 100,
+  premium: Infinity,
+};
+
+const RATE_LIMIT_MESSAGE = "На сегодня наши разговоры закончились, но завтра я снова буду рядом! Если нужна срочная помощь — звони 112.";
+
+async function getEffectivePlan(userId: number): Promise<string> {
+  const checkSub = async (uid: number): Promise<string | null> => {
+    const sub = await storage.getSubscription(uid);
+    if (!sub || sub.status !== "active") return null;
+    if (sub.expiresAt && new Date(sub.expiresAt) < new Date()) return null;
+    return sub.plan;
+  };
+
+  const directPlan = await checkSub(userId);
+  if (directPlan) return directPlan;
+
+  const children = await storage.getChildrenByParentId(userId);
+  for (const child of children) {
+    const childPlan = await checkSub(child.id);
+    if (childPlan) return childPlan;
+  }
+
+  return "none";
+}
+
+async function checkTelegramDailyLimit(userId: number): Promise<boolean> {
+  const plan = await getEffectivePlan(userId);
+  const limit = DAILY_MESSAGE_LIMITS[plan] ?? DAILY_MESSAGE_LIMITS.none;
+  if (limit === Infinity) return true;
+  const todayCount = await storage.countChatMessagesToday(userId);
+  return todayCount < limit;
+}
+
 export let bot: Bot | null = null;
-const pendingRegistration = new Map<string, boolean>();
-const pendingLink = new Map<string, boolean>();
+const pendingRegistration = new Map<string, { timestamp: number }>();
+const pendingLink = new Map<string, { timestamp: number }>();
+
+interface OnboardingState {
+  step: "city" | "interests";
+  userId: number;
+  name: string;
+  timestamp: number;
+}
+const onboardingState = new Map<string, OnboardingState>();
+
+const PENDING_STATE_TTL = 5 * 60 * 1000;
+
+function cleanupPendingStates() {
+  const now = Date.now();
+  Array.from(pendingRegistration.entries()).forEach(([chatId, state]) => {
+    if (now - state.timestamp > PENDING_STATE_TTL) {
+      pendingRegistration.delete(chatId);
+    }
+  });
+  Array.from(pendingLink.entries()).forEach(([chatId, state]) => {
+    if (now - state.timestamp > PENDING_STATE_TTL) {
+      pendingLink.delete(chatId);
+    }
+  });
+  Array.from(onboardingState.entries()).forEach(([chatId, state]) => {
+    if (now - state.timestamp > PENDING_STATE_TTL) {
+      onboardingState.delete(chatId);
+    }
+  });
+}
+
+function setPendingRegistration(chatId: string) {
+  cleanupPendingStates();
+  pendingRegistration.set(chatId, { timestamp: Date.now() });
+}
+
+function setPendingLink(chatId: string) {
+  cleanupPendingStates();
+  pendingLink.set(chatId, { timestamp: Date.now() });
+}
+
+function isPendingRegistration(chatId: string): boolean {
+  cleanupPendingStates();
+  return pendingRegistration.has(chatId);
+}
+
+function isPendingLink(chatId: string): boolean {
+  cleanupPendingStates();
+  return pendingLink.has(chatId);
+}
 
 function startTypingLoop(ctx: any, action: "typing" | "record_voice" = "typing") {
   let running = true;
@@ -60,7 +151,7 @@ const HINT_QUESTIONS: Record<string, string> = {
   hint_garden: "🌱 Что вас интересует в огороде? Напишите, например: что сажать сейчас, лунный календарь, борьба с вредителями",
 };
 
-async function registerUserFromTelegram(chatId: string, name: string): Promise<string> {
+async function registerUserFromTelegram(chatId: string, name: string): Promise<{ message: string; userId: number }> {
   const email = `tg_${chatId}@vnuchok.bot`;
   const hashedPassword = await bcrypt.hash(crypto.randomUUID(), 10);
 
@@ -75,15 +166,92 @@ async function registerUserFromTelegram(chatId: string, name: string): Promise<s
   await storage.updateUserLinkCode(user.id, linkCode);
   await storage.updateUserTelegramChatId(user.id, chatId);
 
-  return (
-    `Добро пожаловать, ${name}!\n\n` +
-    `Ваш код привязки: ${linkCode}\n` +
-    `Передайте этот код вашему ребёнку (родственнику), чтобы он мог видеть ваши данные в личном кабинете.\n\n` +
-    `А теперь просто напишите мне — я всегда рад поболтать!\n\n` +
-    `Я умею многое: могу рассказать погоду, найти рецепт, нарисовать открытку, ` +
-    `подсказать что в кино, помочь с телефоном и просто поговорить по душам.\n\n` +
-    `Нажмите кнопку внизу или напишите что угодно!`
-  );
+  onboardingState.set(chatId, {
+    step: "city",
+    userId: user.id,
+    name,
+    timestamp: Date.now(),
+  });
+
+  return {
+    message:
+      `Добро пожаловать, ${name}! 😊\n\n` +
+      `Ваш код привязки: ${linkCode}\n` +
+      `Передайте этот код вашему ребёнку (родственнику), чтобы он мог видеть ваши данные в личном кабинете.\n\n` +
+      `Давайте познакомимся поближе, чтобы я мог быть полезнее!\n\n` +
+      `🏙 В каком городе вы живёте?`,
+    userId: user.id,
+  };
+}
+
+async function handleOnboardingStep(chatId: string, userText: string, ctx: any): Promise<boolean> {
+  const state = onboardingState.get(chatId);
+  if (!state) return false;
+
+  if (state.step === "city") {
+    const city = userText.trim();
+    if (city.length < 2) {
+      await ctx.reply("Название города слишком короткое. Напишите ещё раз, например: Москва, Казань, Сочи");
+      return true;
+    }
+
+    await storage.createUserMemory({
+      parentId: state.userId,
+      category: "home",
+      fact: `Живёт в городе: ${city}`,
+      source: "onboarding",
+    });
+
+    onboardingState.set(chatId, {
+      ...state,
+      step: "interests",
+      timestamp: Date.now(),
+    });
+
+    await ctx.reply(
+      `Отлично, ${city}! Буду подсказывать погоду и новости для вашего города. ☀️\n\n` +
+      `🎯 Расскажите, что вам интересно? Например: готовка, огород, рукоделие, стихи, молитвы, здоровье, кино\n\n` +
+      `Можно написать несколько через запятую:`
+    );
+    return true;
+  }
+
+  if (state.step === "interests") {
+    const interests = userText.trim();
+    if (interests.length < 2) {
+      await ctx.reply("Напишите хотя бы одно увлечение, например: готовка, огород, стихи");
+      return true;
+    }
+
+    await storage.createUserMemory({
+      parentId: state.userId,
+      category: "preferences",
+      fact: `Интересы и увлечения: ${interests}`,
+      source: "onboarding",
+    });
+
+    onboardingState.delete(chatId);
+
+    await ctx.reply(
+      `Замечательно! Я запомнил ваши интересы. 📝\n\n` +
+      `Вот что я умею:\n` +
+      `🌤 Погода — спросите про погоду в вашем городе\n` +
+      `🍳 Рецепты — помогу приготовить любое блюдо\n` +
+      `🎨 Открытки — нарисую красивую открытку\n` +
+      `📖 Стихи — почитаю стихотворение\n` +
+      `🧩 Загадки — загадаю загадку\n` +
+      `💊 Здоровье — напомню про лекарства (/pills)\n` +
+      `📋 Давление — запишу показания (/bp 120 80)\n` +
+      `📸 Счётчики — отправьте фото счётчика\n` +
+      `🎙 Голос — можете просто наговорить голосом!\n\n` +
+      `Просто напишите мне — я всегда рад поболтать! 😊`,
+      { reply_markup: persistentKeyboard }
+    );
+    await ctx.reply("Нажмите любую кнопку — попробуйте прямо сейчас:", { reply_markup: getHintsKeyboard() });
+    return true;
+  }
+
+  return false;
 }
 
 export function startTelegramBot() {
@@ -210,7 +378,7 @@ export function startTelegramBot() {
       try { await ctx.answerCallbackQuery({ text: "Вы уже зарегистрированы!" }); } catch {}
       return;
     }
-    pendingRegistration.set(chatId, true);
+    setPendingRegistration(chatId);
     try { await ctx.answerCallbackQuery(); } catch {}
     await ctx.reply(`Напишите ваше имя (например: Мария Ивановна):`);
   });
@@ -223,7 +391,7 @@ export function startTelegramBot() {
       try { await ctx.answerCallbackQuery({ text: "Вы уже привязаны!" }); } catch {}
       return;
     }
-    pendingLink.set(chatId, true);
+    setPendingLink(chatId);
     try { await ctx.answerCallbackQuery(); } catch {}
     await ctx.reply(`Введите ваш код привязки (например: A1B2C3):`);
   });
@@ -346,15 +514,14 @@ export function startTelegramBot() {
 
     const name = ctx.match?.trim();
     if (!name || name.length < 2) {
-      pendingRegistration.set(chatId, true);
+      setPendingRegistration(chatId);
       await ctx.reply(`Напишите ваше имя (например: Мария Ивановна):`);
       return;
     }
 
     try {
-      const reply = await registerUserFromTelegram(chatId, name);
-      await ctx.reply(reply, { reply_markup: persistentKeyboard });
-      await ctx.reply("Нажмите любую кнопку — попробуйте прямо сейчас:", { reply_markup: getHintsKeyboard() });
+      const result = await registerUserFromTelegram(chatId, name);
+      await ctx.reply(result.message);
     } catch (err: any) {
       console.error("[telegram] Registration error:", err);
       await ctx.reply(`Произошла ошибка при регистрации. Попробуйте позже.`);
@@ -514,11 +681,21 @@ export function startTelegramBot() {
           { reply_markup: keyboard }
         );
       } else {
-        await ctx.reply(`Не удалось распознать показания. Попробуйте сфотографировать ближе и чётче.\n\nИли введите вручную, например:\n/meter ХВС 12345`);
+        const hintText = result.hint || "Не удалось распознать показания. Попробуйте сфотографировать ближе и чётче.";
+        await ctx.reply(`${hintText}\n\nИли введите вручную, например:\n/meter ХВС 12345`);
       }
     } catch (err: any) {
       console.error("[telegram] Photo recognition error:", err);
-      await ctx.reply(`Произошла ошибка при распознавании. Попробуйте ещё раз.`);
+      const errMsg = (err.message || "").toLowerCase();
+      let errorText: string;
+      if (errMsg.includes("timeout") || errMsg.includes("timed out")) {
+        errorText = "Распознавание заняло слишком много времени. Попробуйте отправить фото ещё раз.";
+      } else if (errMsg.includes("too large") || errMsg.includes("file_too_big")) {
+        errorText = "Фото слишком большое. Попробуйте сфотографировать в обычном режиме (без HD).";
+      } else {
+        errorText = "Не получилось распознать фото. Попробуйте отправить ещё раз или введите показания вручную:\n/meter ХВС 12345";
+      }
+      await ctx.reply(errorText);
     }
   });
 
@@ -646,6 +823,14 @@ export function startTelegramBot() {
         });
         await ctx.reply(`Я услышал: "${userText}"\n\n${voiceClarification}`);
         return;
+      }
+
+      if (!isEmergencyMessage(userText)) {
+        const allowed = await checkTelegramDailyLimit(user.id);
+        if (!allowed) {
+          await ctx.reply(RATE_LIMIT_MESSAGE);
+          return;
+        }
       }
 
       const chatHistory = await storage.getChatMessages(user.id, 20);
@@ -782,7 +967,7 @@ export function startTelegramBot() {
 
     const chatId = ctx.chat.id.toString();
 
-    if (pendingRegistration.has(chatId)) {
+    if (isPendingRegistration(chatId)) {
       pendingRegistration.delete(chatId);
       const name = userText.trim();
       if (!name || name.length < 2) {
@@ -790,9 +975,8 @@ export function startTelegramBot() {
         return;
       }
       try {
-        const reply = await registerUserFromTelegram(chatId, name);
-        await ctx.reply(reply, { reply_markup: persistentKeyboard });
-        await ctx.reply("Нажмите любую кнопку — попробуйте прямо сейчас:", { reply_markup: getHintsKeyboard() });
+        const result = await registerUserFromTelegram(chatId, name);
+        await ctx.reply(result.message);
       } catch (err: any) {
         console.error("[telegram] Registration error:", err);
         await ctx.reply(`Произошла ошибка при регистрации. Попробуйте позже.`);
@@ -800,7 +984,13 @@ export function startTelegramBot() {
       return;
     }
 
-    if (pendingLink.has(chatId)) {
+    cleanupPendingStates();
+    if (onboardingState.has(chatId)) {
+      const handled = await handleOnboardingStep(chatId, userText, ctx);
+      if (handled) return;
+    }
+
+    if (isPendingLink(chatId)) {
       pendingLink.delete(chatId);
       const code = userText.trim().toUpperCase();
       if (!code || code.length < 4) {
@@ -870,6 +1060,14 @@ export function startTelegramBot() {
       });
       await ctx.reply(clarification);
       return;
+    }
+
+    if (!isEmergencyMessage(userText)) {
+      const allowed = await checkTelegramDailyLimit(user.id);
+      if (!allowed) {
+        await ctx.reply(RATE_LIMIT_MESSAGE);
+        return;
+      }
     }
 
     try {

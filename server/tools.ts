@@ -539,7 +539,27 @@ export async function generateImage(description: string, userId?: number): Promi
 
     return { url, error: null };
   } catch (err: any) {
-    console.error("[tools] Image generation error:", err.message);
-    return { url: null, error: "Не получилось нарисовать картинку. Попробуем позже." };
+    console.error("[tools] Image generation error:", err.message, err.status, err.code);
+
+    let errorMessage: string;
+    const errMsg = (err.message || "").toLowerCase();
+    const errCode = err.code || "";
+    const errStatus = err.status || 0;
+
+    if (errStatus === 429 || errCode === "rate_limit_exceeded" || errMsg.includes("rate limit")) {
+      errorMessage = "Сейчас слишком много запросов на рисование. Давай подождём пару минут и попробуем снова, хорошо?";
+    } else if (errStatus === 400 && (errMsg.includes("content_policy") || errMsg.includes("safety") || errMsg.includes("rejected"))) {
+      errorMessage = "Не получилось нарисовать такую картинку — система посчитала описание неподходящим. Попробуй попросить что-нибудь другое, например открытку с цветами или красивый пейзаж!";
+    } else if (errStatus === 400 && errMsg.includes("billing")) {
+      errorMessage = "Сервис рисования временно недоступен. Попробуем позже!";
+    } else if (errMsg.includes("timeout") || errMsg.includes("timed out")) {
+      errorMessage = "Рисование заняло слишком много времени. Давай попробуем ещё раз?";
+    } else if (errStatus >= 500) {
+      errorMessage = "Сервис рисования сейчас перегружен. Попробуем чуть позже, ладно?";
+    } else {
+      errorMessage = "Не получилось нарисовать картинку. Попробуем ещё раз чуть позже?";
+    }
+
+    return { url: null, error: errorMessage };
   }
 }

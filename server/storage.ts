@@ -71,6 +71,8 @@ export interface IStorage {
   getActiveRemindersForTime(hour: number, minute: number): Promise<Reminder[]>;
   updateReminderLastTriggered(id: number, date: Date): Promise<void>;
   resetAllReminderStatuses(): Promise<void>;
+
+  countChatMessagesToday(parentId: number): Promise<number>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -298,6 +300,16 @@ export class DatabaseStorage implements IStorage {
 
   async resetAllReminderStatuses(): Promise<void> {
     await db.update(reminders).set({ status: "pending" }).where(eq(reminders.isActive, true));
+  }
+
+  async countChatMessagesToday(parentId: number): Promise<number> {
+    const [result] = await db.select({ cnt: count() }).from(chatMessages)
+      .where(and(
+        eq(chatMessages.parentId, parentId),
+        eq(chatMessages.role, "user"),
+        gte(chatMessages.createdAt, sql`(now() AT TIME ZONE 'Europe/Moscow')::date AT TIME ZONE 'Europe/Moscow'`)
+      ));
+    return Number(result?.cnt) || 0;
   }
 }
 
