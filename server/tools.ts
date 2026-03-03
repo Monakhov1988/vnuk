@@ -177,14 +177,35 @@ export async function getWeather(city: string): Promise<string> {
   if (cached) return cached;
 
   const cityKey = city.toLowerCase().trim();
-  const coords = CITY_COORDS[cityKey];
+  let coords = CITY_COORDS[cityKey];
+  let cityName = coords?.name;
+  let timezone = "Europe/Moscow";
+
   if (!coords) {
-    return `Город "${city}" не найден в моей базе. Попробуйте указать ближайший крупный город.`;
+    try {
+      const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=ru`;
+      const geoResponse = await fetch(geoUrl, { signal: AbortSignal.timeout(5000) });
+      if (geoResponse.ok) {
+        const geoData = await geoResponse.json() as any;
+        if (geoData.results && geoData.results.length > 0) {
+          const result = geoData.results[0];
+          coords = { lat: result.latitude, lon: result.longitude, name: result.name || city };
+          cityName = result.name || city;
+          timezone = result.timezone || "Europe/Moscow";
+        }
+      }
+    } catch (e) {
+      console.error("[weather] Geocoding error:", e);
+    }
   }
-  const cityName = coords.name;
+
+  if (!coords) {
+    return `Город "${city}" не найден. Попробуйте написать название по-другому или указать ближайший крупный город.`;
+  }
+  if (!cityName) cityName = coords.name;
 
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,apparent_temperature,weathercode,windspeed_10m,relativehumidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Europe/Moscow&forecast_days=2`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,apparent_temperature,weathercode,windspeed_10m,relativehumidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=${encodeURIComponent(timezone)}&forecast_days=2`;
     const response = await fetch(url, {
       signal: AbortSignal.timeout(10000),
     });

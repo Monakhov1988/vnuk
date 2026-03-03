@@ -1076,6 +1076,7 @@ export async function startTelegramBot() {
       const audioBuffer = Buffer.from(await response.arrayBuffer());
 
       const userText = await speechToText(audioBuffer);
+      console.log("[telegram] Voice transcribed, length:", userText?.length || 0, "chars");
       if (!userText || userText.length < 1) {
         await ctx.reply("Не удалось разобрать, что вы сказали. Попробуйте ещё раз, говорите чётко.");
         return;
