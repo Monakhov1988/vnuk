@@ -41,11 +41,8 @@ async function getEffectivePlan(userId: number): Promise<string> {
 }
 
 async function checkTelegramDailyLimit(userId: number): Promise<boolean> {
-  const plan = await getEffectivePlan(userId);
-  const limit = DAILY_MESSAGE_LIMITS[plan] ?? DAILY_MESSAGE_LIMITS.none;
-  if (limit === Infinity) return true;
-  const todayCount = await storage.countChatMessagesToday(userId);
-  return todayCount < limit;
+  // TODO: включить обратно после тестирования
+  return true;
 }
 
 export let bot: Bot | null = null;

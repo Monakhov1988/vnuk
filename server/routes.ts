@@ -336,7 +336,7 @@ export async function registerRoutes(
   });
 
   // ========== UTILITY METRICS ==========
-  app.get("/api/utility-metrics", requireAuth, requireSubscription, async (req, res) => {
+  app.get("/api/utility-metrics", requireAuth, async (req, res) => {
     const userId = req.session.userId!;
     const user = await storage.getUser(userId);
     if (!user?.linkedParentId) return res.json([]);
@@ -344,7 +344,7 @@ export async function registerRoutes(
     return res.json(list);
   });
 
-  app.post("/api/utility-metrics", requireAuth, requireSubscription, async (req, res) => {
+  app.post("/api/utility-metrics", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
       const parentId = await resolveParentId(userId);
@@ -368,7 +368,7 @@ export async function registerRoutes(
   });
 
   // ========== MEMOIRS ==========
-  app.get("/api/memoirs", requireAuth, requireSubscription, async (req, res) => {
+  app.get("/api/memoirs", requireAuth, async (req, res) => {
     const userId = req.session.userId!;
     const user = await storage.getUser(userId);
     if (!user?.linkedParentId) return res.json([]);
@@ -376,7 +376,7 @@ export async function registerRoutes(
     return res.json(list);
   });
 
-  app.post("/api/memoirs", requireAuth, requireSubscription, async (req, res) => {
+  app.post("/api/memoirs", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
@@ -392,7 +392,7 @@ export async function registerRoutes(
   });
 
   // ========== HEALTH LOGS ==========
-  app.get("/api/health-logs", requireAuth, requireSubscription, async (req, res) => {
+  app.get("/api/health-logs", requireAuth, async (req, res) => {
     const userId = req.session.userId!;
     const user = await storage.getUser(userId);
     if (!user?.linkedParentId) return res.json([]);
@@ -401,7 +401,7 @@ export async function registerRoutes(
     return res.json(list);
   });
 
-  app.post("/api/health-logs", requireAuth, requireSubscription, async (req, res) => {
+  app.post("/api/health-logs", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
       const parentId = await resolveParentId(userId);
@@ -465,15 +465,8 @@ export async function registerRoutes(
   }
 
   async function checkDailyMessageLimit(userId: number): Promise<{ allowed: boolean; remaining: number; limit: number }> {
-    const plan = await getEffectivePlan(userId);
-    const limit = DAILY_MESSAGE_LIMITS[plan] ?? DAILY_MESSAGE_LIMITS.none;
-    if (limit === Infinity) {
-      return { allowed: true, remaining: Infinity, limit };
-    }
-    const user = await storage.getUser(userId);
-    const parentId = user?.role === "parent" ? userId : (user?.linkedParentId ?? userId);
-    const todayCount = await storage.countChatMessagesToday(parentId);
-    return { allowed: todayCount < limit, remaining: Math.max(0, limit - todayCount), limit };
+    // TODO: включить обратно после тестирования
+    return { allowed: true, remaining: Infinity, limit: Infinity };
   }
 
   app.post("/api/ai/chat", requireAuth, async (req, res) => {
@@ -584,7 +577,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/ai/recognize-meter", requireAuth, requireSubscription, async (req, res) => {
+  app.post("/api/ai/recognize-meter", requireAuth, async (req, res) => {
     try {
       const { imageBase64 } = req.body;
       if (!imageBase64) {
@@ -598,7 +591,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/ai/analyze-intent", requireAuth, requireSubscription, async (req, res) => {
+  app.post("/api/ai/analyze-intent", requireAuth, async (req, res) => {
     try {
       const { text } = req.body;
       if (!text) {
