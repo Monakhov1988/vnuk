@@ -516,6 +516,8 @@ export async function registerRoutes(
       if (result.hasAlert) {
         const alertTitle = result.intent === "scam"
           ? "Возможная попытка мошенничества!"
+          : result.intent === "financial_risk"
+          ? "Подозрительное финансовое решение!"
           : result.intent === "home_danger"
           ? "Опасная ситуация дома!"
           : result.intent === "lost"

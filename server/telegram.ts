@@ -35,7 +35,7 @@ function detectPersonalitySettingsIntent(text: string): { changes: Record<string
 
 function isEmergencyMessage(text: string): boolean {
   const intent = detectIntentLocal(text, false);
-  return ["home_danger", "lost", "emergency", "scam"].includes(intent);
+  return ["home_danger", "lost", "emergency", "scam", "financial_risk"].includes(intent);
 }
 
 const DAILY_MESSAGE_LIMITS: Record<string, number> = {
@@ -1158,6 +1158,8 @@ export function startTelegramBot() {
       if (result.hasAlert) {
         const alertTitle = result.intent === "scam"
           ? "Возможная попытка мошенничества!"
+          : result.intent === "financial_risk"
+          ? "Подозрительное финансовое решение!"
           : result.intent === "home_danger"
           ? "Опасная ситуация дома!"
           : result.intent === "lost"
@@ -1458,6 +1460,8 @@ export function startTelegramBot() {
       if (result.hasAlert) {
         const alertTitle = result.intent === "scam"
           ? "Возможная попытка мошенничества!"
+          : result.intent === "financial_risk"
+          ? "Подозрительное финансовое решение!"
           : result.intent === "home_danger"
           ? "Опасная ситуация дома!"
           : result.intent === "lost"

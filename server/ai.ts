@@ -255,6 +255,16 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 → Добавь маркер [ALERT] в конец ответа.
 → Повтори: «Ни банк, ни полиция НИКОГДА не просят коды по телефону. Это точно обман.»
 
+УРОВЕНЬ 3.5 — КРУПНЫЕ ФИНАНСОВЫЕ РЕШЕНИЯ (мягко, но твёрдо):
+Если собеседник говорит что хочет: продать квартиру/дом/дачу, подарить или переписать имущество, пожертвовать деньги/накопления (церкви, фонду, организации), отдать крупную сумму, взять кредит/займ, переписать завещание, вложить деньги в «выгодный проект»:
+→ НЕ поддерживай и НЕ помогай осуществить это решение. НЕ подсказывай как продать, к кому обратиться, где оценить имущество.
+→ Вырази мягкое беспокойство: «Подожди, родная/родной. Это очень серьёзный шаг. Такие решения не нужно принимать в спешке.»
+→ Обязательно предложи обсудить с семьёй: «Давай сначала обсудим это с твоими родными? Они тебя любят и хотят помочь разобраться. {ALERT_ACTION_FINANCIAL}»
+→ Объясни почему: «Квартира — это твой дом, твоя защита. Такие решения лучше принимать вместе с близкими, чтобы потом не пожалеть.»
+→ Если кто-то со стороны подтолкнул к этому решению (батюшка, соседка, знакомый, «помощник») — отнесись ещё серьёзнее: «А кто тебе это посоветовал? Если кто-то торопит или давит — это повод насторожиться. Родные помогут разобраться.»
+→ Добавь маркер [ALERT] в конец ответа.
+→ При повторном обсуждении — НЕ меняй позицию: «Я по-прежнему думаю, что это нужно обсудить с родными. Не торопись, ладно?»
+
 УРОВЕНЬ 4 — ОПАСНОСТЬ В ДОМЕ (немедленно):
 Если говорит: запах газа, пахнет газом, газ течёт:
 → ЧЁТКО И СПОКОЙНО: «Послушай меня! Открой окно прямо сейчас. НЕ включай свет и НЕ зажигай спички. Выйди из квартиры. Звони 112 — это единый номер экстренных служб, работает с любого телефона! {ALERT_ACTION}»
@@ -720,10 +730,12 @@ export async function chatWithGrandchild(
   if (hasLinkedChild) {
     systemMessage = systemMessage.replace(/\{ALERT_ACTION\}/g, "Я сейчас сообщу твоему родственнику, он позвонит тебе.");
     systemMessage = systemMessage.replace(/\{ALERT_ACTION_LOST\}/g, "Я прямо сейчас сообщу твоему родственнику, он тебя найдёт.");
+    systemMessage = systemMessage.replace(/\{ALERT_ACTION_FINANCIAL\}/g, "Я сейчас сообщу родным — они помогут разобраться вместе с тобой.");
     systemMessage = systemMessage.replace(/\{ALERT_REPEAT\}/g, "Я уже сообщил родным, они в курсе. Побудь на месте, помощь идёт. Я тут, никуда не денусь.");
   } else {
     systemMessage = systemMessage.replace(/\{ALERT_ACTION\}/g, "Звони 112 — это единый номер, работает с любого телефона!");
     systemMessage = systemMessage.replace(/\{ALERT_ACTION_LOST\}/g, "Звони 112 — они помогут тебя найти!");
+    systemMessage = systemMessage.replace(/\{ALERT_ACTION_FINANCIAL\}/g, "Обязательно поговори с детьми или родными, прежде чем что-то решать!");
     systemMessage = systemMessage.replace(/\{ALERT_REPEAT\}/g, "Звони 112, если ещё не звонил(а)! Я тут, никуда не денусь.");
   }
 
@@ -804,7 +816,7 @@ ${memoryLines}
 
   const lastUserMsg = recentMessages.filter(m => m.role === "user").pop()?.content || "";
 
-  const DANGER_INTENTS = ["emergency", "scam", "home_danger", "lost"];
+  const DANGER_INTENTS = ["emergency", "scam", "home_danger", "lost", "financial_risk"];
   const serverDetectedIntent = detectIntentLocal(lastUserMsg, false);
   const serverDetectedDanger = DANGER_INTENTS.includes(serverDetectedIntent);
   if (serverDetectedDanger) {
@@ -999,6 +1011,20 @@ export function detectIntentLocal(text: string, hasAlert: boolean): string {
 
   const scamPatterns = /(?:из банка|из полиции|следственн|перевести деньги|код из смс|безопасный сч[её]т|спасти накопления|сын попал|дочь попала|новая карта|служба безопасности|попросил[аи]? (?:узнать|сказать|продиктовать|переслать) (?:код|пин|пароль|номер карты|данные)|внучка? просит? код|врач просит? (?:карт|код|данные))/;
   if (scamPatterns.test(lower)) return "scam";
+
+  const financialActionStems = /(?:прода(?:ть|ю|м|ём|дим|ла|л|ст|й)|переписа(?:ть|ла|л)|перепиш(?:у|ем)|подар(?:ить|ила|ил|ю|им|ишь)|переоформи(?:ть|ла|л|ю|м|шь)|отда(?:ть|ла|л|м|ю|ём|дим|й|шь))/;
+  const financialObjectStems = /(?:квартир|дом\b|дач|участок|гараж|машин|имущество|жиль[её]|недвижимост)/;
+  const financialMoneyStems = /(?:деньг|накоплен|сбережен|пенси|всё\s)/;
+  const financialDonateStems = /(?:пожертвова(?:ть|ла|л|ю|ем)|отда(?:ть|ла|л|м|ю)\s+(?:\S+\s+){0,3}(?:деньг|накоплен|сбережен|пенси)|отнес(?:ти|ла|у)\s+(?:\S+\s+){0,3}(?:деньг|накоплен|сбережен)|перевес(?:ти|ла|л)\s+(?:\S+\s+){0,3}(?:деньг|накоплен|сбережен|пенси))/;
+  const financialDestStems = /(?:церков|храм|батюшк|монастыр|фонд|организаци|компани|проект)/;
+  const financialRiskDirect = /(?:дарственн(?:ая|ую)|(?:переписа(?:ть|ла|л)|перепиш(?:у|ем)|измени(?:ть|ла|л)|поменя(?:ть|ла|л)).{0,20}завещани|завещани(?:е|я).{0,20}(?:переписа|перепиш|измени|поменя)|(?:взять|беру|возьм[уём]|оформи(?:ть|ла|л|ю)).{0,15}(?:кредит|займ|ссуд|ипотек)|вложи(?:ть|ла|л|у|м).{0,15}(?:деньг|накоплен|сбережен|пенси|всё))/;
+  const hasAction = financialActionStems.test(lower);
+  const hasObject = financialObjectStems.test(lower);
+  const hasMoney = financialMoneyStems.test(lower);
+  const hasDonate = financialDonateStems.test(lower);
+  const hasDest = financialDestStems.test(lower);
+  const hasDirect = financialRiskDirect.test(lower);
+  if (hasDirect || (hasAction && hasObject) || (hasDonate && hasDest) || (hasAction && hasDest) || (hasDonate) || (hasAction && hasMoney && hasDest)) return "financial_risk";
 
   const suspiciousVisitorPatterns = /(?:ломятся в дверь|угрожа[юе]т|не уход[ия]т от двери|требу[юе]т открыть|стучат в дверь.{0,30}(?:страшно|боюсь|не знаю)|незнакомы[ей].{0,20}(?:в дверь|в квартиру|ворвал))/;
   if (suspiciousVisitorPatterns.test(lower)) return "home_danger";
