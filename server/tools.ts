@@ -540,9 +540,12 @@ export async function generateImage(description: string, userId?: number): Promi
   }
 
   try {
-    let safePrompt = description;
+    let safePrompt = description
+      .replace(/\b(with text|saying|written|inscription|caption|typography|letters|words|writing|надпись|текст|буквы|слова)\b/gi, "")
+      .replace(/["«»].*?["«»]/g, "")
+      .trim();
     if (!/no text/i.test(safePrompt)) {
-      safePrompt += ". STRICTLY no text, no letters, no characters, no words, no signs, no typography, no writing, no captions on the image. Pure visual art only.";
+      safePrompt += ". STRICTLY no text, no letters, no numbers, no characters, no words, no signs, no typography, no writing, no captions, no inscriptions, no banners, no ribbons with text on the image. Pure visual art only, absolutely zero textual elements.";
     }
 
     const response = await openai.images.generate({
