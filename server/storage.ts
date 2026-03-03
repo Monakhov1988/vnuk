@@ -82,6 +82,9 @@ export interface IStorage {
 
   getPersonalitySettings(parentId: number): Promise<PersonalitySetting | undefined>;
   upsertPersonalitySettings(parentId: number, settings: Partial<Omit<PersonalitySetting, "id" | "parentId">>): Promise<PersonalitySetting>;
+
+  getLastMessageTime(parentId: number): Promise<Date | null>;
+  getAllActiveParents(): Promise<User[]>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -370,6 +373,22 @@ export class DatabaseStorage implements IStorage {
       .values({ parentId, ...settings })
       .returning();
     return created;
+  }
+  async getLastMessageTime(parentId: number): Promise<Date | null> {
+    const [msg] = await db.select({ createdAt: chatMessages.createdAt })
+      .from(chatMessages)
+      .where(eq(chatMessages.parentId, parentId))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(1);
+    return msg?.createdAt ?? null;
+  }
+
+  async getAllActiveParents(): Promise<User[]> {
+    return db.select().from(users)
+      .where(and(
+        eq(users.role, "parent"),
+        sql`${users.telegramChatId} IS NOT NULL`
+      ));
   }
 }
 

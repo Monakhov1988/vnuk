@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { InlineKeyboard } from "grammy";
 import { storage } from "./storage";
 import { bot } from "./telegram";
+import { generateProactiveMessage } from "./ai";
 
 function getMoscowTime(): { hour: number; minute: number; dateStr: string } {
   const now = new Date();
@@ -20,7 +21,7 @@ function isSameDay(date: Date | null, dateStr: string): boolean {
 }
 
 async function checkReminders() {
-  if (!bot) return;
+  if (!isBotReady()) return;
 
   const { hour, minute, dateStr } = getMoscowTime();
   const remindersNow = await storage.getActiveRemindersForTime(hour, minute);
@@ -69,7 +70,7 @@ async function checkReminders() {
 }
 
 async function checkMissedReminders() {
-  if (!bot) return;
+  if (!isBotReady()) return;
 
   const { hour, minute, dateStr } = getMoscowTime();
 
@@ -136,6 +137,61 @@ async function checkMissedReminders() {
   }
 }
 
+function isBotReady(): boolean {
+  return bot && (bot as any).__ready === true;
+}
+
+async function checkProactiveMessages() {
+  if (!isBotReady()) return;
+
+  const { hour, dateStr } = getMoscowTime();
+
+  if (hour < 9 || hour > 20) return;
+
+  try {
+    const parents = await storage.getAllActiveParents();
+
+    for (const parent of parents) {
+      try {
+        const recentMessages = await storage.getChatMessages(parent.id, 20);
+        const alreadySentToday = recentMessages.some(m => {
+          if (m.intent !== "proactive") return false;
+          if (!m.createdAt) return false;
+          const msgDate = new Date(m.createdAt.toLocaleString("en-US", { timeZone: "Europe/Moscow" })).toISOString().slice(0, 10);
+          return msgDate === dateStr;
+        });
+        if (alreadySentToday) continue;
+
+        const lastMsgTime = await storage.getLastMessageTime(parent.id);
+
+        if (!lastMsgTime) continue;
+
+        const hoursSinceLastMsg = (Date.now() - lastMsgTime.getTime()) / (1000 * 60 * 60);
+        if (hoursSinceLastMsg < 4) continue;
+
+        const message = await generateProactiveMessage(parent.id);
+        if (!message) continue;
+
+        await bot.api.sendMessage(parent.telegramChatId!, message);
+
+        await storage.createChatMessage({
+          parentId: parent.id,
+          role: "assistant",
+          content: message,
+          intent: "proactive",
+          hasAlert: false,
+        });
+
+        console.log(`[scheduler] Sent proactive message to parent ${parent.id}`);
+      } catch (err) {
+        console.error(`[scheduler] Error sending proactive message to parent ${parent.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[scheduler] Error in checkProactiveMessages:", err);
+  }
+}
+
 async function resetDailyStatuses() {
   try {
     await storage.resetAllReminderStatuses();
@@ -164,5 +220,13 @@ export function startScheduler() {
 
   cron.schedule("0 0 * * *", resetDailyStatuses, { timezone: "Europe/Moscow" });
 
-  console.log("[scheduler] Medication reminder scheduler started (MSK timezone)");
+  cron.schedule("0 9,11,14,17,20 * * *", async () => {
+    try {
+      await checkProactiveMessages();
+    } catch (err) {
+      console.error("[scheduler] checkProactiveMessages error:", err);
+    }
+  }, { timezone: "Europe/Moscow" });
+
+  console.log("[scheduler] Medication reminder + proactive message scheduler started (MSK timezone)");
 }

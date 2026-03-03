@@ -124,7 +124,13 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 У тебя есть специальные возможности. Используй их когда нужно:
 
 ПОГОДА (get_weather):
-Когда спрашивают о погоде, прогнозе, температуре на улице — вызови get_weather с названием города. Если город указан в разделе «ЧТО ТЫ ЗНАЕШЬ О СОБЕСЕДНИКЕ» — используй его. Если город не указан ни в сообщении, ни в памяти — СПРОСИ: «А в каком ты городе? Чтобы точную погоду сказать.» НЕ подставляй Москву молча. Перескажи результат тепло и по-простому: «Сегодня на улице 15 градусов, тепло! Можно погулять.»
+Когда спрашивают о погоде, прогнозе, температуре на улице — вызови get_weather с названием города.
+ВАЖНО: ВСЕГДА используй город из ТЕКУЩЕГО сообщения, если он там указан! Город из памяти используй ТОЛЬКО если в текущем сообщении город НЕ упомянут.
+Примеры:
+— «Какая погода в Шардже?» → get_weather({"city": "Шаржа"}) (даже если в памяти записана Москва!)
+— «Погода в Париже» → get_weather({"city": "Париж"})
+— «Какая погода?» (город НЕ указан) → тогда бери город из памяти. Если и в памяти нет — СПРОСИ: «А в каком ты городе? Чтобы точную погоду сказать.»
+НЕ подставляй Москву молча. Перескажи результат тепло и по-простому: «Сегодня на улице 15 градусов, тепло! Можно погулять.»
 
 ПОИСК ИНФОРМАЦИИ (search_web):
 Когда спрашивают о новостях, событиях, актуальной информации, праздниках, датах, афише, кино, театрах, концертах, куда сходить — вызови search_web. Пересказывай результат по-своему, тепло. Если в результате есть ссылки — передай их ТОЧНО КАК ЕСТЬ, ничего не меняй в URL. При вопросах про кино или театр — перескажи что знаешь, и обязательно скажи: "А точное расписание можно посмотреть тут:" и передай ссылки из результата.
@@ -1213,4 +1219,66 @@ export async function analyzeIntent(text: string, userId?: number): Promise<{
     intent: intent as any,
     confidence,
   };
+}
+
+export async function generateProactiveMessage(parentId: number): Promise<string | null> {
+  try {
+    const recentMessages = await storage.getChatMessages(parentId, 10);
+    const memories = await storage.getUserMemory(parentId, 10);
+    const personality = await storage.getPersonalitySettings(parentId);
+
+    const formality = personality?.formality || "ты";
+    const memorySnippet = memories.slice(0, 5).map(m => `- ${m.fact}`).join("\n") || "Пока нет сохранённых фактов.";
+
+    const recentContext = recentMessages
+      .slice(0, 6)
+      .reverse()
+      .map(m => `${m.role === "user" ? "Собеседник" : "Внучок"}: ${m.content.slice(0, 200)}`)
+      .join("\n") || "Нет недавних сообщений.";
+
+    const now = new Date();
+    const mskHour = parseInt(now.toLocaleString("en-US", { timeZone: "Europe/Moscow", hour: "numeric", hour12: false }));
+
+    let timeContext = "день";
+    if (mskHour < 12) timeContext = "утро";
+    else if (mskHour >= 18) timeContext = "вечер";
+
+    const prompt = `Ты — Внучок, любящий внук. Сейчас ${timeContext} (${mskHour}:00 МСК).
+Обращение: на «${formality}».
+
+Что ты знаешь о собеседнике:
+${memorySnippet}
+
+Последние сообщения:
+${recentContext}
+
+Напиши ОДНО короткое тёплое сообщение-инициативу (1-3 предложения). Варианты:
+- Спроси про что-то из контекста прошлых разговоров (здоровье, дела, готовка)
+- Предложи чем-то заняться (загадка, стихотворение, рецепт, прогулка)
+- Поделись интересным фактом дня
+- Спроси как день проходит
+
+ПРАВИЛА:
+- Никогда не начинай с "Привет" если вечер
+- Будь естественным, как будто вспомнил и решил написать
+- Не упоминай что ты бот или ИИ
+- Если утро и нет сообщений — можно поздороваться
+- Используй обращение на «${formality}»
+- НЕ ставь никаких пометок типа [proactive] или подобного`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 200,
+      temperature: 0.9,
+    });
+
+    const text = response.choices[0]?.message?.content?.trim();
+    if (!text || text.length < 5) return null;
+
+    return text;
+  } catch (err) {
+    console.error("[ai] Error generating proactive message:", err);
+    return null;
+  }
 }

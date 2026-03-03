@@ -1535,11 +1535,38 @@ export async function startTelegramBot() {
     console.error("[telegram] Failed to register bot commands:", err);
   }
 
-  bot.start({
-    drop_pending_updates: true,
-    onStart: () => {
-      console.log("[telegram] Bot started successfully (pending updates dropped)");
-    },
+  let botReady = false;
+
+  const startBotWithRetry = async () => {
+    const MAX_RETRIES = 10;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        await bot.start({
+          drop_pending_updates: true,
+          onStart: () => {
+            botReady = true;
+            (bot as any).__ready = true;
+            console.log("[telegram] Bot started successfully (pending updates dropped)");
+          },
+        });
+        return;
+      } catch (err: any) {
+        if (err?.error_code === 409 || err?.message?.includes("409")) {
+          const jitter = Math.random() * 2000;
+          const delay = Math.min(5000 * Math.pow(2, attempt) + jitter, 60000);
+          console.warn(`[telegram] 409 Conflict — another bot instance running. Retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 1}/${MAX_RETRIES})...`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+        console.error("[telegram] Bot start failed with non-recoverable error:", err);
+        return;
+      }
+    }
+    console.error("[telegram] Bot failed to start after " + MAX_RETRIES + " attempts. Giving up.");
+  };
+
+  startBotWithRetry().catch(err => {
+    console.error("[telegram] Bot start retry loop failed:", err);
   });
 
   return bot;
