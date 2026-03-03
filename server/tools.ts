@@ -519,9 +519,14 @@ export async function generateImage(description: string, userId?: number): Promi
   }
 
   try {
+    let safePrompt = description;
+    if (!/no text/i.test(safePrompt)) {
+      safePrompt += ". STRICTLY no text, no letters, no characters, no words, no signs, no typography, no writing, no captions on the image. Pure visual art only.";
+    }
+
     const response = await openai.images.generate({
       model: "dall-e-3",
-      prompt: description,
+      prompt: safePrompt,
       n: 1,
       size: "1024x1024",
       quality: "standard",
