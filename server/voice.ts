@@ -8,7 +8,23 @@ export interface TtsResult {
   format: "wav" | "opus";
 }
 
-export async function speechToText(audioBuffer: Buffer): Promise<string> {
+export interface SttResult {
+  text: string;
+  confidence: "high" | "medium" | "low";
+  noSpeechProb: number;
+}
+
+const WHISPER_HALLUCINATION_PATTERNS = [
+  /^\.+$/,
+  /^,+$/,
+  /^\s*$/,
+  /^(субтитры|продолжение следует|конец|музыка|аплодисменты)/i,
+  /^(subtitles|subscribe|thank you for watching)/i,
+  /^(редактор субтитров|корректор|переводчик)/i,
+  /^(подписывайтесь|ставьте лайк)/i,
+];
+
+export async function speechToText(audioBuffer: Buffer): Promise<SttResult> {
   try {
     const file = await toFile(audioBuffer, "voice.ogg", { type: "audio/ogg" });
 
@@ -16,10 +32,30 @@ export async function speechToText(audioBuffer: Buffer): Promise<string> {
       model: "whisper-1",
       file,
       language: "ru",
-    });
+      response_format: "verbose_json",
+    } as any);
 
-    const text = response.text?.trim() || "";
-    console.log(`[voice] STT result (${text.length} chars): ${text.slice(0, 80)}`);
+    const result = response as any;
+    const text = (result.text || "").trim();
+    const segments = result.segments || [];
+    const noSpeechProb = segments.length > 0
+      ? segments.reduce((sum: number, s: any) => sum + (s.no_speech_prob || 0), 0) / segments.length
+      : 0.5;
+
+    const isHallucination = WHISPER_HALLUCINATION_PATTERNS.some(p => p.test(text));
+    const isTooShort = text.length < 2;
+    const isOnlyPunctuation = /^[.,!?;:\-—–…\s]+$/.test(text);
+
+    let confidence: "high" | "medium" | "low" = "high";
+    if (isHallucination || isTooShort || isOnlyPunctuation) {
+      confidence = "low";
+    } else if (noSpeechProb > 0.7) {
+      confidence = "low";
+    } else if (noSpeechProb > 0.4 || text.length < 5) {
+      confidence = "medium";
+    }
+
+    console.log(`[voice] STT: "${text.slice(0, 50)}" (${text.length} chars, no_speech=${noSpeechProb.toFixed(2)}, conf=${confidence}, segs=${segments.length})`);
 
     storage.logAiUsage({
       userId: null,
@@ -29,82 +65,39 @@ export async function speechToText(audioBuffer: Buffer): Promise<string> {
       tokensOut: 0,
     });
 
-    return text;
+    return { text, confidence, noSpeechProb };
   } catch (err: any) {
     console.error("[voice] STT error:", err.message);
     throw new Error("Не удалось распознать голосовое сообщение");
   }
 }
 
-async function textToSpeechAudioModel(text: string): Promise<TtsResult> {
-  const trimmedText = text.slice(0, 4096);
-
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini-audio-preview",
-    modalities: ["text", "audio"],
-    audio: { voice: "coral", format: "wav" },
-    messages: [
-      {
-        role: "system",
-        content: "Говори эмоционально и дружелюбно, как заботливый внук. Тепло, с душевными интонациями, не торопясь. Озвучь следующий текст точно как написано, ничего не добавляя и не меняя.",
-      },
-      {
-        role: "user",
-        content: trimmedText,
-      },
-    ],
-  } as any);
-
-  const audioData = (response.choices[0]?.message as any)?.audio?.data;
-  if (!audioData) {
-    throw new Error("Audio model returned no audio data");
-  }
-
-  const buffer = Buffer.from(audioData, "base64");
-
-  const usage = response.usage;
-  storage.logAiUsage({
-    userId: null,
-    endpoint: "text-to-speech-audio",
-    model: "gpt-4o-mini-audio-preview",
-    tokensIn: usage?.prompt_tokens || 0,
-    tokensOut: usage?.completion_tokens || 0,
-  });
-
-  console.log(`[voice] Audio model TTS: ${buffer.length} bytes for ${trimmedText.length} chars (coral/wav)`);
-  return { buffer, format: "wav" };
-}
-
-async function textToSpeechClassic(text: string): Promise<TtsResult> {
-  const trimmedText = text.slice(0, 4096);
-
-  const response = await openai.audio.speech.create({
-    model: "tts-1",
-    voice: "alloy",
-    input: trimmedText,
-    response_format: "opus",
-  });
-
-  const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
-  storage.logAiUsage({
-    userId: null,
-    endpoint: "text-to-speech",
-    model: "tts-1",
-    tokensIn: 0,
-    tokensOut: 0,
-  });
-
-  console.log(`[voice] Classic TTS: ${buffer.length} bytes for ${trimmedText.length} chars (alloy/opus)`);
-  return { buffer, format: "opus" };
-}
-
 export async function textToSpeech(text: string): Promise<TtsResult> {
+  const trimmedText = text.slice(0, 4096);
+
   try {
-    return await textToSpeechAudioModel(text);
+    const response = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: "nova",
+      input: trimmedText,
+      response_format: "opus",
+    });
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    storage.logAiUsage({
+      userId: null,
+      endpoint: "text-to-speech",
+      model: "tts-1",
+      tokensIn: 0,
+      tokensOut: 0,
+    });
+
+    console.log(`[voice] TTS: ${buffer.length} bytes for ${trimmedText.length} chars (nova/opus)`);
+    return { buffer, format: "opus" };
   } catch (err: any) {
-    console.error("[voice] Audio model TTS failed, falling back to classic TTS:", err.message);
-    return await textToSpeechClassic(text);
+    console.error("[voice] TTS error:", err.message);
+    throw new Error("Не удалось озвучить ответ");
   }
 }

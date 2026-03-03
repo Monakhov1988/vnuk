@@ -1075,10 +1075,25 @@ export async function startTelegramBot() {
       }
       const audioBuffer = Buffer.from(await response.arrayBuffer());
 
-      const userText = await speechToText(audioBuffer);
-      console.log("[telegram] Voice transcribed, length:", userText?.length || 0, "chars");
-      if (!userText || userText.length < 1) {
-        await ctx.reply("Не удалось разобрать, что вы сказали. Попробуйте ещё раз, говорите чётко.");
+      const sttResult = await speechToText(audioBuffer);
+      const userText = sttResult.text;
+
+      if (sttResult.confidence === "low" || !userText || userText.length < 1) {
+        console.log(`[telegram] Voice rejected: conf=${sttResult.confidence}, noSpeech=${sttResult.noSpeechProb.toFixed(2)}, text="${userText?.slice(0, 30)}"`);
+        await ctx.reply("Прости, не разобрал что ты сказал(а). Попробуй ещё раз, говори чуть громче и чётче 🙏");
+        return;
+      }
+
+      if (sttResult.confidence === "medium") {
+        console.log(`[telegram] Voice medium confidence: "${userText.slice(0, 50)}", noSpeech=${sttResult.noSpeechProb.toFixed(2)}`);
+        await ctx.reply(`Я услышал: «${userText}»\n\nПравильно? Если да — напиши «да» или повтори голосовое чётче.`);
+        await storage.createChatMessage({
+          parentId: user.id,
+          role: "assistant",
+          content: `[Подтверждение голосового] Я услышал: «${userText}». Правильно?`,
+          intent: "voice_confirm",
+          hasAlert: false,
+        });
         return;
       }
 
@@ -1114,6 +1129,7 @@ export async function startTelegramBot() {
       const chatHistory = await storage.getChatMessages(user.id, 20);
       const messages: Array<{ role: "user" | "assistant"; content: string }> = chatHistory
         .reverse()
+        .filter(m => m.intent !== "voice_confirm")
         .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
       messages.push({ role: "user", content: userText });
 

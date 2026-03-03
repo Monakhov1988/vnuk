@@ -135,8 +135,13 @@
   - Любой текст → AI-чат с Внучком (с сохранением в chat_messages)
   - Голосовое сообщение → Whisper STT → AI-чат → TTS голосовой ответ
 - Голосовые сообщения (`server/voice.ts`):
-  - `speechToText(buffer)` — OpenAI Whisper API, язык `ru`
-  - `textToSpeech(text)` — OpenAI TTS API, модель `tts-1`, голос `nova`, формат `opus`
+  - `speechToText(buffer)` → `SttResult { text, confidence, noSpeechProb }` — Whisper API, verbose_json формат, язык `ru`
+    - Quality gate: `low` conf (no_speech>0.7, hallucination patterns, <2 chars) → отклонение с просьбой повторить
+    - `medium` conf (no_speech>0.4, <5 chars) → подтверждение «Я услышал: …. Правильно?»
+    - `high` conf → прямая обработка
+    - Hallucination patterns: "субтитры", "продолжение следует", "подписывайтесь" и др.
+    - voice_confirm messages фильтруются из chat history
+  - `textToSpeech(text)` — OpenAI TTS API, модель `tts-1`, голос `nova`, формат `opus` (верный, не генеративный)
 - Алерты: при [ALERT] от AI — уведомление ребёнку в Telegram (если привязан)
 - Поле `telegramChatId` в таблице users для привязки
 - Rate-limiting: `checkTelegramDailyLimit()` проверяет лимит сообщений по тарифу; экстренные всегда проходят
@@ -178,7 +183,7 @@
     - `get_weather(city)` — реальная погода через Open-Meteo API (бесплатно, кэш 30 мин). Ветер в м/с. Если город не в базе — просит уточнить (не подставляет Москву молча). Город из user_memory (категория home) автоматически подставляется в system prompt
     - `search_web(query, userId?)` — веб-поиск через Perplexity API (sonar) с актуальными данными и источниками. Fallback: DuckDuckGo HTML + GPT-4o-mini → чистый GPT-4o-mini. Дополнительные ссылки (afisha.ru, gosuslugi.ru и т.д.) по категориям запроса. **Защита**: sanitizeWebContent удаляет prompt-injection паттерны и обрезает >3000 символов. checkSearchRateLimit: max 30 запросов/час на пользователя
     - `search_recipe(dish)` — GPT-4o-mini генерирует рецепт + ссылка Яндекс-поиск с фото. Перед поиском код-уровневый перехват через `extractDishFromText()` (`server/recipeUtils.ts`) — единая функция для telegram.ts и routes.ts: если блюдо из RECIPE_CLARIFICATIONS (борщ, суп, пирог и др.) — бот уточняет вариант напрямую без AI. Поддерживает естественные фразы: «как приготовить борщ», «хочу рецепт борща», «приготовь мне суп» и т.д. (работает и для голосовых сообщений). Tool description также запрещает вызов с общими названиями
-- **TTS (Text-to-Speech)**: основной — gpt-4o-mini-audio-preview (голос coral, формат wav, эмоциональные интонации «заботливого внука»). Fallback — tts-1 (голос alloy, формат opus). STT — whisper-1
+- **TTS (Text-to-Speech)**: tts-1 (голос nova, формат opus) — верное воспроизведение текста без генеративного дрифта. STT — whisper-1 с verbose_json и quality gate (low/medium/high confidence)
     - `generate_image(description)` — генерация открыток/картинок через DALL-E 3 (лимит 10/день на пользователя)
   - Возвращает `imageUrl` для отправки картинок в Telegram и веб-чат
 - `recognizeMeter` — Vision API для распознавания фото счетчиков (с логированием). Возвращает `hint` с конкретным советом при неудаче (переснять ближе, лучше освещение и т.д.)
