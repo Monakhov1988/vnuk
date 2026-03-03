@@ -279,7 +279,7 @@ async function handleOnboardingStep(chatId: string, userText: string, ctx: any):
   return false;
 }
 
-export function startTelegramBot() {
+export async function startTelegramBot() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {
     console.log("[telegram] TELEGRAM_BOT_TOKEN not set, skipping bot startup");
@@ -834,31 +834,7 @@ export function startTelegramBot() {
       await ctx.reply("Сначала зарегистрируйтесь — /start");
       return;
     }
-    const ps = await storage.getPersonalitySettings(user.id);
-    const formality = ps?.formality || "ты";
-    const humor = ps?.humor ?? 3;
-    const softness = ps?.softness ?? 4;
-    const verbosity = ps?.verbosity ?? 3;
-    const useEmoji = ps?.useEmoji ?? true;
-    const encouragement = ps?.encouragement ?? 4;
-    const formalityLabel = formality === "вы" ? "на «вы»" : "на «ты»";
-    const text =
-      `⚙️ Настройки личности бота\n\n` +
-      `👤 Обращение: ${formalityLabel}\n` +
-      `😄 Юмор: ${humor}/5\n` +
-      `🤗 Мягкость: ${softness}/5\n` +
-      `💬 Разговорчивость: ${verbosity}/5\n` +
-      `😊 Эмодзи: ${useEmoji ? "вкл" : "выкл"}\n` +
-      `👏 Подбадривание: ${encouragement}/5\n\n` +
-      `Нажмите кнопку, чтобы изменить:`;
-    const keyboard = new InlineKeyboard()
-      .text(`👤 ${formalityLabel}`, "ps_formality").row()
-      .text(`😄 Юмор ${humor}/5 ➖`, "ps_humor_down").text(`😄 Юмор ${humor}/5 ➕`, "ps_humor_up").row()
-      .text(`🤗 Мягкость ${softness}/5 ➖`, "ps_soft_down").text(`🤗 Мягкость ${softness}/5 ➕`, "ps_soft_up").row()
-      .text(`💬 Болтливость ${verbosity}/5 ➖`, "ps_verb_down").text(`💬 Болтливость ${verbosity}/5 ➕`, "ps_verb_up").row()
-      .text(`😊 Эмодзи: ${useEmoji ? "вкл" : "выкл"}`, "ps_emoji").row()
-      .text(`👏 Похвала ${encouragement}/5 ➖`, "ps_enc_down").text(`👏 Похвала ${encouragement}/5 ➕`, "ps_enc_up").row();
-    await ctx.reply(text, { reply_markup: keyboard });
+    await showSettingsMenu(ctx);
   });
 
   bot.callbackQuery("ps_formality", async (ctx) => {
@@ -1236,7 +1212,15 @@ export function startTelegramBot() {
   bot.on("message:text", async (ctx) => {
     let userText = ctx.message.text;
 
-    if (userText === "/темы" || userText === "/topics") {
+    if (userText === "/настройки") {
+      const chatId = ctx.chat.id.toString();
+      const user = await storage.getUserByTelegramChatId(chatId);
+      if (!user) { await ctx.reply("Сначала зарегистрируйтесь — /start"); return; }
+      await showSettingsMenu(ctx);
+      return;
+    }
+
+    if (userText === "/темы") {
       const chatId = ctx.chat.id.toString();
       const user = await storage.getUserByTelegramChatId(chatId);
       if (!user) { await ctx.reply("Сначала зарегистрируйтесь — /start"); return; }
@@ -1246,14 +1230,6 @@ export function startTelegramBot() {
       }
       keyboard.text("⬅️ Назад к настройкам", "settings_menu").row();
       await ctx.reply("📚 Выберите категорию тем:", { reply_markup: keyboard });
-      return;
-    }
-
-    if (userText === "/настройки" || userText === "/settings") {
-      const chatId = ctx.chat.id.toString();
-      const user = await storage.getUserByTelegramChatId(chatId);
-      if (!user) { await ctx.reply("Сначала зарегистрируйтесь — /start"); return; }
-      await showSettingsMenu(ctx);
       return;
     }
 
@@ -1529,6 +1505,22 @@ export function startTelegramBot() {
   bot.catch((err) => {
     console.error("[telegram] Bot error:", err);
   });
+
+  try {
+    await bot.api.setMyCommands([
+      { command: "start", description: "Начать общение" },
+      { command: "help", description: "Помощь и подсказки" },
+      { command: "settings", description: "Настройки бота" },
+      { command: "topics", description: "Темы и экспертиза" },
+      { command: "pills", description: "Напоминания о лекарствах" },
+      { command: "bp", description: "Записать давление" },
+      { command: "meter", description: "Показания счётчиков" },
+      { command: "link", description: "Привязать родственника" },
+    ]);
+    console.log("[telegram] Bot commands registered via setMyCommands");
+  } catch (err) {
+    console.error("[telegram] Failed to register bot commands:", err);
+  }
 
   bot.start({
     drop_pending_updates: true,
