@@ -26,6 +26,17 @@ function setCache<T>(key: string, data: T, ttlMs: number): void {
 
 const WEATHER_TTL = 30 * 60 * 1000;
 const SEARCH_TTL = 15 * 60 * 1000;
+const EVENT_TTL = 10 * 60 * 1000;
+const TRANSPORT_TTL = 10 * 60 * 1000;
+const TV_TTL = 30 * 60 * 1000;
+const CLINIC_TTL = 30 * 60 * 1000;
+const PLACE_TTL = 30 * 60 * 1000;
+const PRODUCT_TTL = 15 * 60 * 1000;
+const RECIPE_TTL = 60 * 60 * 1000;
+const MEDICINE_TTL = 60 * 60 * 1000;
+const GOV_TTL = 60 * 60 * 1000;
+const GARDEN_TTL = 60 * 60 * 1000;
+const MOVIE_TTL = 60 * 60 * 1000;
 
 const MAX_SEARCH_PER_HOUR = 30;
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
@@ -297,9 +308,25 @@ async function fetchDuckDuckGo(query: string): Promise<Array<{ title: string; ur
   return results;
 }
 
+function getPerplexityContextHint(query: string): string {
+  const lower = query.toLowerCase();
+  if (/(?:афиш|концерт|спектакль|выставк|фестиваль|мероприяти|куда сходить|куда пойти|билет на |расписание сеансов)/.test(lower)) {
+    return ` Это запрос про мероприятия/афишу. Ищи на kassir.ru, afisha.ru, culture.ru. Предупреди что даты могут меняться. Давай ссылки на покупку билетов. Указывай адрес площадки.`;
+  }
+  if (/(?:стих|поэзи|поэт|поэма|стихотворени|басн[яеи]|молитв|псалом|акафист|отче наш|символ веры|тропарь|песн[яеи]|текст песни|слова песни)/.test(lower)) {
+    return ` Это запрос про литературный/религиозный текст. Копируй текст ТОЧНО как в оригинале — не пересказывай, не интерпретируй, не сокращай. Читатель знает наизусть и заметит ошибку.`;
+  }
+  if (/(?:новост|что случилось|что произошло|последние событи)/.test(lower)) {
+    return ` Это запрос про новости. Указывай дату публикации каждой новости. Только проверенные источники.`;
+  }
+  return "";
+}
+
 async function fetchPerplexity(query: string): Promise<string> {
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) throw new Error("PERPLEXITY_API_KEY not set");
+
+  const contextHint = getPerplexityContextHint(query);
 
   const response = await fetch("https://api.perplexity.ai/chat/completions", {
     method: "POST",
@@ -312,7 +339,7 @@ async function fetchPerplexity(query: string): Promise<string> {
       messages: [
         {
           role: "system",
-          content: `Ты помогаешь пожилому человеку найти информацию. Отвечай тепло, понятно, по-русски. Называй конкретные названия, даты, факты. Если есть расписание — укажи его. Пиши простым текстом как сообщение в мессенджере, без маркдауна (без ###, **, - списков). Нумеруй пункты цифрами если нужен список. Преобразуй результаты поиска в простую форму. Избегай профессионального IT-жаргона: не используй слова вроде «дедлайн», «фидбэк», «апдейт», «интерфейс», «таймлайн», «воркфлоу». Общеупотребительные слова (онлайн, кэшбэк, QR-код, приложение) — оставляй как есть. Если используешь слово, которое может быть незнакомо пожилому человеку — поясни его в скобках, но не заменяй. ВАЖНО: передавай только найденную информацию. Если точных данных нет — напиши «информация не найдена». Не придумывай события, места, названия, цены, расписания, адреса, телефоны. Лучше сказать «не нашёл» чем выдумать. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+          content: `Ты помогаешь пожилому человеку (55-75 лет) найти информацию. Отвечай тепло, понятно, по-русски. Называй конкретные названия, даты, факты. Если есть расписание — укажи его. Пиши простым текстом как сообщение в мессенджере, без маркдауна (без ###, **, - списков). Нумеруй пункты цифрами если нужен список. Преобразуй результаты поиска в простую форму. Избегай профессионального IT-жаргона: не используй слова вроде «дедлайн», «фидбэк», «апдейт», «интерфейс», «таймлайн», «воркфлоу». Общеупотребительные слова (онлайн, кэшбэк, QR-код, приложение) — оставляй как есть. Если используешь слово, которое может быть незнакомо пожилому человеку — поясни его в скобках, но не заменяй. ВАЖНО: передавай только найденную информацию. Если точных данных нет — напиши «информация не найдена». Не придумывай события, места, названия, цены, расписания, адреса, телефоны. Лучше сказать «не нашёл» чем выдумать.${contextHint} Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
         },
         { role: "user", content: query },
       ],
@@ -481,15 +508,90 @@ export async function searchWeb(query: string, userId?: number): Promise<string>
     result += "\n\nПолезные ссылки:\nhttps://www.gosuslugi.ru/\nhttps://sfr.gov.ru/";
   }
 
-  setCache(cacheKey, result, SEARCH_TTL);
+  const isEventQuery = /(?:афиш|концерт|спектакл|выставк|мероприят|куда сходить|расписание сеансов|премьер|фестиваль|билет на )/.test(lowerQ);
+  const ttl = isEventQuery ? EVENT_TTL : SEARCH_TTL;
+  setCache(cacheKey, result, ttl);
   return result;
 }
 
-export async function searchRecipe(dish: string): Promise<string> {
+export async function searchRecipe(dish: string, userId?: number): Promise<string> {
   const safeDish = stripPII(dish);
   const cacheKey = `recipe:${safeDish.toLowerCase()}`;
   const cached = getCached<string>(cacheKey);
   if (cached) return cached;
+
+  if (userId) {
+    const rateCheck = checkSearchRateLimit(userId);
+    if (!rateCheck.allowed) return rateCheck.message!;
+  }
+
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+
+  if (apiKey) {
+    try {
+      const response = await fetch("https://api.perplexity.ai/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "sonar",
+          messages: [
+            {
+              role: "system",
+              content: `Ты помогаешь найти проверенный рецепт блюда. Ищи на кулинарных сайтах: povar.ru, eda.ru, russianfood.com, gastronom.ru. Выведи:
+1. Ингредиенты с точными количествами
+2. Пошаговую инструкцию приготовления
+3. Время приготовления
+4. Количество порций
+5. Калорийность (если есть на сайте-источнике)
+6. Источник рецепта (название сайта)
+
+СТРОГИЕ ПРАВИЛА:
+- Используй ТОЛЬКО реальные рецепты с кулинарных сайтов. НЕ выдумывай пропорции и ингредиенты.
+- Указывай точные количества: граммы, миллилитры, штуки, столовые/чайные ложки.
+- Если блюдо незнакомое или не найдено — напиши: «Не нашёл такой рецепт. Уточните название блюда.»
+- Пиши простым текстом без маркдауна, как опытная хозяйка рассказывает рецепт. Нумеруй шаги цифрами.`,
+            },
+            { role: "user", content: `Рецепт: ${safeDish}` },
+          ],
+          max_tokens: 800,
+          temperature: 0.3,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
+      }
+
+      const data = await response.json() as any;
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) throw new Error("Perplexity: empty response");
+
+      const tokensIn = data.usage?.prompt_tokens || 0;
+      const tokensOut = data.usage?.completion_tokens || 0;
+      storage.logAiUsage({
+        userId: userId || null,
+        endpoint: "search-recipe-perplexity",
+        model: "sonar",
+        tokensIn,
+        tokensOut,
+      });
+
+      let result = sanitizeWebContent(content);
+      const encodedDish = encodeURIComponent(safeDish + " рецепт с фото");
+      result += `\n\nЕщё рецепты с фотографиями:\nhttps://www.povarenok.ru/search/name/${encodeURIComponent(safeDish)}/\nhttps://eda.ru/search?q=${encodeURIComponent(safeDish)}`;
+
+      console.log(`[tools] Recipe search (Perplexity): ${tokensIn}+${tokensOut} tokens for "${dish.slice(0, 50)}"`);
+      setCache(cacheKey, result, RECIPE_TTL);
+      return result;
+    } catch (err: any) {
+      console.error("[tools] Recipe Perplexity error, falling back to GPT:", err.message);
+    }
+  }
 
   try {
     const response = await openai.chat.completions.create({
@@ -510,8 +612,8 @@ export async function searchRecipe(dish: string): Promise<string> {
     const usage = response.usage;
     if (usage) {
       storage.logAiUsage({
-        userId: null,
-        endpoint: "search-recipe",
+        userId: userId || null,
+        endpoint: "search-recipe-gpt-fallback",
         model: "gpt-4o-mini",
         tokensIn: usage.prompt_tokens,
         tokensOut: usage.completion_tokens,
@@ -521,7 +623,7 @@ export async function searchRecipe(dish: string): Promise<string> {
     const encodedDish = encodeURIComponent(safeDish + " рецепт с фото");
     result += `\n\n=== ССЫЛКИ (ОБЯЗАТЕЛЬНО ПЕРЕДАЙ В ОТВЕТЕ) ===\nПодробнее с фотографиями: https://yandex.ru/search/?text=${encodedDish}`;
 
-    setCache(cacheKey, result, SEARCH_TTL);
+    setCache(cacheKey, result, RECIPE_TTL);
     return result;
   } catch (err: any) {
     console.error("[tools] Recipe search error:", err.message);
@@ -628,7 +730,7 @@ export async function searchMovie(query: string, userId?: number): Promise<strin
         messages: [
           {
             role: "system",
-            content: `Ты помогаешь найти информацию о фильме или сериале. Ищи данные ТОЛЬКО на Кинопоиске (kinopoisk.ru). Выведи:
+            content: `Ты помогаешь пожилому человеку найти информацию о фильме или сериале. Ищи данные ТОЛЬКО на Кинопоиске (kinopoisk.ru). Выведи:
 1. Полное название фильма (и оригинальное если есть)
 2. Год выпуска, жанр, страна, режиссёр
 3. Оценка на Кинопоиске (число из 10) и количество оценок
@@ -675,7 +777,7 @@ export async function searchMovie(query: string, userId?: number): Promise<strin
     result += `\n\nПодробнее на Кинопоиске:\nhttps://www.kinopoisk.ru/index.php?kp_query=${encodedQuery}`;
 
     console.log(`[tools] Movie search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, SEARCH_TTL);
+    setCache(cacheKey, result, MOVIE_TTL);
     return result;
   } catch (err: any) {
     console.error("[tools] Movie search error:", err.message);
@@ -711,7 +813,7 @@ export async function searchPlace(query: string, city?: string, userId?: number)
         messages: [
           {
             role: "system",
-            content: `Ты помогаешь найти информацию о заведении или сервисе. Ищи данные на Яндекс.Картах (yandex.ru/maps). Выведи:
+            content: `Ты помогаешь пожилому человеку найти информацию о заведении или сервисе. Ищи данные на Яндекс.Картах (yandex.ru/maps). Выведи:
 1. Полное название заведения
 2. Адрес
 3. Оценка (из 5) и количество отзывов
@@ -760,7 +862,7 @@ export async function searchPlace(query: string, city?: string, userId?: number)
     result += `\n\nПосмотреть на Яндекс.Картах:\nhttps://yandex.ru/maps/?text=${encodedQuery}`;
 
     console.log(`[tools] Place search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, SEARCH_TTL);
+    setCache(cacheKey, result, PLACE_TTL);
     return result;
   } catch (err: any) {
     console.error("[tools] Place search error:", err.message);
@@ -801,7 +903,7 @@ export async function searchTransport(from: string, to: string, date?: string, t
         messages: [
           {
             role: "system",
-            content: `Ты помогаешь найти расписание транспорта в России. Ищи данные на сайтах: РЖД (rzd.ru), Яндекс.Расписания (rasp.yandex.ru), Туту.ру (tutu.ru), автовокзалы. Выведи:
+            content: `Ты помогаешь найти расписание транспорта в России. Пассажир — пожилой человек. Ищи данные на сайтах: РЖД (rzd.ru), Яндекс.Расписания (rasp.yandex.ru), Туту.ру (tutu.ru), автовокзалы. Выведи:
 1. Доступные рейсы (${typeLabel}) из ${safeFrom} в ${safeTo}
 2. Время отправления и прибытия
 3. Время в пути
@@ -815,6 +917,7 @@ ${dateInstruction}
 - Если точное расписание не найдено — напиши: «Точное расписание лучше проверить на сайте» и дай ссылки.
 - Если направление не обслуживается прямым рейсом — предложи варианты с пересадкой, если знаешь.
 - Цены указывай как ориентировочные: «от ... руб» или «примерно ... руб».
+- Рекомендуй нижние полки в поездах. Если есть скидки для пенсионеров — упомяни.
 - Пиши простым текстом без маркдауна. Нумеруй рейсы цифрами.`,
           },
           { role: "user", content: `Расписание ${typeLabel} из ${safeFrom} в ${safeTo}${date ? ` на ${date}` : ""}` },
@@ -854,7 +957,7 @@ ${dateInstruction}
     result += `\nhttps://www.rzd.ru/`;
 
     console.log(`[tools] Transport search: ${tokensIn}+${tokensOut} tokens for "${from} -> ${to}"`);
-    setCache(cacheKey, result, SEARCH_TTL);
+    setCache(cacheKey, result, TRANSPORT_TTL);
     return result;
   } catch (err: any) {
     console.error("[tools] Transport search error:", err.message);
@@ -890,7 +993,7 @@ export async function searchClinic(query: string, city?: string, userId?: number
         messages: [
           {
             role: "system",
-            content: `Ты помогаешь найти врача или клинику в России. Ищи данные на сайтах: ПроДокторов (prodoctorov.ru), ДокДок (docdoc.ru), СберЗдоровье (sberhealth.ru), Яндекс.Карты. Выведи:
+            content: `Ты помогаешь найти врача или клинику в России. Пациент — пожилой человек. Ищи данные на сайтах: ПроДокторов (prodoctorov.ru), ДокДок (docdoc.ru), СберЗдоровье (sberhealth.ru), Яндекс.Карты. Выведи:
 1. Название клиники или ФИО врача
 2. Специализация
 3. Адрес
@@ -903,6 +1006,7 @@ export async function searchClinic(query: string, city?: string, userId?: number
 - Используй ТОЛЬКО реальные данные с медицинских сервисов. НЕ выдумывай врачей, клиники, цены, отзывы, адреса, телефоны.
 - Если врач/клиника не найдены — напиши: «Не нашёл по этому запросу. Попробуйте уточнить специализацию или город.»
 - Если запрос общий (например «хороший терапевт в Казани») — предложи 2-3 варианта с рейтингами.
+- Если есть информация о доступности (лифт, пандус, 1 этаж) — укажи. Приоритет врачам с опытом работы с пожилыми пациентами.
 - Всегда добавляй: «Для записи лучше позвонить в клинику или записаться через сайт.»
 - Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
 - Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
@@ -944,7 +1048,7 @@ export async function searchClinic(query: string, city?: string, userId?: number
     result += `\nhttps://www.gosuslugi.ru/`;
 
     console.log(`[tools] Clinic search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, SEARCH_TTL);
+    setCache(cacheKey, result, CLINIC_TTL);
     return result;
   } catch (err: any) {
     console.error("[tools] Clinic search error:", err.message);
@@ -978,18 +1082,20 @@ export async function searchMedicine(query: string, userId?: number): Promise<st
         messages: [
           {
             role: "system",
-            content: `Ты помогаешь найти информацию о лекарственном препарате. Ищи данные на сайтах: Видаль (vidal.ru), РЛС (rlsnet.ru), Аптека.ру (apteka.ru). Выведи:
+            content: `Ты помогаешь найти информацию о лекарственном препарате. Пациент — пожилой человек. Ищи данные на сайтах: Видаль (vidal.ru), РЛС (rlsnet.ru), Аптека.ру (apteka.ru). Выведи:
 1. Полное торговое и международное непатентованное название
 2. Для чего применяется (показания) — кратко, понятным языком
 3. Основные побочные эффекты (самые частые)
 4. Противопоказания (основные)
-5. Аналоги (дженерики) — 2-3 варианта с примерными ценами
-6. Ориентировочная цена в аптеках
+5. Особые указания для пожилых (сниженная дозировка, контроль почек/печени — если есть)
+6. Аналоги (дженерики) — 2-3 варианта с примерными ценами
+7. Ориентировочная цена в аптеках
 
 СТРОГИЕ ПРАВИЛА:
 - Используй ТОЛЬКО реальные данные из справочников лекарств. НЕ выдумывай названия, показания, побочки, цены.
 - Если препарат не найден — напиши: «Не нашёл такой препарат. Проверьте название или спросите у фармацевта.»
 - ОБЯЗАТЕЛЬНО добавляй: «Перед приёмом любого лекарства проконсультируйтесь с врачом. Не меняйте дозировку самостоятельно.»
+- Предупреди о рисках взаимодействия с частыми лекарствами пожилых (от давления, для сердца, кроверазжижающие — варфарин, аспирин).
 - НЕ рекомендуй конкретные лекарства. НЕ предлагай замену назначенного врачом препарата.
 - Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.`,
           },
@@ -1025,7 +1131,7 @@ export async function searchMedicine(query: string, userId?: number): Promise<st
     result += `\n\nПодробная инструкция и цены:\nhttps://www.vidal.ru/search?t=all&q=${encodedQuery}\nhttps://apteka.ru/search/?q=${encodedQuery}`;
 
     console.log(`[tools] Medicine search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, SEARCH_TTL);
+    setCache(cacheKey, result, MEDICINE_TTL);
     return result;
   } catch (err: any) {
     console.error("[tools] Medicine search error:", err.message);
@@ -1064,7 +1170,7 @@ export async function searchTV(channel?: string, date?: string, userId?: number)
         messages: [
           {
             role: "system",
-            content: `Ты помогаешь узнать телепрограмму. Ищи данные на сайтах: tv.yandex.ru, teleprogramma.pro, tv.mail.ru. ${channelInstruction}
+            content: `Ты помогаешь пожилому человеку узнать телепрограмму. Ищи данные на сайтах: tv.yandex.ru, teleprogramma.pro, tv.mail.ru. ${channelInstruction}
 
 Для каждой передачи укажи:
 - Время начала
@@ -1109,7 +1215,7 @@ export async function searchTV(channel?: string, date?: string, userId?: number)
     result += `\n\nПолная телепрограмма:\nhttps://tv.yandex.ru/`;
 
     console.log(`[tools] TV search: ${tokensIn}+${tokensOut} tokens for "${channelLabel} ${dateLabel}"`);
-    setCache(cacheKey, result, SEARCH_TTL);
+    setCache(cacheKey, result, TV_TTL);
     return result;
   } catch (err: any) {
     console.error("[tools] TV search error:", err.message);
@@ -1155,6 +1261,7 @@ export async function searchGovServices(query: string, userId?: number): Promise
 - Используй ТОЛЬКО актуальные данные из официальных источников. НЕ выдумывай суммы, сроки, условия.
 - Если точные данные не найдены — напиши: «Точную информацию лучше уточнить на Госуслугах или в МФЦ.»
 - Всегда указывай год актуальности данных (например: «по данным на 2026 год»).
+- Упомяни что можно оформить через соцработника или с помощью родных, а не только через интернет.
 - Объясняй ПРОСТЫМ языком, без юридических терминов. Если используешь термин — поясни в скобках.
 - Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
 - Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
@@ -1190,7 +1297,7 @@ export async function searchGovServices(query: string, userId?: number): Promise
     result += `\n\nПолезные ссылки:\nhttps://www.gosuslugi.ru/\nhttps://sfr.gov.ru/`;
 
     console.log(`[tools] Gov services search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, SEARCH_TTL);
+    setCache(cacheKey, result, GOV_TTL);
     return result;
   } catch (err: any) {
     console.error("[tools] Gov services search error:", err.message);
@@ -1231,7 +1338,7 @@ export async function searchGarden(query: string, region?: string, userId?: numb
         messages: [
           {
             role: "system",
-            content: `Ты помогаешь опытному садоводу-огороднику. Ищи данные на сайтах: Антонов Сад (antonovsad.ru), 7 Дач (7dach.ru), Ботаничка (botanichka.ru). Сейчас месяц: ${currentMonth}. ${regionInstruction}
+            content: `Ты помогаешь опытному пожилому садоводу-огороднику. Ищи данные на сайтах: Антонов Сад (antonovsad.ru), 7 Дач (7dach.ru), Ботаничка (botanichka.ru). Сейчас месяц: ${currentMonth}. ${regionInstruction}
 
 Выведи:
 1. Конкретные рекомендации с учётом текущего сезона и месяца
@@ -1242,6 +1349,7 @@ export async function searchGarden(query: string, region?: string, userId?: numb
 СТРОГИЕ ПРАВИЛА:
 - Используй ТОЛЬКО реальные агрономические данные. НЕ выдумывай сроки, дозировки удобрений, препараты.
 - Учитывай ТЕКУЩИЙ МЕСЯЦ — не давай советы не по сезону.
+- Не рекомендуй тяжёлую физическую работу (перекопка лопатой, перетаскивание тяжестей). Предлагай облегчённые варианты (мульчирование вместо прополки, высокие грядки, капельный полив).
 - Если препарат для обработки — указывай точное название и дозировку из инструкции.
 - Пиши простым текстом без маркдауна, как опытная соседка по даче. Нумеруй пункты цифрами.
 - Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
@@ -1278,7 +1386,7 @@ export async function searchGarden(query: string, region?: string, userId?: numb
     result += `\n\nПодробнее:\nhttps://7dach.ru/search/?q=${encodedQuery}`;
 
     console.log(`[tools] Garden search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, SEARCH_TTL);
+    setCache(cacheKey, result, GARDEN_TTL);
     return result;
   } catch (err: any) {
     console.error("[tools] Garden search error:", err.message);
@@ -1312,7 +1420,7 @@ export async function searchProduct(query: string, userId?: number): Promise<str
         messages: [
           {
             role: "system",
-            content: `Ты помогаешь выбрать товар. Ищи данные на сайтах: Яндекс.Маркет (market.yandex.ru), Ozon (ozon.ru), Wildberries (wildberries.ru). Выведи:
+            content: `Ты помогаешь пожилому человеку выбрать товар. Ищи данные на сайтах: Яндекс.Маркет (market.yandex.ru), Ozon (ozon.ru), Wildberries (wildberries.ru). Выведи:
 1. Название товара / модель
 2. Цена (диапазон от-до если на разных площадках)
 3. Рейтинг и количество отзывов
@@ -1323,7 +1431,7 @@ export async function searchProduct(query: string, userId?: number): Promise<str
 - Используй ТОЛЬКО реальные данные с маркетплейсов. НЕ выдумывай цены, модели, отзывы.
 - Если товар не найден — напиши: «Не нашёл такой товар. Попробуйте уточнить название.»
 - Цены указывай как ориентировочные: «от ... руб» или «примерно ... руб».
-- Для пожилого человека выделяй простоту использования, надёжность, крупные кнопки/дисплей (если техника).
+- Покупатель — пожилой человек. Рекомендуй товары с крупными кнопками/экраном, простым управлением, надёжностью. Избегай сложных технологических решений.
 - Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
 - Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
           },
@@ -1362,7 +1470,7 @@ export async function searchProduct(query: string, userId?: number): Promise<str
     result += `\nhttps://www.wildberries.ru/catalog/0/search.aspx?search=${encodedQuery}`;
 
     console.log(`[tools] Product search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, SEARCH_TTL);
+    setCache(cacheKey, result, PRODUCT_TTL);
     return result;
   } catch (err: any) {
     console.error("[tools] Product search error:", err.message);
