@@ -1762,17 +1762,52 @@ export async function analyzeIntent(text: string, userId?: number): Promise<{
 export async function generateProactiveMessage(parentId: number): Promise<string | null> {
   try {
     const recentMessages = await storage.getChatMessages(parentId, 10);
-    const memories = await storage.getUserMemory(parentId, 10);
+    const memories = await storage.getUserMemory(parentId, 30);
     const personality = await storage.getPersonalitySettings(parentId);
 
     const formality = personality?.formality || "ты";
     const memorySnippet = memories.slice(0, 5).map(m => `- ${m.fact}`).join("\n") || "Пока нет сохранённых фактов.";
+
+    const ageMemory = memories.find(m => m.fact.includes("Возрастная группа:"));
+    let ageTone = "";
+    if (ageMemory) {
+      if (ageMemory.fact.includes("55–60")) {
+        ageTone = `\nВозрастная группа: 55–60. Тон: деловой, уважительный помощник. Предлагай полезные факты: изменения в законах, льготы предпенсионерам, транспорт, практические советы. НЕ сюсюкай, не спрашивай «покушал ли».`;
+      } else if (ageMemory.fact.includes("60–70")) {
+        ageTone = `\nВозрастная группа: 60–70. Тон: тёплый, компетентный. Спрашивай как дела, предлагай рецепты, путешествия, интересные факты. Совмещай заботу с уважением.`;
+      } else if (ageMemory.fact.includes("старше 70")) {
+        ageTone = `\nВозрастная группа: старше 70. Тон: заботливый, внимательный. Спрашивай про самочувствие, напоминай про давление, предлагай зарядку. Будь терпеливым и тёплым.`;
+      }
+    }
 
     const recentContext = recentMessages
       .slice(0, 6)
       .reverse()
       .map(m => `${m.role === "user" ? "Собеседник" : "Внучок"}: ${m.content.slice(0, 200)}`)
       .join("\n") || "Нет недавних сообщений.";
+
+    const DISCOVERABLE_FEATURES: Record<string, { keywords: RegExp; suggestion: string }> = {
+      transport: { keywords: /электричк|расписани|поезд|автобус|маршрут/i, suggestion: "расписание электричек и поездов (напиши «электричка до...» или «поезд...»)" },
+      benefits: { keywords: /льгот|пенси|субсиди|предпенсион|пособи/i, suggestion: "льготы и пенсия (напиши «какие льготы...» или «субсидия на ЖКХ»)" },
+      legal: { keywords: /юридическ|наследств|завещани|права\s+при|договор/i, suggestion: "юридические вопросы (наследство, права, документы)" },
+      travel: { keywords: /санатори|путешестви|экскурси|отдых|тур\b/i, suggestion: "путешествия и санатории (напиши «санатории...» или «отдых на...»)" },
+      exercise: { keywords: /зарядк|упражнени|разминк|гимнастик/i, suggestion: "зарядка и упражнения (напиши «зарядка для спины» или «утренняя зарядка»)" },
+      recipe: { keywords: /рецепт|ингредиент|приготов|пошагов/i, suggestion: "рецепты (напиши название блюда — найду пошаговый рецепт)" },
+      card: { keywords: /открытк|нарисова.*открытк/i, suggestion: "открытки (нарисую красивую открытку для подруги или на праздник)" },
+      medicine: { keywords: /побочн.*эффект|совместимость.*лекарств|противопоказани|действующ.*вещество/i, suggestion: "информация о лекарствах (напиши название — расскажу про побочные и совместимость)" },
+    };
+
+    let featureHint = "";
+    try {
+      const allContent = recentMessages.map(m => m.content).join(" ");
+      const unusedFeatures = Object.values(DISCOVERABLE_FEATURES)
+        .filter(f => !f.keywords.test(allContent))
+        .map(f => f.suggestion);
+      if (unusedFeatures.length > 0) {
+        const randomFeature = unusedFeatures[Math.floor(Math.random() * unusedFeatures.length)];
+        featureHint = `\n\nМОЖНО предложить попробовать новую функцию (но не обязательно, только если органично впишется): ${randomFeature}`;
+      }
+    } catch {}
 
     const now = new Date();
     const mskHour = parseInt(now.toLocaleString("en-US", { timeZone: "Europe/Moscow", hour: "numeric", hour12: false }));
@@ -1782,7 +1817,7 @@ export async function generateProactiveMessage(parentId: number): Promise<string
     else if (mskHour >= 18) timeContext = "вечер";
 
     const prompt = `Ты — Внучок, любящий внук. Сейчас ${timeContext} (${mskHour}:00 МСК).
-Обращение: на «${formality}».
+Обращение: на «${formality}».${ageTone}
 
 Что ты знаешь о собеседнике:
 ${memorySnippet}
@@ -1794,7 +1829,7 @@ ${recentContext}
 - Спроси про что-то из контекста прошлых разговоров (здоровье, дела, готовка)
 - Предложи чем-то заняться (загадку, рецепт, прогулку)
 - Спроси как день проходит, как самочувствие
-- Напомни про давление или лекарства (если в памяти есть)
+- Напомни про давление или лекарства (если в памяти есть)${featureHint}
 
 ПРАВИЛА:
 - Никогда не начинай с "Привет" если вечер

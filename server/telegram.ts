@@ -87,6 +87,32 @@ async function checkTelegramDailyLimit(userId: number): Promise<boolean> {
   return todayCount < limit;
 }
 
+const paywallNotifiedToday = new Map<string, string>();
+
+async function maybeSendPaywallHint(userId: number, chatId: string, ctx: any): Promise<void> {
+  try {
+    const plan = await getEffectivePlan(userId);
+    if (plan === "standard" || plan === "premium") return;
+
+    const limit = DAILY_MESSAGE_LIMITS[plan] ?? DAILY_MESSAGE_LIMITS.none;
+    if (limit === Infinity) return;
+
+    const todayCount = await storage.countChatMessagesToday(userId);
+    const threshold = Math.floor(limit * 0.8);
+    if (todayCount < threshold) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (paywallNotifiedToday.get(chatId) === today) return;
+    paywallNotifiedToday.set(chatId, today);
+
+    await ctx.reply(
+      `📊 Сегодня вы задали ${todayCount} из ${limit} вопросов.\n\n` +
+      `Хотите безлимит + напоминания о лекарствах?\n` +
+      `Узнайте о подписке — попросите родственника зайти в личный кабинет Внучка.`
+    );
+  } catch {}
+}
+
 export let bot: Bot | null = null;
 const pendingRegistration = new Map<string, { timestamp: number }>();
 const pendingLink = new Map<string, { timestamp: number }>();
@@ -205,7 +231,8 @@ function getMoreKeyboard() {
   return new InlineKeyboard()
     .text("⚖️ Льготы и пенсия", "hint_benefits").text("📜 Юридический вопрос", "hint_legal").row()
     .text("💊 Про лекарство", "hint_medicine_info").row()
-    .text("⚙️ Настройки бота", "action_settings").text("❓ Помощь", "hint_help").row();
+    .text("⚙️ Настройки бота", "action_settings").text("❓ Помощь", "hint_help").row()
+    .text("📩 Рассказать другу", "action_share").row();
 }
 
 const HINT_QUESTIONS: Record<string, string> = {
@@ -404,13 +431,9 @@ export async function startTelegramBot() {
 
     if (existing) {
       await ctx.reply(
-        `С возвращением, ${existing.name}!\n\n` +
-        `Просто напишите мне — я всегда рад поболтать.\n` +
-        `Или нажмите кнопку внизу:`,
+        `С возвращением, ${existing.name}! Чем помочь сегодня?\n\n` +
+        `Нажмите кнопку внизу или просто напишите мне:`,
         { reply_markup: persistentKeyboard }
-      );
-      await ctx.reply(
-        `Нажмите кнопку внизу — выберите нужный раздел! 👇`
       );
       return;
     }
@@ -521,6 +544,23 @@ export async function startTelegramBot() {
   bot.callbackQuery("action_settings", async (ctx) => {
     try { await ctx.answerCallbackQuery(); } catch {}
     await showSettingsMenu(ctx);
+  });
+
+  bot.callbackQuery("action_share", async (ctx) => {
+    try { await ctx.answerCallbackQuery(); } catch {}
+    try {
+      const me = await bot!.api.getMe();
+      const botLink = `t.me/${me.username}`;
+      await ctx.reply(
+        `📩 Перешлите это сообщение другу или подруге:\n\n` +
+        `Привет! Попробуй Внучка — это бесплатный помощник в Telegram.\n` +
+        `Погода, рецепты, лекарства, электрички, льготы, стихи — на каждый день.\n` +
+        `Можно писать или говорить голосом 🎤\n\n` +
+        `👉 ${botLink}`
+      );
+    } catch {
+      await ctx.reply("Не удалось получить ссылку. Попробуйте позже.");
+    }
   });
 
   bot.callbackQuery("hint_help", async (ctx) => {
@@ -1306,6 +1346,8 @@ export async function startTelegramBot() {
           await ctx.reply(result.reply);
         }
       }
+
+      await maybeSendPaywallHint(user.id, chatId, ctx);
     } catch (err: any) {
       console.error("[telegram] Voice message error:", err);
       await ctx.reply("Ой, не получилось обработать голосовое сообщение. Попробуйте ещё раз или напишите текстом.");
@@ -1531,6 +1573,7 @@ export async function startTelegramBot() {
         } else {
           await ctx.reply(result.reply);
         }
+        await maybeSendPaywallHint(user.id, chatId, ctx);
         return;
       } else {
         await ctx.reply("Ладно, давай попробуем ещё раз! Отправь голосовое сообщение заново 🎙");
@@ -1714,6 +1757,8 @@ export async function startTelegramBot() {
           console.error("[telegram] TTS for text message failed:", ttsErr);
         }
       }
+
+      await maybeSendPaywallHint(user.id, chatId, ctx);
     } catch (err: any) {
       console.error("[telegram] Chat error:", err);
       await ctx.reply("Ой, что-то я задумался. Напишите ещё раз через минутку.");

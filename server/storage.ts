@@ -86,6 +86,7 @@ export interface IStorage {
 
   getLastMessageTime(parentId: number): Promise<Date | null>;
   getAllActiveParents(): Promise<User[]>;
+  getUsedIntentsLastDays(parentId: number, days: number): Promise<string[]>;
 
   createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent>;
   getAnalyticsStats(variant?: string): Promise<{ variant: string; eventType: string; count: number }[]>;
@@ -393,6 +394,20 @@ export class DatabaseStorage implements IStorage {
         eq(users.role, "parent"),
         sql`${users.telegramChatId} IS NOT NULL`
       ));
+  }
+
+  async getUsedIntentsLastDays(parentId: number, days: number): Promise<string[]> {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    const rows = await db.selectDistinct({ intent: chatMessages.intent })
+      .from(chatMessages)
+      .where(and(
+        eq(chatMessages.parentId, parentId),
+        eq(chatMessages.role, "assistant"),
+        sql`${chatMessages.intent} IS NOT NULL`,
+        gte(chatMessages.createdAt, since)
+      ));
+    return rows.map(r => r.intent).filter((i): i is string => !!i);
   }
 
   async createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent> {
