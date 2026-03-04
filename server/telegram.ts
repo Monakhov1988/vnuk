@@ -152,6 +152,8 @@ const TOOL_STATUS_MESSAGES: Record<string, string> = {
   search_recipe: "Минуточку, ищу рецепт... 🍳",
   generate_image: "Рисую, подожди немножко... 🎨",
   get_weather: "Смотрю погоду... ☀️",
+  search_legal: "Ищу юридическую информацию... ⚖️",
+  search_travel: "Подбираю варианты... ✈️",
 };
 
 const persistentKeyboard = new Keyboard()

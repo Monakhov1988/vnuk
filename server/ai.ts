@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
-import { getWeather, searchWeb, searchRecipe, generateImage, searchMovie, searchPlace, searchTransport, searchClinic, searchMedicine, searchTV, searchGovServices, searchGarden, searchProduct, checkSearchRateLimit, sanitizeWebContent, verifySearchResult } from "./tools";
+import { getWeather, searchWeb, searchRecipe, generateImage, searchMovie, searchPlace, searchTransport, searchClinic, searchMedicine, searchTV, searchGovServices, searchGarden, searchProduct, searchLegal, searchTravel, checkSearchRateLimit, sanitizeWebContent, verifySearchResult } from "./tools";
 import { buildTopicPromptSection, buildPersonalityPromptSection, DEFAULT_PERSONALITY, type PersonalityConfig, type TopicDepth } from "./topicCatalog";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -270,14 +270,24 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 ТЕЛЕВИЗОР (search_tv):
 Когда спрашивают «что по телевизору?», «что сегодня показывают?», «что на Первом?» — вызови search_tv. Если назван канал — передай его. Если нет — покажет основные каналы. Перескажи тепло: «Сегодня вечером на Первом — ...»
 
-ПЕНСИЯ, ЛЬГОТЫ, ГОСУСЛУГИ (search_gov_services):
+ПЕНСИЯ, ЛЬГОТЫ, ГОСУСЛУГИ, ДИСПАНСЕРИЗАЦИЯ, ФИНАНСЫ (search_gov_services):
 Когда спрашивают про пенсию, льготы, субсидии, пособия, оформление документов, МФЦ, Госуслуги — вызови search_gov_services. Он найдёт актуальные данные: кому положено, какие документы, куда обращаться, какие суммы. Объясни простым языком. НЕ выдумывай суммы и условия.
+Также вызывай search_gov_services для: диспансеризация, обследования по ОМС, что положено бесплатно по полису, калькулятор пенсии, пенсионные баллы, стаж, налоговые вычеты (за лечение, обучение, недвижимость), права предпенсионеров.
 
 ОГОРОД И ДАЧА (search_garden):
 Когда спрашивают про посадки, рассаду, обрезку, вредителей, удобрения, лунный календарь, что делать на даче — вызови search_garden. Он учитывает текущий месяц и регион (если знаешь из памяти — передай). Ответь как опытная соседка по даче. НЕ выдумывай сроки и дозировки препаратов.
 
 ТОВАРЫ И ПОКУПКИ (search_product):
 Когда спрашивают «сколько стоит?», «где купить?», «какой тонометр выбрать?», «посоветуй стиральную машину» — вызови search_product. Он найдёт товары с ценами и отзывами на маркетплейсах. Для пожилого человека выделяй простоту, надёжность, крупные кнопки (если техника). НЕ выдумывай цены и модели.
+
+ЮРИДИЧЕСКИЕ ВОПРОСЫ (search_legal):
+Когда спрашивают про завещание, наследство, дарственную, переоформление квартиры, права собственности, приватизацию, трудовые права, увольнение, сокращение, алименты, развод, раздел имущества — вызови search_legal. Он найдёт порядок действий, нужные документы, куда обращаться. НЕ давай юридических советов от себя — только информирование. Всегда рекомендуй обращаться к нотариусу или юристу для принятия решений. НЕ выдумывай статьи законов и номера.
+
+ПУТЕШЕСТВИЯ И ОТДЫХ (search_travel):
+Когда спрашивают куда поехать, куда съездить, отдых, отель, санаторий (за свой счёт), экскурсии, маршруты — вызови search_travel. Он найдёт что посмотреть, где остановиться с ценами, как добраться. Учитывает сезон. ВАЖНО: если спрашивают про санаторий ПО ЛЬГОТЕ или бесплатную путёвку — используй search_gov_services, а не search_travel. Если непонятно — уточни: «Тебе санаторий по льготе или за свой счёт?»
+
+ВНУКИ И ДЕТИ:
+Когда спрашивают куда сходить с ребёнком/внуком, что подарить внуку/внучке, какие кружки/секции, помощь с уроками — используй search_web или search_place. Добавляй к запросу «для детей» или «с ребёнком». Если возраст ребёнка не указан — уточни, потому что рекомендации для 3-летнего и 12-летнего совершенно разные. При вопросах про уроки, ЕГЭ, ОГЭ — ищи через search_web.
 
 ПРАЗДНИКИ И ИМЕНИНЫ: знаешь народные и церковные праздники, именины, дни ангела. Если спрашивают «какой сегодня праздник» — используй search_web. Знаешь приметы на каждый день.
 
@@ -692,6 +702,34 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "search_legal",
+      description: "Найти юридическую информацию: наследство, завещание, дарственная, переоформление недвижимости, трудовые права, увольнение, сокращение, алименты, развод, раздел имущества, приватизация. Вызывай когда спрашивают про юридические вопросы, оформление документов на недвижимость, права при увольнении.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Юридический вопрос (например: как оформить завещание, как переоформить квартиру на дочь, права при сокращении на работе)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_travel",
+      description: "Найти информацию о путешествиях, отдыхе, экскурсиях, санаториях (за свой счёт), отелях, маршрутах по России. Вызывай когда спрашивают куда поехать, куда съездить, где отдохнуть, подобрать отель/санаторий.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Запрос о путешествии (например: куда поехать на неделю недорого, санатории Кавказских Минеральных Вод, что посмотреть в Казани)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
 ];
 
 async function executeToolCall(
@@ -758,6 +796,14 @@ async function executeToolCall(
       const result = await searchProduct(args.query || "", userId);
       return { text: result };
     }
+    case "search_legal": {
+      const result = await searchLegal(args.query || "", userId);
+      return { text: result };
+    }
+    case "search_travel": {
+      const result = await searchTravel(args.query || "", userId);
+      return { text: result };
+    }
     case "record_blood_pressure": {
       const systolic = parseInt(args.systolic);
       const diastolic = parseInt(args.diastolic);
@@ -803,7 +849,7 @@ async function executeToolCall(
   }
 }
 
-const RETRYABLE_TOOLS = new Set(["search_web", "search_recipe", "get_weather", "search_movie", "search_place", "search_transport", "search_clinic", "search_medicine", "search_tv", "search_gov_services", "search_garden", "search_product"]);
+const RETRYABLE_TOOLS = new Set(["search_web", "search_recipe", "get_weather", "search_movie", "search_place", "search_transport", "search_clinic", "search_medicine", "search_tv", "search_gov_services", "search_garden", "search_product", "search_legal", "search_travel"]);
 
 function getToolErrorMessage(toolName: string, err: any): string {
   const errMsg = (err.message || "").toLowerCase();
@@ -1108,6 +1154,7 @@ function detectRequiredTool(message: string): string | null {
     "салон красоты", "парикмахерск", "барбершоп", "маникюр", "педикюр",
     "автосервис", "автомастерск", "шиномонтаж",
     "на яндекс картах", "на яндекс.картах",
+    "детский центр", "детский клуб", "батут", "аквапарк",
   ];
   if (placeWords.some(w => lower.includes(w))) return "search_place";
 
@@ -1131,13 +1178,25 @@ function detectRequiredTool(message: string): string | null {
   if (tvWords.some(w => lower.includes(w))) return "search_tv";
   if (/(?:что (?:сейчас |вечером |утром )?(?:идёт|идет|покажут|будут показывать) по)/.test(lower)) return "search_tv";
 
+  if (/(?:санатор|курорт)/.test(lower)) {
+    if (/(?:льгот|бесплатн|по направлени|по путёвк|по путевк|соц|фсс|омс|полис|по медпоказан|реабилитац|инвалид|ветеран)/.test(lower)) {
+      return "search_gov_services";
+    }
+    return "search_travel";
+  }
+
   const govWords = [
     "пенси", "льгот", "субсиди", "госуслуг", "мфц",
     "пособи", "соцвыплат", "ветеран труда", "инвалидност",
     "перерасчёт", "перерасчет", "материнский капитал",
     "соцзащит", "социальн", "компенсац",
-    "санатор", "путёвк", "путевк", "курорт по льгот",
+    "путёвк", "путевк",
     "единовременн", "доплат к пенси",
+    "диспансериз", "чекап", "check-up", "чек-ап",
+    "что положено по полису", "бесплатные анализ", "омс",
+    "пенсионн", "стаж", "пенсионные балл",
+    "налоговый вычет", "вычет за лечени", "вычет за обучени",
+    "калькулятор пенси", "ипк ", "предпенсион",
   ];
   if (govWords.some(w => lower.includes(w))) return "search_gov_services";
 
@@ -1158,6 +1217,24 @@ function detectRequiredTool(message: string): string | null {
     "отзывы на товар", "рейтинг товар",
   ];
   if (productWords.some(w => lower.includes(w))) return "search_product";
+
+  const legalWords = [
+    "завещани", "наследств", "дарственн", "переоформ",
+    "нотариус", "росреестр", "право собственност", "долевая",
+    "приватизац", "увольнени", "сокращени", "трудовой спор",
+    "алимент", "развод", "раздел имущ",
+    "оформить квартиру", "оформить дом",
+    "выписать из квартиры", "прописк", "регистрац по месту",
+  ];
+  if (legalWords.some(w => lower.includes(w))) return "search_legal";
+
+  const travelWords = [
+    "куда поехать", "куда съездить", "где отдохнуть",
+    "отдых в ", "отдых на ", "отель", "гостиниц", "хостел",
+    "экскурси", "тур в ", "тур по ", "путешестви",
+    "маршрут по ", "маршрут в ",
+  ];
+  if (travelWords.some(w => lower.includes(w))) return "search_travel";
 
   const searchWords = [
     "новости", "что произошло", "событи", "что случилось", "расскажи про ",
@@ -1394,7 +1471,7 @@ ${memoryLines}
         fnArgs = {};
       }
 
-      const isSearchCall = fnName === "search_web" || fnName === "search_recipe" || fnName === "search_movie" || fnName === "search_place" || fnName === "search_transport" || fnName === "search_clinic" || fnName === "search_medicine" || fnName === "search_tv" || fnName === "search_gov_services" || fnName === "search_garden" || fnName === "search_product";
+      const isSearchCall = fnName === "search_web" || fnName === "search_recipe" || fnName === "search_movie" || fnName === "search_place" || fnName === "search_transport" || fnName === "search_clinic" || fnName === "search_medicine" || fnName === "search_tv" || fnName === "search_gov_services" || fnName === "search_garden" || fnName === "search_product" || fnName === "search_legal" || fnName === "search_travel";
       if (isSearchCall) {
         searchCallsThisResponse++;
         if (searchCallsThisResponse > MAX_SEARCH_PER_RESPONSE) {

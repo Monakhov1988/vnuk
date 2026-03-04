@@ -37,6 +37,8 @@ const MEDICINE_TTL = 60 * 60 * 1000;
 const GOV_TTL = 60 * 60 * 1000;
 const GARDEN_TTL = 60 * 60 * 1000;
 const MOVIE_TTL = 60 * 60 * 1000;
+const LEGAL_TTL = 60 * 60 * 1000;
+const TRAVEL_TTL = 30 * 60 * 1000;
 
 const MAX_SEARCH_PER_HOUR = 30;
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
@@ -318,6 +320,9 @@ function getPerplexityContextHint(query: string): string {
   }
   if (/(?:новост|что случилось|что произошло|последние событи)/.test(lower)) {
     return ` Это запрос про новости. Указывай дату публикации каждой новости. Только проверенные источники.`;
+  }
+  if (/(?:внук|внучк|ребёнк|ребенк|с детьми|для детей|детский|подарок ребён|подарок внук|с ребёнком|с ребенком)/.test(lower)) {
+    return ` Это запрос про детей/внуков. Учитывай возраст ребёнка если указан. Рекомендуй безопасные, развивающие, интересные для детей варианты. Указывай возрастные ограничения.`;
   }
   return "";
 }
@@ -1249,13 +1254,19 @@ export async function searchGovServices(query: string, userId?: number): Promise
         messages: [
           {
             role: "system",
-            content: `Ты помогаешь пожилому человеку разобраться с государственными услугами в России. Ищи данные на сайтах: Госуслуги (gosuslugi.ru), СФР — Социальный фонд России (sfr.gov.ru), КонсультантПлюс (consultant.ru), Гарант (garant.ru). Выведи:
+            content: `Ты помогаешь человеку разобраться с государственными услугами в России. Ищи данные на сайтах: Госуслуги (gosuslugi.ru), СФР — Социальный фонд России (sfr.gov.ru), КонсультантПлюс (consultant.ru), Гарант (garant.ru), ФОМС (ffoms.gov.ru), ФНС (nalog.gov.ru). Выведи:
 1. Суть услуги/льготы — простым языком
 2. Кому положено (условия получения)
 3. Какие документы нужны
 4. Куда обращаться (МФЦ, Госуслуги, СФР)
 5. Актуальные суммы выплат/размеры льгот (если применимо)
 6. Сроки оформления
+
+ТЕМАТИЧЕСКИЕ ДОПОЛНЕНИЯ:
+- Если вопрос про ДИСПАНСЕРИЗАЦИЮ, ОМС, бесплатные обследования — ищи на ffoms.gov.ru, minzdrav.gov.ru. Укажи какие обследования положены бесплатно по возрасту и полу. Упомяни что для прохождения нужен только полис ОМС и паспорт. Укажи с какого возраста положена расширенная диспансеризация.
+- Если вопрос про ПЕНСИЮ, стаж, баллы, ИПК — ищи на sfr.gov.ru. Объясни формулу расчёта простым языком. Упомяни онлайн-калькулятор пенсии на сайте СФР. Укажи актуальную стоимость пенсионного балла и фиксированную выплату.
+- Если вопрос про НАЛОГОВЫЕ ВЫЧЕТЫ (лечение, обучение, недвижимость) — ищи на nalog.gov.ru. Укажи максимальные суммы вычетов, порядок оформления через Госуслуги или ФНС, какие документы нужны.
+- Если вопрос про ПРАВА ПРЕДПЕНСИОНЕРОВ — укажи что предпенсионный возраст (за 5 лет до пенсии) даёт защиту от увольнения, бесплатную переподготовку, 2 дня оплачиваемых для диспансеризации.
 
 СТРОГИЕ ПРАВИЛА:
 - Используй ТОЛЬКО актуальные данные из официальных источников. НЕ выдумывай суммы, сроки, условия.
@@ -1475,6 +1486,181 @@ export async function searchProduct(query: string, userId?: number): Promise<str
   } catch (err: any) {
     console.error("[tools] Product search error:", err.message);
     return "Не удалось найти информацию о товаре. Попробуйте позже.";
+  }
+}
+
+export async function searchLegal(query: string, userId?: number): Promise<string> {
+  const safeQuery = stripPII(query);
+  const cacheKey = `legal:${safeQuery.toLowerCase()}`;
+  const cached = getCached<string>(cacheKey);
+  if (cached) return cached;
+
+  if (userId) {
+    const rateCheck = checkSearchRateLimit(userId);
+    if (!rateCheck.allowed) return rateCheck.message!;
+  }
+
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+  if (!apiKey) return "Сервис юридической информации временно недоступен.";
+
+  try {
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sonar",
+        messages: [
+          {
+            role: "system",
+            content: `Ты помогаешь человеку разобраться с юридическим вопросом в России. Ищи данные на сайтах: КонсультантПлюс (consultant.ru), Гарант (garant.ru), Правовед (pravoved.ru), Госуслуги (gosuslugi.ru). Выведи:
+1. Суть вопроса — простым языком, без юридического жаргона
+2. Какие законы/статьи регулируют (номер закона и статьи)
+3. Порядок действий — пошагово
+4. Какие документы нужны
+5. Куда обращаться (нотариус, МФЦ, Росреестр, суд)
+6. Ориентировочные сроки и стоимость оформления (госпошлины, нотариальные услуги)
+
+СТРОГИЕ ПРАВИЛА:
+- Используй ТОЛЬКО реальные данные из правовых систем. НЕ выдумывай статьи законов, номера, даты вступления в силу.
+- ОБЯЗАТЕЛЬНО добавляй: «Для принятия решения проконсультируйтесь с нотариусом или юристом. Эта информация носит справочный характер.»
+- НЕ давай конкретных юридических рекомендаций — только информирование о порядке и процедурах.
+- Если вопрос про наследство/завещание/дарственную — укажи разницу между вариантами (плюсы и минусы каждого).
+- Если вопрос про трудовые права — укажи статьи Трудового кодекса и куда жаловаться (трудовая инспекция, прокуратура).
+- Объясняй ПРОСТЫМ языком. Если используешь юридический термин — поясни в скобках.
+- Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
+- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+          },
+          { role: "user", content: `Юридический вопрос: ${safeQuery}` },
+        ],
+        max_tokens: 900,
+        temperature: 0.2,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
+    }
+
+    const data = await response.json() as any;
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("Perplexity: empty response");
+
+    const tokensIn = data.usage?.prompt_tokens || 0;
+    const tokensOut = data.usage?.completion_tokens || 0;
+    storage.logAiUsage({
+      userId: userId || null,
+      endpoint: "search-legal-perplexity",
+      model: "sonar",
+      tokensIn,
+      tokensOut,
+    });
+
+    let result = sanitizeWebContent(content);
+    const encodedQuery = encodeURIComponent(safeQuery);
+    result += `\n\nПодробнее:\nhttps://www.consultant.ru/search/?q=${encodedQuery}\nhttps://www.garant.ru/search/?q=${encodedQuery}`;
+
+    console.log(`[tools] Legal search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
+    setCache(cacheKey, result, LEGAL_TTL);
+    return result;
+  } catch (err: any) {
+    console.error("[tools] Legal search error:", err.message);
+    return "Не удалось найти юридическую информацию. Попробуйте позже.";
+  }
+}
+
+export async function searchTravel(query: string, userId?: number): Promise<string> {
+  const safeQuery = stripPII(query);
+  const cacheKey = `travel:${safeQuery.toLowerCase()}`;
+  const cached = getCached<string>(cacheKey);
+  if (cached) return cached;
+
+  if (userId) {
+    const rateCheck = checkSearchRateLimit(userId);
+    if (!rateCheck.allowed) return rateCheck.message!;
+  }
+
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+  if (!apiKey) return "Сервис поиска путешествий временно недоступен.";
+
+  try {
+    const currentMonth = new Date().toLocaleDateString("ru-RU", { month: "long" });
+    const isSanatorium = /(?:санатор|курорт|лечебн|оздоровительн)/.test(safeQuery.toLowerCase());
+    const sanatoriumHint = isSanatorium
+      ? ` Это запрос про санаторий/курорт за свой счёт (НЕ по льготе). Ищи коммерческие предложения с ценами, рейтингами, профилями лечения. Источники: sanatoriums.com, kurort26.ru, sanatory-mashuk.ru.`
+      : "";
+
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sonar",
+        messages: [
+          {
+            role: "system",
+            content: `Ты помогаешь человеку 50-65 лет спланировать поездку по России. Сейчас месяц: ${currentMonth}. Ищи данные на сайтах: Островок (ostrovok.ru), Суточно (sutochno.ru), Туту (tutu.ru), Tripadvisor, Яндекс.Путешествия.${sanatoriumHint} Выведи:
+1. Что посмотреть / чем заняться — основные достопримечательности и активности
+2. Где остановиться — 2-3 варианта в разных ценовых категориях (бюджетный / средний / комфорт) с ориентировочными ценами за ночь
+3. Как добраться — поезд, самолёт, автобус с ориентировочными ценами
+4. Лучшее время для поездки и погода в текущем сезоне
+5. Полезные советы — что взять, особенности, на что обратить внимание
+
+СТРОГИЕ ПРАВИЛА:
+- Используй ТОЛЬКО реальные данные. НЕ выдумывай отели, цены, маршруты, достопримечательности.
+- Цены указывай как ориентировочные: «от ... руб/ночь» или «примерно ... руб».
+- Учитывай текущий сезон — не рекомендуй пляжный отдых зимой.
+- Рекомендуй комфортные маршруты без экстрима. Учитывай что путешественник не молод — пологие маршруты, удобная обувь, не слишком длинные переезды.
+- Если направление не подходит по сезону — предложи альтернативу.
+- Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
+- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+          },
+          { role: "user", content: `Путешествие: ${safeQuery}` },
+        ],
+        max_tokens: 900,
+        temperature: 0.3,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
+    }
+
+    const data = await response.json() as any;
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("Perplexity: empty response");
+
+    const tokensIn = data.usage?.prompt_tokens || 0;
+    const tokensOut = data.usage?.completion_tokens || 0;
+    storage.logAiUsage({
+      userId: userId || null,
+      endpoint: "search-travel-perplexity",
+      model: "sonar",
+      tokensIn,
+      tokensOut,
+    });
+
+    let result = sanitizeWebContent(content);
+    const encodedQuery = encodeURIComponent(safeQuery);
+    result += `\n\nГде забронировать:`;
+    result += `\nhttps://ostrovok.ru/search/?q=${encodedQuery}`;
+    result += `\nhttps://travel.yandex.ru/`;
+    result += `\nhttps://sutochno.ru/`;
+
+    console.log(`[tools] Travel search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
+    setCache(cacheKey, result, TRAVEL_TTL);
+    return result;
+  } catch (err: any) {
+    console.error("[tools] Travel search error:", err.message);
+    return "Не удалось найти информацию о путешествии. Попробуйте позже.";
   }
 }
 
