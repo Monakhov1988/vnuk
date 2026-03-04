@@ -767,3 +767,187 @@ export async function searchPlace(query: string, city?: string, userId?: number)
     return "Не удалось найти информацию о заведении. Попробуйте позже.";
   }
 }
+
+export async function searchTransport(from: string, to: string, date?: string, transportType?: string, userId?: number): Promise<string> {
+  const safeFrom = stripPII(from);
+  const safeTo = stripPII(to);
+  const typeLabel = transportType || "поезд или автобус";
+  const dateLabel = date || "ближайшие дни";
+  const cacheKey = `transport:${safeFrom}:${safeTo}:${dateLabel}:${typeLabel}`.toLowerCase();
+  const cached = getCached<string>(cacheKey);
+  if (cached) return cached;
+
+  if (userId) {
+    const rateCheck = checkSearchRateLimit(userId);
+    if (!rateCheck.allowed) return rateCheck.message!;
+  }
+
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+  if (!apiKey) return "Сервис поиска расписания временно недоступен.";
+
+  try {
+    const dateInstruction = date
+      ? `Ищи рейсы на конкретную дату: ${date}.`
+      : `Ищи ближайшие рейсы. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}.`;
+
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sonar",
+        messages: [
+          {
+            role: "system",
+            content: `Ты помогаешь найти расписание транспорта в России. Ищи данные на сайтах: РЖД (rzd.ru), Яндекс.Расписания (rasp.yandex.ru), Туту.ру (tutu.ru), автовокзалы. Выведи:
+1. Доступные рейсы (${typeLabel}) из ${safeFrom} в ${safeTo}
+2. Время отправления и прибытия
+3. Время в пути
+4. Ориентировочная стоимость билета (плацкарт/купе для поездов, стандарт для автобусов)
+5. Номер поезда/рейса (если есть)
+
+${dateInstruction}
+
+СТРОГИЕ ПРАВИЛА:
+- Используй ТОЛЬКО реальные данные из расписаний. НЕ выдумывай рейсы, время, цены.
+- Если точное расписание не найдено — напиши: «Точное расписание лучше проверить на сайте» и дай ссылки.
+- Если направление не обслуживается прямым рейсом — предложи варианты с пересадкой, если знаешь.
+- Цены указывай как ориентировочные: «от ... руб» или «примерно ... руб».
+- Пиши простым текстом без маркдауна. Нумеруй рейсы цифрами.`,
+          },
+          { role: "user", content: `Расписание ${typeLabel} из ${safeFrom} в ${safeTo}${date ? ` на ${date}` : ""}` },
+        ],
+        max_tokens: 800,
+        temperature: 0.2,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
+    }
+
+    const data = await response.json() as any;
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("Perplexity: empty response");
+
+    const tokensIn = data.usage?.prompt_tokens || 0;
+    const tokensOut = data.usage?.completion_tokens || 0;
+    storage.logAiUsage({
+      userId: userId || null,
+      endpoint: "search-transport-perplexity",
+      model: "sonar",
+      tokensIn,
+      tokensOut,
+    });
+
+    let result = sanitizeWebContent(content);
+
+    const encodedFrom = encodeURIComponent(safeFrom);
+    const encodedTo = encodeURIComponent(safeTo);
+    result += `\n\nГде купить билеты и проверить расписание:`;
+    result += `\nhttps://rasp.yandex.ru/search/?fromName=${encodedFrom}&toName=${encodedTo}`;
+    result += `\nhttps://www.tutu.ru/`;
+    result += `\nhttps://www.rzd.ru/`;
+
+    console.log(`[tools] Transport search: ${tokensIn}+${tokensOut} tokens for "${from} -> ${to}"`);
+    setCache(cacheKey, result, SEARCH_TTL);
+    return result;
+  } catch (err: any) {
+    console.error("[tools] Transport search error:", err.message);
+    return "Не удалось найти расписание. Попробуйте позже.";
+  }
+}
+
+export async function searchClinic(query: string, city?: string, userId?: number): Promise<string> {
+  const safeQuery = stripPII(query);
+  const safeCity = city ? stripPII(city) : "";
+  const fullQuery = safeCity ? `${safeQuery} ${safeCity}` : safeQuery;
+  const cacheKey = `clinic:${fullQuery.toLowerCase()}`;
+  const cached = getCached<string>(cacheKey);
+  if (cached) return cached;
+
+  if (userId) {
+    const rateCheck = checkSearchRateLimit(userId);
+    if (!rateCheck.allowed) return rateCheck.message!;
+  }
+
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+  if (!apiKey) return "Сервис поиска клиник временно недоступен.";
+
+  try {
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sonar",
+        messages: [
+          {
+            role: "system",
+            content: `Ты помогаешь найти врача или клинику в России. Ищи данные на сайтах: ПроДокторов (prodoctorov.ru), ДокДок (docdoc.ru), СберЗдоровье (sberhealth.ru), Яндекс.Карты. Выведи:
+1. Название клиники или ФИО врача
+2. Специализация
+3. Адрес
+4. Рейтинг и количество отзывов
+5. Стоимость первичного приёма
+6. Что пишут пациенты — основные плюсы и минусы
+7. Телефон или способ записи (если есть)
+
+СТРОГИЕ ПРАВИЛА:
+- Используй ТОЛЬКО реальные данные с медицинских сервисов. НЕ выдумывай врачей, клиники, цены, отзывы, адреса, телефоны.
+- Если врач/клиника не найдены — напиши: «Не нашёл по этому запросу. Попробуйте уточнить специализацию или город.»
+- Если запрос общий (например «хороший терапевт в Казани») — предложи 2-3 варианта с рейтингами.
+- Всегда добавляй: «Для записи лучше позвонить в клинику или записаться через сайт.»
+- Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
+- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+          },
+          { role: "user", content: `Найди врача или клинику: ${fullQuery}` },
+        ],
+        max_tokens: 800,
+        temperature: 0.2,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
+    }
+
+    const data = await response.json() as any;
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("Perplexity: empty response");
+
+    const tokensIn = data.usage?.prompt_tokens || 0;
+    const tokensOut = data.usage?.completion_tokens || 0;
+    storage.logAiUsage({
+      userId: userId || null,
+      endpoint: "search-clinic-perplexity",
+      model: "sonar",
+      tokensIn,
+      tokensOut,
+    });
+
+    let result = sanitizeWebContent(content);
+
+    const encodedQuery = encodeURIComponent(fullQuery);
+    result += `\n\nГде записаться и почитать отзывы:`;
+    result += `\nhttps://prodoctorov.ru/search/?q=${encodedQuery}`;
+    result += `\nhttps://docdoc.ru/`;
+    result += `\nhttps://sberhealth.ru/`;
+    result += `\nhttps://www.gosuslugi.ru/`;
+
+    console.log(`[tools] Clinic search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
+    setCache(cacheKey, result, SEARCH_TTL);
+    return result;
+  } catch (err: any) {
+    console.error("[tools] Clinic search error:", err.message);
+    return "Не удалось найти информацию о враче или клинике. Попробуйте позже.";
+  }
+}
