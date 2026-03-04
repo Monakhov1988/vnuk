@@ -56,23 +56,11 @@ function trackEvent(variant: string, eventType: string, eventData?: string) {
   }).catch(() => {});
 }
 
-function ABCLanding() {
-  const [variant, setVariant] = useState<"A" | "B" | "C" | null>(null);
-
+function MainLanding() {
   useEffect(() => {
-    let v = localStorage.getItem("vnuchok_ab_variant") as "A" | "B" | "C" | null;
-    if (!v || !["A", "B", "C"].includes(v)) {
-      const idx = Math.floor(Math.random() * 3);
-      v = (["A", "B", "C"] as const)[idx];
-      localStorage.setItem("vnuchok_ab_variant", v);
-    }
-    setVariant(v);
-    trackEvent(v, "landing_view");
+    localStorage.setItem("vnuchok_ab_variant", "C");
+    trackEvent("C", "landing_view");
   }, []);
-
-  if (!variant) return null;
-  if (variant === "A") return <LandingA />;
-  if (variant === "B") return <LandingB />;
   return <LandingC />;
 }
 
@@ -103,7 +91,7 @@ function LandingCPage() {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={ABCLanding} />
+      <Route path="/" component={MainLanding} />
       <Route path="/a" component={LandingAPage} />
       <Route path="/b" component={LandingBPage} />
       <Route path="/c" component={LandingCPage} />

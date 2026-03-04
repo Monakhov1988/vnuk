@@ -705,52 +705,6 @@ export default function LandingC() {
         </div>
       </footer>
 
-      <VariantToggle current="C" />
-    </div>
-  );
-}
-
-function VariantToggle({ current }: { current: "A" | "B" | "C" }) {
-  const [, navigate] = useLocation();
-  const [open, setOpen] = useState(false);
-
-  const variants = [
-    { key: "A" as const, path: "/a", label: "Эмоциональный" },
-    { key: "B" as const, path: "/b", label: "Тех-дизайн" },
-    { key: "C" as const, path: "/c", label: "Гибрид" },
-  ];
-
-  const others = variants.filter((v) => v.key !== current);
-
-  return (
-    <div className="fixed bottom-6 right-6 z-50">
-      {open && (
-        <div className="mb-2 flex flex-col gap-2">
-          {others.map((v) => (
-            <button
-              key={v.key}
-              onClick={() => {
-                localStorage.setItem("vnuchok_ab_variant", v.key);
-                navigate(v.path);
-                setOpen(false);
-              }}
-              className="px-4 py-2.5 rounded-full bg-white shadow-lg border border-orange-200 hover:bg-orange-50 text-sm font-medium text-slate-700 transition-all"
-              data-testid={`button-switch-to-${v.key.toLowerCase()}-c`}
-            >
-              {v.key}: {v.label}
-            </button>
-          ))}
-        </div>
-      )}
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-4 py-3 rounded-full bg-white shadow-xl shadow-slate-300/50 border border-orange-200 hover:shadow-2xl hover:scale-105 transition-all text-sm font-medium text-slate-700 group"
-        data-testid="button-switch-variant-c"
-      >
-        <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
-        <span>Вариант {current}</span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
     </div>
   );
 }
