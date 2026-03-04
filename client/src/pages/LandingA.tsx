@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LandingA() {
@@ -598,7 +598,32 @@ export default function LandingA() {
           <p>© 2025 Внучок AI. Забота о родителях с помощью ИИ.</p>
         </div>
       </footer>
+
+      <VariantToggle current="A" />
     </div>
+  );
+}
+
+function VariantToggle({ current }: { current: "A" | "B" }) {
+  const [, navigate] = useLocation();
+  const other = current === "A" ? "B" : "A";
+  const otherPath = current === "A" ? "/b" : "/a";
+  const otherLabel = current === "A" ? "Tech-дизайн" : "Эмоциональный";
+
+  return (
+    <button
+      onClick={() => {
+        localStorage.setItem("vnuchok_ab_variant", other);
+        navigate(otherPath);
+      }}
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-white shadow-xl shadow-slate-300/50 border border-orange-200 hover:shadow-2xl hover:scale-105 transition-all text-sm font-medium text-slate-700 group"
+      data-testid="button-switch-variant"
+    >
+      <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+      <span>Вариант {current}</span>
+      <span className="text-slate-400 mx-1">|</span>
+      <span className="text-orange-500 group-hover:underline">{otherLabel}</span>
+    </button>
   );
 }
 
