@@ -1280,7 +1280,7 @@ export async function startTelegramBot() {
       return;
     }
 
-    if (userText === "🎭 Увлечения") {
+    if (userText === "🎭 Увлечения" || userText === "🎭 Афиша") {
       await ctx.reply("🎭 Увлечения — выберите:", { reply_markup: getEntertainmentKeyboard() });
       return;
     }
