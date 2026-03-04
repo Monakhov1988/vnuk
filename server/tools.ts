@@ -601,3 +601,169 @@ export async function generateImage(description: string, userId?: number): Promi
     return { url: null, error: errorMessage };
   }
 }
+
+export async function searchMovie(query: string, userId?: number): Promise<string> {
+  const safeQuery = stripPII(query);
+  const cacheKey = `movie:${safeQuery.toLowerCase()}`;
+  const cached = getCached<string>(cacheKey);
+  if (cached) return cached;
+
+  if (userId) {
+    const rateCheck = checkSearchRateLimit(userId);
+    if (!rateCheck.allowed) return rateCheck.message!;
+  }
+
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+  if (!apiKey) return "Сервис поиска фильмов временно недоступен.";
+
+  try {
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sonar",
+        messages: [
+          {
+            role: "system",
+            content: `Ты помогаешь найти информацию о фильме или сериале. Ищи данные ТОЛЬКО на Кинопоиске (kinopoisk.ru). Выведи:
+1. Полное название фильма (и оригинальное если есть)
+2. Год выпуска, жанр, страна, режиссёр
+3. Оценка на Кинопоиске (число из 10) и количество оценок
+4. Краткое описание сюжета (2-3 предложения)
+5. Что пишут в отзывах — основные плюсы и минусы по мнению зрителей
+
+СТРОГИЕ ПРАВИЛА:
+- Используй ТОЛЬКО реальные данные с Кинопоиска. НЕ выдумывай оценки, количество отзывов, имена актёров.
+- Если фильм не найден на Кинопоиске — напиши: «Не нашёл этот фильм на Кинопоиске.»
+- Если не уверен в точной оценке — напиши: «Точную оценку лучше проверить на Кинопоиске.»
+- Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
+- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+          },
+          { role: "user", content: `Найди на Кинопоиске: ${safeQuery}` },
+        ],
+        max_tokens: 800,
+        temperature: 0.2,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
+    }
+
+    const data = await response.json() as any;
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("Perplexity: empty response");
+
+    const tokensIn = data.usage?.prompt_tokens || 0;
+    const tokensOut = data.usage?.completion_tokens || 0;
+    storage.logAiUsage({
+      userId: userId || null,
+      endpoint: "search-movie-perplexity",
+      model: "sonar",
+      tokensIn,
+      tokensOut,
+    });
+
+    let result = sanitizeWebContent(content);
+
+    const encodedQuery = encodeURIComponent(safeQuery);
+    result += `\n\nПодробнее на Кинопоиске:\nhttps://www.kinopoisk.ru/index.php?kp_query=${encodedQuery}`;
+
+    console.log(`[tools] Movie search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
+    setCache(cacheKey, result, SEARCH_TTL);
+    return result;
+  } catch (err: any) {
+    console.error("[tools] Movie search error:", err.message);
+    return "Не удалось найти информацию о фильме. Попробуйте позже.";
+  }
+}
+
+export async function searchPlace(query: string, city?: string, userId?: number): Promise<string> {
+  const safeQuery = stripPII(query);
+  const safeCity = city ? stripPII(city) : "";
+  const fullQuery = safeCity ? `${safeQuery} ${safeCity}` : safeQuery;
+  const cacheKey = `place:${fullQuery.toLowerCase()}`;
+  const cached = getCached<string>(cacheKey);
+  if (cached) return cached;
+
+  if (userId) {
+    const rateCheck = checkSearchRateLimit(userId);
+    if (!rateCheck.allowed) return rateCheck.message!;
+  }
+
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+  if (!apiKey) return "Сервис поиска заведений временно недоступен.";
+
+  try {
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sonar",
+        messages: [
+          {
+            role: "system",
+            content: `Ты помогаешь найти информацию о заведении или сервисе. Ищи данные на Яндекс.Картах (yandex.ru/maps). Выведи:
+1. Полное название заведения
+2. Адрес
+3. Оценка (из 5) и количество отзывов
+4. Режим работы (если есть)
+5. Что пишут в отзывах — основные плюсы и минусы по мнению посетителей
+6. Контактный телефон (если есть)
+
+СТРОГИЕ ПРАВИЛА:
+- Используй ТОЛЬКО реальные данные с Яндекс.Карт. НЕ выдумывай оценки, адреса, телефоны, отзывы.
+- Если заведение не найдено на Яндекс.Картах — напиши: «Не нашёл это заведение на Яндекс.Картах. Попробуйте уточнить название или город.»
+- Если не уверен в данных — напиши: «Точную информацию лучше проверить на Яндекс.Картах.»
+- Если запрос общий (например «хороший ресторан в Москве») — предложи 2-3 варианта с оценками с Яндекс.Карт.
+- Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
+- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+          },
+          { role: "user", content: `Найди на Яндекс.Картах: ${fullQuery}` },
+        ],
+        max_tokens: 800,
+        temperature: 0.2,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
+    }
+
+    const data = await response.json() as any;
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("Perplexity: empty response");
+
+    const tokensIn = data.usage?.prompt_tokens || 0;
+    const tokensOut = data.usage?.completion_tokens || 0;
+    storage.logAiUsage({
+      userId: userId || null,
+      endpoint: "search-place-perplexity",
+      model: "sonar",
+      tokensIn,
+      tokensOut,
+    });
+
+    let result = sanitizeWebContent(content);
+
+    const encodedQuery = encodeURIComponent(fullQuery);
+    result += `\n\nПосмотреть на Яндекс.Картах:\nhttps://yandex.ru/maps/?text=${encodedQuery}`;
+
+    console.log(`[tools] Place search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
+    setCache(cacheKey, result, SEARCH_TTL);
+    return result;
+  } catch (err: any) {
+    console.error("[tools] Place search error:", err.message);
+    return "Не удалось найти информацию о заведении. Попробуйте позже.";
+  }
+}

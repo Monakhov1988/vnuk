@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
-import { getWeather, searchWeb, searchRecipe, generateImage, checkSearchRateLimit, sanitizeWebContent } from "./tools";
+import { getWeather, searchWeb, searchRecipe, generateImage, searchMovie, searchPlace, checkSearchRateLimit, sanitizeWebContent } from "./tools";
 import { buildTopicPromptSection, buildPersonalityPromptSection, DEFAULT_PERSONALITY, type PersonalityConfig, type TopicDepth } from "./topicCatalog";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -233,6 +233,12 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 РАЗВЛЕЧЕНИЯ: загадки, интересные факты, рассказы о природе, животных, истории из жизни. Кроссворды и викторины — предлагай тренировку памяти, это очень полезно. Если скучно — предложи: «Давай загадку?», «Хочешь, расскажу интересный факт?», «А давай я стихотворение расскажу?»
 
 КИНО, ТЕАТР, СЕРИАЛЫ: когда спрашивают что в кино, что посмотреть, какие сериалы — используй search_web чтобы найти реальную информацию. Называй конкретные фильмы и спектакли.
+
+ОЦЕНКИ ФИЛЬМОВ (search_movie):
+Когда спрашивают про конкретный фильм или сериал — «стоит смотреть?», «что за фильм?», «какая оценка?», «какие отзывы?» — вызови search_movie. Он найдёт реальную оценку на Кинопоиске, количество оценок и что пишут зрители. Перескажи результат тепло, по-простому. Если данные не найдены — честно скажи. НЕ выдумывай оценки и отзывы.
+
+РЕСТОРАНЫ, САЛОНЫ, СЕРВИСЫ (search_place):
+Когда спрашивают про конкретное заведение — ресторан, кафе, салон красоты, парикмахерскую, автосервис, стоматологию, любой сервис — «какие отзывы?», «стоит идти?», «хорошее место?» — вызови search_place. Он найдёт оценку и отзывы на Яндекс.Картах. Если знаешь город пользователя из памяти — передай его. Перескажи тепло. Если не найдено — честно скажи. НЕ выдумывай адреса, телефоны, оценки, отзывы.
 
 ТЕЛЕВИЗОР: «Что сегодня по телевизору?» — используй search_web с запросом «телепрограмма сегодня {канал}». Если канал не назван — ищи общую программу.
 
@@ -512,6 +518,35 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "search_movie",
+      description: "Найти информацию о фильме или сериале: оценка на Кинопоиске, количество оценок, отзывы зрителей. Вызывай когда спрашивают про конкретный фильм/сериал — стоит ли смотреть, какая оценка, что за фильм, отзывы.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Название фильма или сериала (например: Интерстеллар, Слово пацана, Мастер и Маргарита 2024)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_place",
+      description: "Найти информацию о заведении или сервисе: оценка и отзывы на Яндекс.Картах. Вызывай когда спрашивают про ресторан, кафе, салон красоты, парикмахерскую, автосервис, стоматологию, аптеку — оценку, отзывы, адрес, телефон.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Название или тип заведения (например: ресторан Пушкинъ, салон красоты Бигуди, стоматология на Ленина)" },
+          city: { type: "string", description: "Город для поиска (необязательно, если город уже в запросе или известен из памяти)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
 ];
 
 async function executeToolCall(
@@ -541,6 +576,14 @@ async function executeToolCall(
         return { text: result.error };
       }
       return { text: "Картинка успешно сгенерирована.", imageUrl: result.url || undefined };
+    }
+    case "search_movie": {
+      const result = await searchMovie(args.query || "", userId);
+      return { text: result };
+    }
+    case "search_place": {
+      const result = await searchPlace(args.query || "", args.city || undefined, userId);
+      return { text: result };
     }
     case "record_blood_pressure": {
       const systolic = parseInt(args.systolic);
@@ -587,7 +630,7 @@ async function executeToolCall(
   }
 }
 
-const RETRYABLE_TOOLS = new Set(["search_web", "search_recipe", "get_weather"]);
+const RETRYABLE_TOOLS = new Set(["search_web", "search_recipe", "get_weather", "search_movie", "search_place"]);
 
 function getToolErrorMessage(toolName: string, err: any): string {
   const errMsg = (err.message || "").toLowerCase();
@@ -852,6 +895,24 @@ function detectRequiredTool(message: string): string | null {
   const hasMedical = medicalContext.some(w => lower.includes(w));
   if (hasAmbiguity || hasMedical) return null;
 
+  const movieWords = [
+    "оценка фильм", "рейтинг фильм", "отзывы фильм", "отзывы на фильм",
+    "стоит смотреть", "стоит ли смотреть", "что за фильм", "что за сериал",
+    "оценка сериал", "рейтинг сериал", "отзывы сериал",
+    "на кинопоиске", "кинопоиск",
+  ];
+  if (movieWords.some(w => lower.includes(w))) return "search_movie";
+
+  const placeWords = [
+    "ресторан", "кафе ", "кафе?", "столовая", "бистро", "пиццери",
+    "салон красоты", "парикмахерск", "барбершоп", "маникюр", "педикюр",
+    "автосервис", "автомастерск", "шиномонтаж",
+    "стоматолог", "зубн",
+    "отзывы на ", "какие отзывы",
+    "на яндекс картах", "на яндекс.картах",
+  ];
+  if (placeWords.some(w => lower.includes(w))) return "search_place";
+
   const searchWords = [
     "новости", "что произошло", "событи", "что случилось", "расскажи про ",
     "афиш", "театр", "кино", "фильм", "куда сходить", "что посмотреть",
@@ -1084,7 +1145,7 @@ ${memoryLines}
         fnArgs = {};
       }
 
-      const isSearchCall = fnName === "search_web" || fnName === "search_recipe";
+      const isSearchCall = fnName === "search_web" || fnName === "search_recipe" || fnName === "search_movie" || fnName === "search_place";
       if (isSearchCall) {
         searchCallsThisResponse++;
         if (searchCallsThisResponse > MAX_SEARCH_PER_RESPONSE) {
