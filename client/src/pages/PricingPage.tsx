@@ -9,18 +9,33 @@ import { useToast } from "@/hooks/use-toast";
 
 const plans = [
   {
+    id: "none",
+    name: "Бесплатный",
+    price: "0",
+    period: "навсегда",
+    description: "Попробовать",
+    features: [
+      "10 вопросов в день",
+      "Рецепты, погода, транспорт",
+      "Стихи, загадки, открытки",
+      "Голосовой ввод",
+    ],
+    missing: ["Напоминания о лекарствах", "Защита от мошенников"],
+    popular: false,
+  },
+  {
     id: "basic",
     name: "Базовый",
     price: "490",
     period: "мес",
-    description: "Для начала заботы",
+    description: "Контроль лекарств",
     features: [
+      "30 вопросов в день",
       "Напоминания о лекарствах",
       "Дневник давления",
       "Лента событий",
-      "До 5 напоминаний",
     ],
-    missing: ["AI-чат с Внучком", "Распознавание счетчиков", "Книга жизни"],
+    missing: ["Защита от мошенников", "Бот пишет первым"],
     popular: false,
   },
   {
@@ -30,13 +45,13 @@ const plans = [
     period: "мес",
     description: "Полная забота",
     features: [
+      "100 вопросов в день",
       "Все из «Базового»",
-      "AI-чат с Внучком",
-      "Распознавание счетчиков по фото",
-      "Безлимитные напоминания",
-      "Книга жизни (мемуары)",
+      "Защита от мошенников",
+      "Бот пишет первым",
+      "Распознавание счётчиков",
     ],
-    missing: ["Приоритетная поддержка"],
+    missing: [],
     popular: true,
   },
   {
@@ -46,12 +61,11 @@ const plans = [
     period: "мес",
     description: "Максимум заботы",
     features: [
+      "Безлимит вопросов",
       "Все из «Стандарта»",
-      "Приоритетная поддержка 24/7",
-      "Подключение до 3 родителей",
-      "Автозвонок при тревоге",
-      "Персональные отчеты",
-      "Ранний доступ к новым функциям",
+      "Настройка личности бота",
+      "Открытки и картинки",
+      "Расширенная история",
     ],
     missing: [],
     popular: false,
@@ -138,11 +152,11 @@ export default function PricingPage() {
         <div className="container mx-auto text-center max-w-3xl mb-12">
           <h1 className="text-3xl md:text-5xl font-bold mb-4">Выберите тариф заботы</h1>
           <p className="text-lg text-muted-foreground">
-            Первые 7 дней бесплатно на любом тарифе. Отменить можно в любой момент.
+            Бесплатный тариф — навсегда. Подписка — от 490₽/мес. Отменить можно в любой момент.
           </p>
         </div>
 
-        <div className="container mx-auto grid md:grid-cols-3 gap-8 max-w-5xl">
+        <div className="container mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl">
           {plans.map((plan) => (
             <Card key={plan.id} className={`relative overflow-hidden transition-all hover:-translate-y-1 ${plan.popular ? "border-primary shadow-lg shadow-primary/10 scale-105" : "border-slate-200"}`}>
               {plan.popular && (
