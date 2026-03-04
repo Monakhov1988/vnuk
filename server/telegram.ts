@@ -93,9 +93,10 @@ const pendingLink = new Map<string, { timestamp: number }>();
 const pendingVoiceConfirm = new Map<string, { transcript: string; timestamp: number }>();
 
 interface OnboardingState {
-  step: "city" | "interests";
+  step: "city" | "age" | "interests";
   userId: number;
   name: string;
+  city?: string;
   timestamp: number;
 }
 const onboardingState = new Map<string, OnboardingState>();
@@ -170,31 +171,41 @@ const TOOL_STATUS_MESSAGES: Record<string, string> = {
 };
 
 const persistentKeyboard = new Keyboard()
-  .text("⚙️ Настройки").text("💊 Здоровье").row()
-  .text("🏠 Хозяйство").text("🎭 Увлечения").row()
+  .text("💊 Здоровье").text("🏠 Помощь").row()
+  .text("🎭 Досуг").text("📋 Ещё").row()
   .resized()
   .persistent();
 
 function getHealthKeyboard() {
   return new InlineKeyboard()
-    .text("💊 Лекарства", "hint_pills").text("📋 Давление", "hint_bp").row()
-    .text("🏥 Запись к врачу", "hint_doctor").row()
+    .text("💊 Мои лекарства", "hint_pills").text("📋 Записать давление", "hint_bp").row()
+    .text("🏥 Найти врача", "hint_doctor").text("💊 Про лекарство", "hint_medicine_info").row()
+    .text("🏃 Зарядка", "hint_exercise").row()
     .text("❓ Что ты ещё умеешь?", "hint_help");
 }
 
-function getHouseholdKeyboard() {
+function getHelpKeyboard() {
   return new InlineKeyboard()
-    .text("🔧 Как починить", "hint_repair").text("🍳 Рецепт", "hint_recipe").row()
+    .text("🌤 Погода", "hint_weather").text("🍳 Рецепт", "hint_recipe").row()
     .text("📸 Фото счётчика", "hint_meter").text("🌱 Огород", "hint_garden").row()
+    .text("🚆 Транспорт", "hint_transport").text("🛒 Товары", "hint_product").row()
+    .text("🔧 Как починить", "hint_repair").row()
     .text("❓ Что ты ещё умеешь?", "hint_help");
 }
 
-function getEntertainmentKeyboard() {
+function getLeisureKeyboard() {
   return new InlineKeyboard()
     .text("📺 Что по ТВ", "hint_tv").text("🎬 Что в кино", "hint_cinema").row()
     .text("🧩 Загадка", "hint_riddle").text("📖 Стихотворение", "hint_poem").row()
-    .text("🎨 Открытка", "hint_card").row()
+    .text("🎨 Открытка", "hint_card").text("✈️ Путешествия", "hint_travel").row()
     .text("❓ Что ты ещё умеешь?", "hint_help");
+}
+
+function getMoreKeyboard() {
+  return new InlineKeyboard()
+    .text("⚖️ Льготы и пенсия", "hint_benefits").text("📜 Юридический вопрос", "hint_legal").row()
+    .text("💊 Про лекарство", "hint_medicine_info").row()
+    .text("⚙️ Настройки бота", "action_settings").text("❓ Помощь", "hint_help").row();
 }
 
 const HINT_QUESTIONS: Record<string, string> = {
@@ -208,6 +219,13 @@ const HINT_QUESTIONS: Record<string, string> = {
   hint_doctor: "🏥 К какому врачу нужно записаться? Напишите специальность или жалобу, например: терапевт, болит спина, окулист",
   hint_repair: "🔧 Что сломалось? Напишите, например: течёт кран, скрипит дверь, не работает розетка",
   hint_garden: "🌱 Что вас интересует в огороде? Напишите, например: что сажать сейчас, лунный календарь, борьба с вредителями",
+  hint_transport: "🚆 Куда нужно доехать? Напишите, например: электричка до Ревды, поезд Москва — Казань, автобус до Суздаля",
+  hint_product: "🛒 Что ищете? Напишите, например: тонометр, увлажнитель воздуха, очки для чтения",
+  hint_travel: "✈️ Куда хотите поехать? Напишите, например: санатории Краснодарского края, отдых на Алтае, экскурсии в Суздаль",
+  hint_benefits: "⚖️ Что хотите узнать? Напишите, например: какие льготы у предпенсионеров, как увеличить пенсию, субсидия на ЖКХ",
+  hint_legal: "📜 Какой юридический вопрос? Напишите, например: как оформить наследство, права при увольнении, как написать завещание",
+  hint_medicine_info: "💊 О каком лекарстве хотите узнать? Напишите название, например: аторвастатин, лизиноприл, метформин",
+  hint_exercise: "🏃 Какую зарядку хотите? Напишите, например: утренняя зарядка, зарядка для спины, для суставов, для шеи",
 };
 
 async function registerUserFromTelegram(chatId: string, name: string): Promise<{ message: string; userId: number }> {
@@ -263,14 +281,56 @@ async function handleOnboardingStep(chatId: string, userText: string, ctx: any):
 
     onboardingState.set(chatId, {
       ...state,
+      step: "age",
+      city,
+      timestamp: Date.now(),
+    });
+
+    const ageKeyboard = new InlineKeyboard()
+      .text("55–60", "onb_age_55").text("60–70", "onb_age_60").text("Старше 70", "onb_age_70").row()
+      .text("Пропустить", "onb_age_skip");
+
+    await ctx.reply(
+      `Отлично, ${city}! Буду подсказывать погоду и новости для вашего города. ☀️\n\n` +
+      `Чтобы я лучше вас понимал — сколько вам лет?`,
+      { reply_markup: ageKeyboard }
+    );
+    return true;
+  }
+
+  if (state.step === "age") {
+    const text = userText.trim().toLowerCase();
+    let ageLabel: string | null = null;
+    const num = parseInt(text);
+    if (!isNaN(num)) {
+      if (num >= 55 && num <= 60) ageLabel = "55–60";
+      else if (num > 60 && num <= 70) ageLabel = "60–70";
+      else if (num > 70) ageLabel = "старше 70";
+      else if (num < 55) ageLabel = "55–60";
+    } else if (/пропуст|skip|не хочу|не скажу/i.test(text)) {
+      ageLabel = null;
+    } else {
+      await ctx.reply("Нажмите кнопку с возрастом или напишите число (например: 63):");
+      return true;
+    }
+
+    if (ageLabel) {
+      await storage.createUserMemory({
+        parentId: state.userId,
+        category: "preferences",
+        fact: `Возрастная группа: ${ageLabel}`,
+        source: "onboarding",
+      });
+    }
+
+    onboardingState.set(chatId, {
+      ...state,
       step: "interests",
       timestamp: Date.now(),
     });
 
     await ctx.reply(
-      `Отлично, ${city}! Буду подсказывать погоду и новости для вашего города. ☀️\n\n` +
-      `🎯 Расскажите, что вам интересно? Например: готовка, огород, рукоделие, стихи, молитвы, здоровье, кино\n\n` +
-      `Можно написать несколько через запятую:`
+      `🎯 Расскажите, что вам интересно?\n\nНапример: готовка, огород, путешествия, стихи, здоровье, кино\n\nМожно написать несколько через запятую:`
     );
     return true;
   }
@@ -278,7 +338,7 @@ async function handleOnboardingStep(chatId: string, userText: string, ctx: any):
   if (state.step === "interests") {
     const interests = userText.trim();
     if (interests.length < 2) {
-      await ctx.reply("Напишите хотя бы одно увлечение, например: готовка, огород, стихи");
+      await ctx.reply("Напишите хотя бы одно увлечение, например: готовка, огород, стихи, путешествия");
       return true;
     }
 
@@ -292,21 +352,35 @@ async function handleOnboardingStep(chatId: string, userText: string, ctx: any):
     onboardingState.delete(chatId);
 
     await ctx.reply(
-      `Замечательно! Я запомнил ваши интересы. 📝\n\n` +
-      `Вот что я умею:\n` +
-      `🌤 Погода — спросите про погоду в вашем городе\n` +
-      `🍳 Рецепты — помогу приготовить любое блюдо\n` +
-      `🎨 Открытки — нарисую красивую открытку\n` +
-      `📖 Стихи — почитаю стихотворение\n` +
-      `🧩 Загадки — загадаю загадку\n` +
-      `💊 Здоровье — напомню про лекарства (/pills)\n` +
-      `📋 Давление — запишу показания (/bp 120 80)\n` +
-      `📸 Счётчики — отправьте фото счётчика\n` +
-      `🎙 Голос — можете просто наговорить голосом!\n\n` +
-      `Просто напишите мне — я всегда рад поболтать! 😊`,
+      `Отлично, я запомнил! 📝\n\n` +
+      `Я готов помогать вам каждый день — от погоды до льгот и рецептов.\n` +
+      `Просто напишите мне что угодно, или нажмите кнопку внизу.`,
       { reply_markup: persistentKeyboard }
     );
-    await ctx.reply("Нажмите кнопку внизу — выберите нужный раздел! 👇");
+
+    let weatherInfo = "";
+    if (state.city) {
+      try {
+        const { getWeather } = await import("./tools");
+        const weather = await getWeather(state.city);
+        if (weather && !weather.includes("не удалось") && !weather.includes("Не нашёл")) {
+          weatherInfo = `\n🌤 Кстати, сейчас в ${state.city}:\n${weather.split("\n").slice(0, 2).join("\n")}`;
+        }
+      } catch {}
+    }
+
+    const tryKeyboard = new InlineKeyboard()
+      .text("🍳 Найди рецепт", "hint_recipe").text("📖 Стихотворение", "hint_poem").row()
+      .text("🧩 Загадай загадку", "hint_riddle").row();
+
+    await ctx.reply(
+      (weatherInfo ? weatherInfo + "\n\n" : "") +
+      `Попробуйте — нажмите любую кнопку:`,
+      { reply_markup: tryKeyboard }
+    );
+
+    await ctx.reply("🎤 Кстати, вы можете не печатать — просто нажмите микрофон и скажите голосом. Я всё пойму!");
+
     return true;
   }
 
@@ -342,11 +416,20 @@ export async function startTelegramBot() {
     }
 
     const keyboard = new InlineKeyboard()
-      .text("Зарегистрироваться", "action_register").row()
-      .text("У меня есть код привязки", "action_link");
+      .text("👋 Давайте знакомиться!", "action_register").row()
+      .text("🔗 Меня подключил(а) родственник(ца)", "action_link");
 
     await ctx.reply(
-      `Здравствуйте! Я — Внучок, ваш заботливый помощник.\n\n` +
+      `Здравствуйте! Меня зовут Внучок — я ваш помощник на каждый день.\n\n` +
+      `Я могу:\n` +
+      `🌤 Подсказать погоду\n` +
+      `🍳 Найти рецепт любого блюда\n` +
+      `💊 Напомнить про лекарства\n` +
+      `🚆 Найти расписание электричек\n` +
+      `⚖️ Рассказать про льготы и пенсию\n` +
+      `📖 Почитать стихотворение\n` +
+      `...и многое другое!\n\n` +
+      `Можете писать мне или говорить голосом 🎤 — я всё пойму.\n\n` +
       `Нажмите кнопку ниже, чтобы начать:`,
       { reply_markup: keyboard }
     );
@@ -354,79 +437,28 @@ export async function startTelegramBot() {
 
   bot.command("help", async (ctx) => {
     console.log("[telegram] /help command received from chat:", ctx.chat.id);
-    const helpText =
-`Вот что я умею! Просто напишите мне:
 
-💬 ПОБОЛТАТЬ
-«Как дела?», «Расскажи что-нибудь интересное», «Мне скучно»
+    const helpKeyboard = new InlineKeyboard()
+      .text("🌤 Погода", "hint_weather").text("🍳 Рецепт", "hint_recipe").row()
+      .text("💊 Про лекарство", "hint_medicine_info").text("🚆 Электрички", "hint_transport").row()
+      .text("⚖️ Льготы", "hint_benefits").text("🎨 Открытка", "hint_card").row();
 
-🍳 РЕЦЕПТЫ
-«Как приготовить борщ?», «Рецепт шарлотки», «Что приготовить на ужин?»
-
-🌤 ПОГОДА
-«Какая сегодня погода?», «Будет ли дождь?», «Какая погода в Сочи?»
-
-🔍 НОВОСТИ И АФИША
-«Что в кино?», «Какой сегодня праздник?», «Что нового?»
-
-📺 ТЕЛЕВИЗОР
-«Что сегодня по ТВ?», «Что по Первому каналу?»
-
-💊 ЗДОРОВЬЕ
-«Напомни выпить таблетки», «Какую зарядку сделать?»
-/pills — мои лекарства
-/bp 120 80 — записать давление
-
-🏠 БЫТ И ЖКХ
-«Как вывести пятно?», «Когда передавать показания?»
-Отправьте фото счётчика — передам показания!
-
-🌱 ОГОРОД И ДАЧА
-«Что сажать в марте?», «Лунный календарь», «Как бороться с тлёй?»
-
-🎨 ОТКРЫТКИ И КАРТИНКИ
-«Нарисуй открытку на день рождения», «Нарисуй котика»
-
-📖 КНИГИ И СТИХИ
-«Почитай стихотворение», «Что почитать?», «Расскажи про Чехова»
-
-✈️ ГОРОДА И ПУТЕШЕСТВИЯ
-«Расскажи про Суздаль», «Что посмотреть в Казани?»
-
-🙏 МОЛИТВЫ
-«Прочитай Отче наш», «Какой сегодня пост?»
-
-📝 ПОЗДРАВЛЕНИЯ
-«Напиши поздравление маме на юбилей», «Поздравь с Новым годом»
-
-🚕 ДОСТАВКА И ТАКСИ
-«Как заказать такси?», «Как заказать продукты домой?»
-
-📱 ПОМОЩЬ С ТЕЛЕФОНОМ
-«Как отправить фото?», «Как позвонить по видео?»
-
-🧶 РУКОДЕЛИЕ
-«Как связать носки?», «Как зашить дырку?»
-
-🌿 ТРАВЫ И НАРОДНЫЕ СРЕДСТВА
-«Чай с ромашкой от чего помогает?», «Как заваривать шиповник?»
-
-📜 ИСТОРИЯ ДНЯ
-«Что было в этот день в истории?»
-
-🧩 ЗАГАДКИ И ИГРЫ
-«Загадай загадку», «Давай викторину», «Расскажи интересный факт»
-
-📸 ВОСПОМИНАНИЯ
-Расскажите мне историю из вашей жизни — я запомню!
-
-🎙 ГОЛОСОВЫЕ СООБЩЕНИЯ
-Можете просто наговорить голосом — я пойму и отвечу!
-
-Просто напишите или наговорите — я всегда рад помочь! 😊`;
-
-    await ctx.reply(helpText);
-    await ctx.reply("Нажмите кнопку внизу — выберите нужный раздел! 👇");
+    await ctx.reply(
+      `Я умею многое! Вот самое полезное:\n\n` +
+      `🌤 Погода и прогноз\n` +
+      `🍳 Рецепты с пошаговой инструкцией\n` +
+      `💊 Напоминания о лекарствах и информация о препаратах\n` +
+      `🚆 Расписание электричек и поездов\n` +
+      `⚖️ Льготы, пенсия, субсидии\n` +
+      `📜 Юридические вопросы (наследство, права)\n` +
+      `📺 Телепрограмма, кино, новости\n` +
+      `🎨 Открытки, стихи, загадки\n` +
+      `✈️ Путешествия и санатории\n` +
+      `📸 Показания счётчиков по фото\n\n` +
+      `Попробуйте — нажмите любую кнопку:`,
+      { reply_markup: helpKeyboard }
+    );
+    await ctx.reply("А ещё можете просто написать или наговорить голосом 🎤 — любой вопрос!");
   });
 
   bot.callbackQuery("action_register", async (ctx) => {
@@ -455,32 +487,59 @@ export async function startTelegramBot() {
     await ctx.reply(`Введите ваш код привязки (например: A1B2C3):`);
   });
 
+  for (const ageCallback of ["onb_age_55", "onb_age_60", "onb_age_70", "onb_age_skip"]) {
+    bot.callbackQuery(ageCallback, async (ctx) => {
+      const chatId = ctx.chat?.id.toString();
+      if (!chatId) return;
+      try { await ctx.answerCallbackQuery(); } catch {}
+
+      const state = onboardingState.get(chatId);
+      if (!state || state.step !== "age") return;
+
+      if (ageCallback !== "onb_age_skip") {
+        const ageLabel = ageCallback === "onb_age_55" ? "55–60" : ageCallback === "onb_age_60" ? "60–70" : "старше 70";
+        await storage.createUserMemory({
+          parentId: state.userId,
+          category: "preferences",
+          fact: `Возрастная группа: ${ageLabel}`,
+          source: "onboarding",
+        });
+      }
+
+      onboardingState.set(chatId, {
+        ...state,
+        step: "interests",
+        timestamp: Date.now(),
+      });
+
+      await ctx.reply(
+        `🎯 Расскажите, что вам интересно?\n\nНапример: готовка, огород, путешествия, стихи, здоровье, кино\n\nМожно написать несколько через запятую:`
+      );
+    });
+  }
+
+  bot.callbackQuery("action_settings", async (ctx) => {
+    try { await ctx.answerCallbackQuery(); } catch {}
+    await showSettingsMenu(ctx);
+  });
+
   bot.callbackQuery("hint_help", async (ctx) => {
     try { await ctx.answerCallbackQuery(); } catch {}
-    const helpText =
-`Вот что я умею! Просто напишите мне:
+    const helpKeyboard = new InlineKeyboard()
+      .text("🌤 Погода", "hint_weather").text("🍳 Рецепт", "hint_recipe").row()
+      .text("💊 Про лекарство", "hint_medicine_info").text("🚆 Электрички", "hint_transport").row()
+      .text("⚖️ Льготы", "hint_benefits").text("🎨 Открытка", "hint_card").row();
 
-💬 Поболтать — «Как дела?», «Мне скучно»
-🍳 Рецепты — «Как приготовить борщ?»
-🌤 Погода — «Какая погода?»
-🔍 Новости — «Что в кино?», «Какой праздник?»
-📺 ТВ — «Что по телевизору?»
-💊 Здоровье — /pills, /bp
-🏠 ЖКХ — фото счётчика
-🌱 Огород — «Что сажать?»
-🎨 Открытки — «Нарисуй открытку»
-📖 Стихи и книги — «Почитай стихотворение»
-✈️ Путешествия — «Расскажи про Суздаль»
-🙏 Молитвы — «Прочитай Отче наш»
-📝 Поздравления — «Напиши поздравление»
-🚕 Такси — «Как вызвать такси?»
-📱 Техника — «Как отправить фото?»
-🧶 Рукоделие — «Как связать носки?»
-🌿 Травы — «Чай с ромашкой от чего?»
-🧩 Загадки — «Загадай загадку»
-📸 Воспоминания — расскажите историю
-🎙 Голосовые — просто наговорите!`;
-    await ctx.reply(helpText);
+    await ctx.reply(
+      `Я умею многое! Вот самое полезное:\n\n` +
+      `🌤 Погода  🍳 Рецепты  💊 Лекарства\n` +
+      `🚆 Электрички  ⚖️ Льготы  📜 Юридическое\n` +
+      `📺 ТВ  🎬 Кино  🎨 Открытки  📖 Стихи\n` +
+      `✈️ Путешествия  🌱 Огород  🏥 Врачи\n` +
+      `📸 Счётчики по фото  🎙 Голосовые\n\n` +
+      `Попробуйте — нажмите кнопку:`,
+      { reply_markup: helpKeyboard }
+    );
   });
 
   bot.callbackQuery("hint_pills", async (ctx) => {
@@ -1292,13 +1351,18 @@ export async function startTelegramBot() {
       return;
     }
 
-    if (userText === "🏠 Хозяйство") {
-      await ctx.reply("🏠 Хозяйство — выберите:", { reply_markup: getHouseholdKeyboard() });
+    if (userText === "🏠 Помощь" || userText === "🏠 Хозяйство") {
+      await ctx.reply("🏠 Помощь — выберите:", { reply_markup: getHelpKeyboard() });
       return;
     }
 
-    if (userText === "🎭 Увлечения" || userText === "🎭 Афиша") {
-      await ctx.reply("🎭 Увлечения — выберите:", { reply_markup: getEntertainmentKeyboard() });
+    if (userText === "🎭 Досуг" || userText === "🎭 Увлечения" || userText === "🎭 Афиша") {
+      await ctx.reply("🎭 Досуг — выберите:", { reply_markup: getLeisureKeyboard() });
+      return;
+    }
+
+    if (userText === "📋 Ещё") {
+      await ctx.reply("📋 Ещё — выберите:", { reply_markup: getMoreKeyboard() });
       return;
     }
 
@@ -1366,11 +1430,12 @@ export async function startTelegramBot() {
     const user = await storage.getUserByTelegramChatId(chatId);
     if (!user) {
       const keyboard = new InlineKeyboard()
-        .text("Зарегистрироваться", "action_register").row()
-        .text("У меня есть код привязки", "action_link");
+        .text("👋 Давайте знакомиться!", "action_register").row()
+        .text("🔗 Меня подключил(а) родственник(ца)", "action_link");
 
       await ctx.reply(
-        `Здравствуйте! Я — Внучок.\n\n` +
+        `Здравствуйте! Меня зовут Внучок — я ваш помощник на каждый день.\n` +
+        `Погода, рецепты, лекарства, льготы, электрички и многое другое.\n\n` +
         `Нажмите кнопку ниже, чтобы начать:`,
         { reply_markup: keyboard }
       );
