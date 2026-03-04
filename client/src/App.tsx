@@ -3,17 +3,97 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Landing from "@/pages/Landing";
+import { useEffect, useState } from "react";
+import LandingA from "@/pages/LandingA";
+import LandingB from "@/pages/LandingB";
 import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
 import PricingPage from "@/pages/PricingPage";
 import TopicSettings from "@/pages/TopicSettings";
 import NotFound from "@/pages/not-found";
 
+function getSessionId(): string {
+  let sid = localStorage.getItem("vnuchok_session_id");
+  if (!sid) {
+    sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem("vnuchok_session_id", sid);
+  }
+  return sid;
+}
+
+function getUtmParams(): Record<string, string> {
+  const params = new URLSearchParams(window.location.search);
+  const utm: Record<string, string> = {};
+  for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content"]) {
+    const val = params.get(key);
+    if (val) {
+      utm[key] = val;
+      localStorage.setItem(`vnuchok_${key}`, val);
+    } else {
+      const saved = localStorage.getItem(`vnuchok_${key}`);
+      if (saved) utm[key] = saved;
+    }
+  }
+  return utm;
+}
+
+function trackEvent(variant: string, eventType: string, eventData?: string) {
+  const utm = getUtmParams();
+  fetch("/api/analytics/event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sessionId: getSessionId(),
+      variant,
+      eventType,
+      eventData,
+      utmSource: utm.utm_source,
+      utmMedium: utm.utm_medium,
+      utmCampaign: utm.utm_campaign,
+      utmContent: utm.utm_content,
+    }),
+  }).catch(() => {});
+}
+
+function ABLanding() {
+  const [variant, setVariant] = useState<"A" | "B" | null>(null);
+
+  useEffect(() => {
+    let v = localStorage.getItem("vnuchok_ab_variant") as "A" | "B" | null;
+    if (!v) {
+      v = Math.random() < 0.5 ? "A" : "B";
+      localStorage.setItem("vnuchok_ab_variant", v);
+    }
+    setVariant(v);
+    trackEvent(v, "landing_view");
+  }, []);
+
+  if (!variant) return null;
+  return variant === "A" ? <LandingA /> : <LandingB />;
+}
+
+function LandingAPage() {
+  useEffect(() => {
+    localStorage.setItem("vnuchok_ab_variant", "A");
+    trackEvent("A", "landing_view");
+  }, []);
+  return <LandingA />;
+}
+
+function LandingBPage() {
+  useEffect(() => {
+    localStorage.setItem("vnuchok_ab_variant", "B");
+    trackEvent("B", "landing_view");
+  }, []);
+  return <LandingB />;
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Landing} />
+      <Route path="/" component={ABLanding} />
+      <Route path="/a" component={LandingAPage} />
+      <Route path="/b" component={LandingBPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/pricing" component={PricingPage} />

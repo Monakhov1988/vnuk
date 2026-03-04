@@ -822,5 +822,47 @@ export async function registerRoutes(
     }
   });
 
+  // ========== ANALYTICS ==========
+  const analyticsSchema = z.object({
+    sessionId: z.string().min(1),
+    variant: z.enum(["A", "B"]),
+    eventType: z.string().min(1),
+    eventData: z.string().optional(),
+    utmSource: z.string().optional(),
+    utmMedium: z.string().optional(),
+    utmCampaign: z.string().optional(),
+    utmContent: z.string().optional(),
+  });
+
+  app.post("/api/analytics/event", async (req, res) => {
+    try {
+      const data = validateBody(analyticsSchema, req, res);
+      if (!data) return;
+      await storage.createAnalyticsEvent({
+        sessionId: data.sessionId,
+        variant: data.variant,
+        eventType: data.eventType,
+        eventData: data.eventData ?? null,
+        utmSource: data.utmSource ?? null,
+        utmMedium: data.utmMedium ?? null,
+        utmCampaign: data.utmCampaign ?? null,
+        utmContent: data.utmContent ?? null,
+      });
+      return res.json({ success: true });
+    } catch {
+      return res.json({ success: true });
+    }
+  });
+
+  app.get("/api/analytics/stats", requireAuth, async (req, res) => {
+    try {
+      const variant = req.query.variant as string | undefined;
+      const stats = await storage.getAnalyticsStats(variant);
+      return res.json(stats);
+    } catch (e: any) {
+      return res.status(500).json({ message: e.message });
+    }
+  });
+
   return httpServer;
 }

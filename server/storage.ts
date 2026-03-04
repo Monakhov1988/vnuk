@@ -14,8 +14,9 @@ import {
   type InsertAiUsageLog,
   type UserMemory, type InsertUserMemory,
   type TopicSetting, type PersonalitySetting,
+  type InsertAnalyticsEvent, type AnalyticsEvent,
   users, reminders, events, utilityMetrics, memoirs, healthLogs, subscriptions, waitlist, chatMessages, aiUsageLogs, userMemory,
-  topicSettings, personalitySettings,
+  topicSettings, personalitySettings, analyticsEvents,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -85,6 +86,9 @@ export interface IStorage {
 
   getLastMessageTime(parentId: number): Promise<Date | null>;
   getAllActiveParents(): Promise<User[]>;
+
+  createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent>;
+  getAnalyticsStats(variant?: string): Promise<{ variant: string; eventType: string; count: number }[]>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -389,6 +393,24 @@ export class DatabaseStorage implements IStorage {
         eq(users.role, "parent"),
         sql`${users.telegramChatId} IS NOT NULL`
       ));
+  }
+
+  async createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent> {
+    const [created] = await db.insert(analyticsEvents).values(event).returning();
+    return created;
+  }
+
+  async getAnalyticsStats(variant?: string): Promise<{ variant: string; eventType: string; count: number }[]> {
+    const conditions = variant ? eq(analyticsEvents.variant, variant) : undefined;
+    const rows = await db.select({
+      variant: analyticsEvents.variant,
+      eventType: analyticsEvents.eventType,
+      count: count(),
+    })
+      .from(analyticsEvents)
+      .where(conditions)
+      .groupBy(analyticsEvents.variant, analyticsEvents.eventType);
+    return rows.map(r => ({ variant: r.variant, eventType: r.eventType, count: Number(r.count) }));
   }
 }
 
