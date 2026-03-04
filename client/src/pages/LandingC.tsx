@@ -145,7 +145,7 @@ export default function LandingC() {
 
               <div className="relative rounded-[2rem] overflow-hidden shadow-2xl shadow-orange-200/50 border border-white/50 aspect-[4/3]">
                 <img
-                  src="/hero.png"
+                  src="/hero.png?v=2"
                   alt="Внучок — цифровой помощник для родителей"
                   className="w-full h-full object-cover"
                 />
