@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  ShieldCheck,
   HeartPulse,
   ArrowRight,
   CheckCircle2,

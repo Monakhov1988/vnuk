@@ -825,7 +825,7 @@ export async function registerRoutes(
   // ========== ANALYTICS ==========
   const analyticsSchema = z.object({
     sessionId: z.string().min(1),
-    variant: z.enum(["A", "B"]),
+    variant: z.enum(["A", "B", "C"]),
     eventType: z.string().min(1),
     eventData: z.string().optional(),
     utmSource: z.string().optional(),
