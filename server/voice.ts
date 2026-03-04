@@ -5,7 +5,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface TtsResult {
   buffer: Buffer;
-  format: "wav" | "opus";
+  format: "opus";
 }
 
 export interface SttResult {
