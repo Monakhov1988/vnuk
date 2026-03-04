@@ -154,20 +154,20 @@ const TOOL_STATUS_MESSAGES: Record<string, string> = {
 
 const persistentKeyboard = new Keyboard()
   .text("⚙️ Настройки").text("💊 Здоровье").row()
-  .text("🏠 Хозяйство").text("🎭 Афиша").row()
+  .text("🏠 Хозяйство").text("🎭 Увлечения").row()
   .resized()
   .persistent();
 
 function getHealthKeyboard() {
   return new InlineKeyboard()
     .text("💊 Лекарства", "hint_pills").text("📋 Давление", "hint_bp").row()
-    .text("🙏 Молитва", "hint_prayer").row()
+    .text("🏥 Запись к врачу", "hint_doctor").row()
     .text("❓ Что ты ещё умеешь?", "hint_help");
 }
 
 function getHouseholdKeyboard() {
   return new InlineKeyboard()
-    .text("🌤 Погода", "hint_weather").text("🍳 Рецепт", "hint_recipe").row()
+    .text("🔧 Как починить", "hint_repair").text("🍳 Рецепт", "hint_recipe").row()
     .text("📸 Фото счётчика", "hint_meter").text("🌱 Огород", "hint_garden").row()
     .text("❓ Что ты ещё умеешь?", "hint_help");
 }
@@ -188,7 +188,8 @@ const HINT_QUESTIONS: Record<string, string> = {
   hint_riddle: "🧩 Какую загадку хотите? Напишите: лёгкую, сложную, для детей, про природу — или просто «загадку»",
   hint_poem: "📖 Какое стихотворение прочитать? Напишите автора или тему, например: Пушкин, про осень, про любовь",
   hint_card: "🎨 Какую открытку нарисовать? Напишите повод и для кого, например: с днём рождения маме, с 8 марта, просто красивую с цветами",
-  hint_prayer: "🙏 Какую молитву прочитать? Напишите, например: Отче наш, Богородице Дево, утреннюю молитву",
+  hint_doctor: "🏥 К какому врачу нужно записаться? Напишите специальность или жалобу, например: терапевт, болит спина, окулист",
+  hint_repair: "🔧 Что сломалось? Напишите, например: течёт кран, скрипит дверь, не работает розетка",
   hint_garden: "🌱 Что вас интересует в огороде? Напишите, например: что сажать сейчас, лунный календарь, борьба с вредителями",
 };
 
@@ -1279,8 +1280,8 @@ export async function startTelegramBot() {
       return;
     }
 
-    if (userText === "🎭 Афиша") {
-      await ctx.reply("🎭 Афиша — выберите:", { reply_markup: getEntertainmentKeyboard() });
+    if (userText === "🎭 Увлечения") {
+      await ctx.reply("🎭 Увлечения — выберите:", { reply_markup: getEntertainmentKeyboard() });
       return;
     }
 
