@@ -1622,6 +1622,16 @@ export async function startTelegramBot() {
       } else {
         await ctx.reply(result.reply);
       }
+
+      const wantsVoice = /голос(ом|ом\s|овое)|поговори(ть|м)?\s*(голосом)?|хочу.*голос|скажи\s*голосом|аудио/i.test(userText);
+      if (wantsVoice) {
+        try {
+          const ttsResult = await textToSpeech(result.reply);
+          await ctx.replyWithVoice(new InputFile(ttsResult.buffer, `response.ogg`));
+        } catch (ttsErr) {
+          console.error("[telegram] TTS for text message failed:", ttsErr);
+        }
+      }
     } catch (err: any) {
       console.error("[telegram] Chat error:", err);
       await ctx.reply("Ой, что-то я задумался. Напишите ещё раз через минутку.");
