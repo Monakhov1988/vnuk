@@ -12,6 +12,7 @@ import Dashboard from "@/pages/Dashboard";
 import PricingPage from "@/pages/PricingPage";
 import TopicSettings from "@/pages/TopicSettings";
 import NotFound from "@/pages/not-found";
+import PrivacyPage from "@/pages/PrivacyPage";
 
 function getSessionId(): string {
   let sid = localStorage.getItem("vnuchok_session_id");
@@ -99,6 +100,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/pricing" component={PricingPage} />
       <Route path="/settings/topics" component={TopicSettings} />
+      <Route path="/privacy" component={PrivacyPage} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -244,6 +244,15 @@
 - `client/src/pages/` — Landing, AuthPage, Dashboard, PricingPage, TopicSettings
 - `server/topicCatalog.ts` — каталог 104 тем с 3 уровнями промптов + настройки личности + функции buildTopicPromptSection/buildPersonalityPromptSection
 
+### Лендинг (LandingC.tsx — route `/`)
+- **ЦА**: покупатель 20-45 лет (платит за родителя)
+- **Messaging**: «Подарить маме помощника» (не «подключить»), акцент на relief покупателя
+- **Hero**: CSS-мокап телефона с Telegram-ботом (persistent keyboard 💊🏠🎭📋), уведомление «Мама приняла лекарство»
+- **Структура**: Hero → Что вы получаете (push/алерт/дашборд + relief moment) → Узнаёте родителя? → Как работает → Чат-демо (в рамке телефона) → Dashboard preview → Features (6 + toggle «ещё 6») → Отзывы (4 покупателя 28-45, один 4.5/5) → Pricing (0₽ без «/мес» + сравнительная таблица) → FAQ → Final CTA
+- **Footer**: email support@vnuchok.ru, ссылка @vnuchok_bot, политика конфиденциальности
+- **SEO**: canonical URL, расширенные keywords, robots.txt, семантический HTML (`<main>`)
+- **AB-варианты**: `/a`=LandingA, `/b`=LandingB (устаревшие)
+
 ## Стек
 - React 19, wouter, TanStack Query, Recharts
 - Express 5, Drizzle ORM, PostgreSQL
