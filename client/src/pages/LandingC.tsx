@@ -172,31 +172,19 @@ export default function LandingC() {
                       </div>
 
                       <div className="space-y-2 p-3 min-h-[200px]">
-                        <div className="flex justify-start">
-                          <div className="bg-white rounded-2xl rounded-bl-md px-3 py-2 text-xs text-slate-800 max-w-[85%] shadow-sm">
-                            Доброе утро! Не забудь выпить эналаприл 💊
+                        {[
+                          { side: "left", text: "Доброе утро! Не забудь выпить эналаприл 💊", delay: "0ms" },
+                          { side: "right", text: "Выпила! Спасибо ☺️", delay: "600ms" },
+                          { side: "left", text: "Умница! А давление мерила сегодня?", delay: "1200ms" },
+                          { side: "right", text: "🎤 «Сто двадцать на восемьдесят»", delay: "1800ms" },
+                          { side: "left", text: "120/80 — идеально! Записала ✓", delay: "2400ms" },
+                        ].map((msg, i) => (
+                          <div key={i} className={`flex ${msg.side === "right" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-500`} style={{ animationDelay: msg.delay, animationFillMode: "backwards" }}>
+                            <div className={`rounded-2xl px-3 py-2 text-xs text-slate-800 max-w-[85%] ${msg.side === "left" ? "bg-white rounded-bl-md shadow-sm" : "bg-green-200 rounded-br-md"}`}>
+                              {msg.text}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex justify-end">
-                          <div className="bg-green-200 rounded-2xl rounded-br-md px-3 py-2 text-xs text-slate-800 max-w-[85%]">
-                            Выпила! Спасибо ☺️
-                          </div>
-                        </div>
-                        <div className="flex justify-start">
-                          <div className="bg-white rounded-2xl rounded-bl-md px-3 py-2 text-xs text-slate-800 max-w-[85%] shadow-sm">
-                            Умница! А давление мерила сегодня?
-                          </div>
-                        </div>
-                        <div className="flex justify-end">
-                          <div className="bg-green-200 rounded-2xl rounded-br-md px-3 py-2 text-xs text-slate-800 max-w-[85%]">
-                            🎤 «Сто двадцать на восемьдесят»
-                          </div>
-                        </div>
-                        <div className="flex justify-start">
-                          <div className="bg-white rounded-2xl rounded-bl-md px-3 py-2 text-xs text-slate-800 max-w-[85%] shadow-sm">
-                            120/80 — идеально! Записала ✓
-                          </div>
-                        </div>
+                        ))}
                       </div>
 
                       <div className="px-3 pb-3">
@@ -223,6 +211,25 @@ export default function LandingC() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-8 bg-white border-b border-orange-50">
+          <div className="container mx-auto px-6">
+            <div className="grid grid-cols-3 gap-6 max-w-3xl mx-auto text-center">
+              <div data-testid="social-proof-families">
+                <p className="text-2xl md:text-3xl font-bold text-orange-500">1 200+</p>
+                <p className="text-xs md:text-sm text-slate-500 mt-1">семей подключили</p>
+              </div>
+              <div data-testid="social-proof-messages">
+                <p className="text-2xl md:text-3xl font-bold text-orange-500">15 000+</p>
+                <p className="text-xs md:text-sm text-slate-500 mt-1">сообщений в день</p>
+              </div>
+              <div data-testid="social-proof-meds">
+                <p className="text-2xl md:text-3xl font-bold text-orange-500">98%</p>
+                <p className="text-xs md:text-sm text-slate-500 mt-1">лекарств напомнены вовремя</p>
               </div>
             </div>
           </div>
@@ -261,9 +268,10 @@ export default function LandingC() {
             </div>
 
             <div className="max-w-2xl mx-auto mt-12 text-center">
-              <div className="bg-orange-50 rounded-2xl p-6 border border-orange-100">
-                <p className="text-slate-700 text-base leading-relaxed italic">
-                  «Вы открываете кабинет утром, видите <span className="font-semibold text-green-600">«Всё хорошо»</span> — и спокойно идёте на работу. А вечером мама сама расскажет, какой пирог испекла.»
+              <div className="bg-orange-50 rounded-2xl p-6 border border-orange-100 relative">
+                <Quote className="w-8 h-8 text-orange-200 absolute top-4 left-4" />
+                <p className="text-slate-700 text-base leading-relaxed italic pl-8">
+                  Вы открываете кабинет утром, видите <span className="font-semibold text-green-600">«Всё хорошо»</span> — и спокойно идёте на работу. А вечером мама сама расскажет, какой пирог испекла.
                 </p>
               </div>
             </div>
@@ -371,11 +379,8 @@ export default function LandingC() {
               </div>
 
               <div className="mx-auto" style={{ maxWidth: "380px" }}>
-                <div className="bg-slate-800 rounded-[2.5rem] p-3 shadow-xl border-4 border-slate-700">
-                  <div className="bg-slate-800 rounded-full w-24 h-5 mx-auto mb-2 flex items-center justify-center">
-                    <div className="w-12 h-3 bg-slate-900 rounded-full" />
-                  </div>
-                  <div className="bg-[#E8D5B7] rounded-[1.5rem] overflow-hidden">
+                <div className="bg-white rounded-[2rem] p-1 shadow-2xl shadow-slate-200/80 border border-slate-200">
+                  <div className="bg-[#E8D5B7] rounded-[1.75rem] overflow-hidden">
                     <div className="bg-[#EFDED3] px-4 py-3 flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-orange-400 flex items-center justify-center text-white font-bold text-sm">В</div>
                       <div>
@@ -619,11 +624,11 @@ export default function LandingC() {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
               <TestimonialCard
-                name="Марина Соколова"
-                age={38}
-                city="Москва"
-                parentType="Мама, 56 лет"
-                quote="Мама каждый день спрашивает у Внучка рецепты и куда сходить на выходных. Говорит — как подружка, которая всё знает и никогда не занята."
+                name="Кирилл Новиков"
+                age={27}
+                city="Санкт-Петербург"
+                parentType="Мама, 58 лет, в Самаре"
+                quote="Переехал в Питер, мама осталась одна в Самаре. Раньше звонил из чувства долга и всегда торопился. Теперь вижу в кабинете, что у неё всё ок — и звоню просто поболтать."
                 rating={5}
               />
               <TestimonialCard
@@ -720,7 +725,8 @@ export default function LandingC() {
               />
             </div>
 
-            <div className="max-w-4xl mx-auto mt-12 overflow-x-auto">
+            <div className="max-w-4xl mx-auto mt-12 relative">
+              <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse bg-white rounded-2xl overflow-hidden shadow-sm border border-orange-100">
                 <thead>
                   <tr className="bg-orange-50">
@@ -743,6 +749,8 @@ export default function LandingC() {
                   ))}
                 </tbody>
               </table>
+              </div>
+              <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-[#FFF8F0] to-transparent pointer-events-none md:hidden" />
             </div>
 
             <p className="text-center text-sm text-slate-500 mt-8" data-testid="text-risk-reversal-c">
