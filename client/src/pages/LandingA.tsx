@@ -7,7 +7,6 @@ import {
   PhoneCall,
   Check,
   Star,
-  Mail,
   Clock,
   Heart,
   MessageCircle,
@@ -20,6 +19,11 @@ import {
   FileText,
   Sparkles,
   Users,
+  Lock,
+  AlertTriangle,
+  Server,
+  Quote,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,9 +34,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "wouter";
-import { useToast } from "@/hooks/use-toast";
 
 export default function LandingA() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -97,7 +99,7 @@ export default function LandingA() {
                 будете спокойны каждый день.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 mb-10">
+              <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <Link href="/auth">
                   <Button
                     size="lg"
@@ -119,7 +121,10 @@ export default function LandingA() {
                 </Link>
               </div>
 
-              <WaitlistForm />
+              <div className="flex items-center gap-2 mb-10" data-testid="badge-setup-time">
+                <Zap className="w-4 h-4 text-orange-500" />
+                <span className="text-sm text-slate-500">Подключите за 3 минуты — без установки приложений</span>
+              </div>
             </div>
 
             <div className="relative">
@@ -456,7 +461,87 @@ export default function LandingA() {
         </div>
       </section>
 
-      <section id="pricing" className="py-24 bg-white">
+      <section id="reviews" className="py-24 bg-white">
+        <div className="container mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
+              Истории наших пользователей
+            </h2>
+            <p className="text-slate-600 text-lg">
+              Тысячи семей уже используют Внучка для заботы о близких
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <TestimonialCard
+              name="Елена Смирнова"
+              age={42}
+              city="Москва"
+              quote="Наконец-то я перестала переживать каждый день. Мама сама общается с ботом, а я вижу, что всё в порядке. Это как невидимая рука помощи."
+              rating={5}
+            />
+            <TestimonialCard
+              name="Андрей Петров"
+              age={38}
+              city="Санкт-Петербург"
+              quote="Папа сначала скептически отнёсся, но через неделю сам стал рассказывать Внучку о давлении и лекарствах. Теперь это его утренний ритуал."
+              rating={5}
+            />
+            <TestimonialCard
+              name="Ольга Козлова"
+              age={45}
+              city="Новосибирск"
+              quote="Живу далеко от мамы. Раньше звонила раз в неделю и мучилась от чувства вины. Теперь каждый день вижу, что она в порядке. Бесценно!"
+              rating={5}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section id="security" className="py-24 bg-gradient-to-b from-white to-[#FFF8F0]">
+        <div className="container mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
+              Безопасность — наш приоритет
+            </h2>
+            <p className="text-slate-600 text-lg">
+              Внучок не только помогает, но и защищает ваших родителей
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="text-center p-8 rounded-3xl bg-white border border-slate-100 shadow-sm" data-testid="security-card-scam">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 mx-auto bg-red-50 text-red-500">
+                <AlertTriangle className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold mb-3 text-slate-900">Распознаёт мошенников</h3>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                Если кто-то просит перевести деньги или назвать код из SMS — бот мгновенно предупредит родителя и отправит вам алерт.
+              </p>
+            </div>
+            <div className="text-center p-8 rounded-3xl bg-white border border-slate-100 shadow-sm" data-testid="security-card-alert">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 mx-auto bg-amber-50 text-amber-500">
+                <BellRing className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold mb-3 text-slate-900">Мгновенный алерт</h3>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                При любой подозрительной активности или проблеме со здоровьем вы получите уведомление в течение секунд.
+              </p>
+            </div>
+            <div className="text-center p-8 rounded-3xl bg-white border border-slate-100 shadow-sm" data-testid="security-card-data">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 mx-auto bg-blue-50 text-blue-500">
+                <Server className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold mb-3 text-slate-900">Защищённые серверы</h3>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                Все данные хранятся на защищённых серверах. Бот не передаёт информацию третьим лицам. Полная конфиденциальность.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" className="py-24 bg-[#FFF8F0]">
         <div className="container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-4">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
@@ -472,6 +557,7 @@ export default function LandingA() {
               name="Базовый"
               price="490"
               subtitle="Как открытка, но каждый день"
+              result="Вы знаете, что мама приняла лекарства"
               features={[
                 "Напоминания о лекарствах",
                 "Дневник давления",
@@ -484,6 +570,7 @@ export default function LandingA() {
               price="990"
               popular
               subtitle="Забота на полную"
+              result="Мама не одинока — с ней тёплый собеседник"
               features={[
                 "Все из Базового",
                 "ИИ-чат с Внучком голосом",
@@ -497,6 +584,7 @@ export default function LandingA() {
               name="Премиум"
               price="1 990"
               subtitle="Максимум спокойствия"
+              result="Полная автоматизация заботы"
               features={[
                 "Все из Стандарта",
                 "Настройка личности бота",
@@ -508,7 +596,11 @@ export default function LandingA() {
             />
           </div>
 
-          <div className="text-center mt-8">
+          <p className="text-center text-sm text-slate-500 mt-8" data-testid="text-risk-reversal">
+            Без привязки карты. Отмена в 1 клик.
+          </p>
+
+          <div className="text-center mt-4">
             <Link href="/pricing">
               <Button
                 variant="link"
@@ -654,77 +746,40 @@ const faqItems = [
   },
 ];
 
-function WaitlistForm() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email) return;
-    setLoading(true);
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSubmitted(true);
-        toast({
-          title: "Вы в списке!",
-          description: data.message || "Мы сообщим, когда запустим.",
-        });
-      }
-    } catch {
-      toast({
-        title: "Ошибка",
-        description: "Попробуйте позже",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (submitted) {
-    return (
-      <div className="flex items-center gap-3 text-sm text-green-700 bg-green-50 rounded-full px-5 py-3 w-fit">
-        <CheckCircle2 className="w-5 h-5" />
-        <span>Спасибо! Мы вам напишем.</span>
-      </div>
-    );
-  }
-
+function TestimonialCard({
+  name,
+  age,
+  city,
+  quote,
+  rating,
+}: {
+  name: string;
+  age: number;
+  city: string;
+  quote: string;
+  rating: number;
+}) {
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex gap-2 max-w-md"
-      data-testid="form-waitlist-a"
-    >
-      <div className="relative flex-1">
-        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input
-          type="email"
-          placeholder="Ваша электронная почта"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="pl-9 rounded-full h-11 border-orange-200"
-          data-testid="input-waitlist-email-a"
-          required
-        />
+    <div className="p-8 rounded-3xl bg-white border border-orange-100 shadow-sm hover:shadow-md transition-shadow" data-testid={`testimonial-card-${name}`}>
+      <div className="flex gap-1 mb-4">
+        {Array.from({ length: rating }).map((_, i) => (
+          <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+        ))}
       </div>
-      <Button
-        type="submit"
-        className="rounded-full h-11 px-5 bg-orange-500 hover:bg-orange-600"
-        disabled={loading}
-        data-testid="button-waitlist-submit-a"
-      >
-        {loading ? "..." : "Записаться"}
-      </Button>
-    </form>
+      <div className="relative mb-5">
+        <Quote className="w-6 h-6 text-orange-200 absolute -top-1 -left-1" />
+        <p className="text-slate-700 text-sm leading-relaxed pl-6">{quote}</p>
+      </div>
+      <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-200 to-amber-200 flex items-center justify-center text-orange-700 font-bold text-sm">
+          {name.charAt(0)}
+        </div>
+        <div>
+          <p className="font-semibold text-sm text-slate-800">{name}</p>
+          <p className="text-xs text-slate-500">{age} лет, {city}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -820,12 +875,14 @@ function PricingCard({
   name,
   price,
   subtitle,
+  result,
   features,
   popular,
 }: {
   name: string;
   price: string;
   subtitle: string;
+  result: string;
   features: string[];
   popular?: boolean;
 }) {
@@ -846,6 +903,9 @@ function PricingCard({
         <div className="mt-3">
           <span className="text-3xl font-bold">{price}₽</span>
           <span className="text-muted-foreground">/мес</span>
+        </div>
+        <div className="mt-3 bg-orange-50 rounded-lg px-3 py-2" data-testid={`pricing-result-${name}`}>
+          <p className="text-xs font-medium text-orange-700">{result}</p>
         </div>
       </CardHeader>
       <CardContent>

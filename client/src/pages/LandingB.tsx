@@ -1,16 +1,15 @@
 import { useState } from "react";
 import {
-  ShieldCheck, Brain, Mic, Eye, Bell, MessageSquare, Cpu, Zap, Lock,
-  ArrowRight, CheckCircle2, Check, Star, Mail, ChevronDown, Activity,
+  ShieldCheck, Brain, Mic, Eye, Bell, MessageSquare, Zap, Lock,
+  ArrowRight, CheckCircle2, Check, Star, ChevronDown, Activity,
   AlertTriangle, Camera, Clock, Shield, Server, Database, Fingerprint,
-  Bot, Sparkles, PhoneCall, HeartPulse, FileText
+  Bot, Sparkles, PhoneCall, HeartPulse, FileText, Heart, Quote,
+  Timer, Frown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "wouter";
-import { useToast } from "@/hooks/use-toast";
 
 export default function LandingB() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -25,7 +24,7 @@ export default function LandingB() {
             </div>
             <span className="font-bold text-xl tracking-tight text-white">Внучок<span className="text-cyan-400">.ai</span></span>
           </div>
-          <div className="hidden md:flex gap-8 items-center text-sm font-medium text-slate-400">
+          <div className="hidden md:flex gap-8 items-center text-sm font-medium text-slate-300">
             <a href="#architecture" className="hover:text-cyan-400 transition-colors" data-testid="link-nav-architecture">Технологии</a>
             <a href="#features" className="hover:text-cyan-400 transition-colors" data-testid="link-nav-features">Возможности</a>
             <a href="#pricing" className="hover:text-cyan-400 transition-colors" data-testid="link-nav-pricing">Тарифы</a>
@@ -48,16 +47,18 @@ export default function LandingB() {
             <Badge className="mb-6 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 px-4 py-1.5 rounded-full border border-cyan-500/20 font-mono text-xs" data-testid="badge-hero">
               Нейросеть · Голосовой ИИ · Генерация изображений · Компьютерное зрение
             </Badge>
-            <h1 className="text-4xl md:text-7xl font-bold leading-[1.05] mb-6 tracking-tight" style={{ fontFamily: "'Inter', sans-serif" }}>
-              ИИ-агент, который заботится
+            <h1 className="text-4xl md:text-7xl font-bold leading-[1.05] mb-4 tracking-tight" style={{ fontFamily: "'Inter', sans-serif" }}>
+              ИИ-помощник, который
               <br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400">
-                о ваших родителях каждый день
+                каждый день рядом с мамой
               </span>
             </h1>
-            <p className="text-lg md:text-xl text-slate-400 mb-10 leading-relaxed max-w-2xl mx-auto">
-              Голосовой ИИ-помощник нового поколения на базе продвинутой нейросети. Распознавание показаний по фото.
-              Обнаружение угроз для защиты от мошенников. Проактивные сообщения для ежедневной заботы.
+            <p className="text-xl md:text-2xl text-cyan-300/80 mb-4 font-medium">
+              Вы спокойны. Мама не одна.
+            </p>
+            <p className="text-lg md:text-xl text-slate-300 mb-10 leading-relaxed max-w-2xl mx-auto">
+              Голосовой ИИ нового поколения: тёплый диалог, напоминания о лекарствах, распознавание по фото и защита от мошенников — всё в Telegram.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
@@ -73,9 +74,7 @@ export default function LandingB() {
               </Link>
             </div>
 
-            <WaitlistFormDark />
-
-            <div className="flex items-center justify-center gap-6 mt-10 text-sm text-slate-500">
+            <div className="flex items-center justify-center gap-6 mt-10 text-sm text-slate-400">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                 <span>Работает в Telegram</span>
@@ -93,6 +92,44 @@ export default function LandingB() {
         </div>
       </section>
 
+      <section id="pain-points" className="py-24 relative border-t border-slate-800/50">
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <Badge className="mb-4 bg-rose-500/10 text-rose-400 border-rose-500/20 font-mono text-xs">ЗНАКОМО?</Badge>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Знакомые проблемы
+            </h2>
+            <p className="text-slate-300 text-lg">
+              Каждый день миллионы семей сталкиваются с этим
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 text-center hover:border-rose-500/30 transition-colors" data-testid="pain-point-0">
+              <div className="w-14 h-14 mx-auto mb-5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                <Timer className="w-7 h-7 text-rose-400" />
+              </div>
+              <h3 className="font-bold text-lg mb-3" style={{ fontFamily: "'Inter', sans-serif" }}>Нехватка времени</h3>
+              <p className="text-sm text-slate-300 leading-relaxed">Работа, семья, дела — на ежедневные звонки маме просто не хватает сил. А чувство вины нарастает.</p>
+            </div>
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 text-center hover:border-amber-500/30 transition-colors" data-testid="pain-point-1">
+              <div className="w-14 h-14 mx-auto mb-5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <AlertTriangle className="w-7 h-7 text-amber-400" />
+              </div>
+              <h3 className="font-bold text-lg mb-3" style={{ fontFamily: "'Inter', sans-serif" }}>Постоянная тревога</h3>
+              <p className="text-sm text-slate-300 leading-relaxed">Приняла ли мама лекарства? Не обманули ли мошенники? Всё ли в порядке? Эти вопросы не дают покоя.</p>
+            </div>
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 text-center hover:border-violet-500/30 transition-colors" data-testid="pain-point-2">
+              <div className="w-14 h-14 mx-auto mb-5 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                <Frown className="w-7 h-7 text-violet-400" />
+              </div>
+              <h3 className="font-bold text-lg mb-3" style={{ fontFamily: "'Inter', sans-serif" }}>Чувство вины</h3>
+              <p className="text-sm text-slate-300 leading-relaxed">Вы далеко, а мама одна. Хочется быть рядом, но расстояние и обстоятельства не позволяют.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="architecture" className="py-24 relative border-t border-slate-800/50">
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900/50 to-slate-950" />
         <div className="container mx-auto px-6 relative z-10">
@@ -101,7 +138,7 @@ export default function LandingB() {
             <h2 className="text-3xl md:text-5xl font-bold mb-4" style={{ fontFamily: "'Inter', sans-serif" }}>
               Мультимодальный ИИ-стек
             </h2>
-            <p className="text-slate-400 text-lg">
+            <p className="text-slate-300 text-lg">
               Архитектура профессионального уровня на базе лучших нейросетей
             </p>
           </div>
@@ -146,7 +183,7 @@ export default function LandingB() {
             <h2 className="text-3xl md:text-5xl font-bold mb-4" style={{ fontFamily: "'Inter', sans-serif" }}>
               Возможности ИИ-агента
             </h2>
-            <p className="text-slate-400 text-lg">
+            <p className="text-slate-300 text-lg">
               6 ключевых модулей для полной автоматизации заботы о пожилых родителях
             </p>
           </div>
@@ -212,7 +249,7 @@ export default function LandingB() {
             <h2 className="text-3xl md:text-5xl font-bold mb-4" style={{ fontFamily: "'Inter', sans-serif" }}>
               Сценарии работы
             </h2>
-            <p className="text-slate-400 text-lg">
+            <p className="text-slate-300 text-lg">
               Как ИИ-агент решает реальные проблемы
             </p>
           </div>
@@ -247,7 +284,7 @@ export default function LandingB() {
             <h2 className="text-3xl md:text-5xl font-bold mb-4" style={{ fontFamily: "'Inter', sans-serif" }}>
               Безопасность
             </h2>
-            <p className="text-slate-400 text-lg">
+            <p className="text-slate-300 text-lg">
               8 категорий обнаружения угроз и защита данных
             </p>
           </div>
@@ -276,21 +313,21 @@ export default function LandingB() {
                 <Lock className="w-6 h-6 text-cyan-400" />
               </div>
               <h4 className="font-semibold mb-1 text-sm" style={{ fontFamily: "'Inter', sans-serif" }}>Защита данных</h4>
-              <p className="text-xs text-slate-500">Безопасное хранение и передача данных</p>
+              <p className="text-xs text-slate-400">Безопасное хранение и передача данных</p>
             </div>
             <div className="text-center p-6">
               <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
                 <Fingerprint className="w-6 h-6 text-cyan-400" />
               </div>
               <h4 className="font-semibold mb-1 text-sm" style={{ fontFamily: "'Inter', sans-serif" }}>Приватность</h4>
-              <p className="text-xs text-slate-500">Данные не используются для обучения моделей</p>
+              <p className="text-xs text-slate-400">Данные не используются для обучения моделей</p>
             </div>
             <div className="text-center p-6">
               <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
                 <Clock className="w-6 h-6 text-cyan-400" />
               </div>
               <h4 className="font-semibold mb-1 text-sm" style={{ fontFamily: "'Inter', sans-serif" }}>Постоянный мониторинг</h4>
-              <p className="text-xs text-slate-500">Алерты в реальном времени при угрозах</p>
+              <p className="text-xs text-slate-400">Алерты в реальном времени при угрозах</p>
             </div>
           </div>
         </div>
@@ -305,7 +342,7 @@ export default function LandingB() {
               <h2 className="text-3xl md:text-4xl font-bold mb-6" style={{ fontFamily: "'Inter', sans-serif" }}>
                 Полная картина в реальном времени
               </h2>
-              <p className="text-lg text-slate-400 mb-8">
+              <p className="text-lg text-slate-300 mb-8">
                 Лента событий, статусы здоровья, история диалогов — всё в одной панели управления.
                 Уведомления при критических событиях.
               </p>
@@ -336,7 +373,7 @@ export default function LandingB() {
               <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
                 <div>
                   <h3 className="font-semibold text-lg" style={{ fontFamily: "'Inter', sans-serif" }}>Панель управления</h3>
-                  <p className="text-sm text-slate-500">Мария Ивановна (Мама)</p>
+                  <p className="text-sm text-slate-400">Мария Ивановна (Мама)</p>
                 </div>
                 <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">● В сети</Badge>
               </div>
@@ -383,7 +420,7 @@ export default function LandingB() {
             <h2 className="text-3xl md:text-5xl font-bold mb-4" style={{ fontFamily: "'Inter', sans-serif" }}>
               ИИ-забота за 990₽
             </h2>
-            <p className="text-slate-400 text-lg">
+            <p className="text-slate-300 text-lg">
               Первые 7 дней бесплатно. Без привязки карты. Отменить в 1 клик.
             </p>
           </div>
@@ -439,10 +476,46 @@ export default function LandingB() {
         </div>
       </section>
 
+      <section id="testimonials" className="py-24 relative border-t border-slate-800/50">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900/30 to-slate-950" />
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <Badge className="mb-4 bg-cyan-500/10 text-cyan-400 border-cyan-500/20 font-mono text-xs">ОТЗЫВЫ</Badge>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Уже помогаем семьям
+            </h2>
+            <p className="text-slate-300 text-lg">
+              Истории тех, кто подключил Внучок.ai
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <TestimonialCardDark
+              name="Алексей"
+              role="Сын, 38 лет · Москва"
+              quote="Мама живёт в Саратове, я в Москве. Раньше каждый вечер мучила совесть — не позвонил. Теперь бот общается с ней каждый день, а я получаю сводку. Наконец-то я спокоен."
+              rating={5}
+            />
+            <TestimonialCardDark
+              name="Ирина"
+              role="Дочь, 42 года · Санкт-Петербург"
+              quote="Папа забывал принимать лекарства от давления. Бот напоминает и проверяет. За 2 месяца ни одного пропуска. Врач заметил улучшения."
+              rating={5}
+            />
+            <TestimonialCardDark
+              name="Дмитрий"
+              role="Сын, 35 лет · Новосибирск"
+              quote="Маме позвонили «из банка» — бот мгновенно прислал мне алерт. Успел предупредить. Одна эта функция окупает подписку на годы вперёд."
+              rating={5}
+            />
+          </div>
+        </div>
+      </section>
+
       <section className="py-24 relative border-t border-slate-800/50">
         <div className="container mx-auto px-6 relative z-10 max-w-3xl">
           <div className="text-center mb-16">
-            <Badge className="mb-4 bg-slate-800 text-slate-400 border-slate-700 font-mono text-xs">ВОПРОСЫ</Badge>
+            <Badge className="mb-4 bg-slate-800 text-slate-300 border-slate-700 font-mono text-xs">ВОПРОСЫ</Badge>
             <h2 className="text-3xl md:text-4xl font-bold" style={{ fontFamily: "'Inter', sans-serif" }}>
               Частые вопросы
             </h2>
@@ -451,28 +524,28 @@ export default function LandingB() {
           <div className="space-y-3">
             {[
               {
-                q: "Какие технологии ИИ используются?",
-                a: "Продвинутая нейросеть для диалогов и анализа, голосовой ИИ для распознавания и синтеза речи, компьютерное зрение для распознавания по фото, генерация изображений для открыток и картинок."
+                q: "А если мама не разбирается в технике?",
+                a: "Маме не нужно ничего устанавливать и настраивать. Достаточно Telegram на любом телефоне — бот сам начнёт диалог. Мама просто пишет или отправляет голосовое сообщение, как обычному собеседнику."
               },
               {
-                q: "Нужен ли смартфон для родителя?",
-                a: "Достаточно любого телефона с Telegram. Бот работает с текстовыми и голосовыми сообщениями. Никаких сложных интерфейсов — только чат."
+                q: "Это безопасно? Кто видит переписку?",
+                a: "Переписку видите только вы в панели управления. Данные надёжно защищены и не используются для обучения моделей. Бот распознаёт мошенников и мгновенно предупреждает вас."
               },
               {
-                q: "Как быстро агент реагирует на мошенников?",
-                a: "Обнаружение угроз работает в реальном времени. При обнаружении подозрительного паттерна алерт отправляется в течение нескольких секунд через уведомление и Telegram."
+                q: "Чем это лучше обычного звонка?",
+                a: "Бот на связи 24/7, не устаёт и не забывает. Он напомнит о лекарствах, проверит самочувствие, поддержит разговор, когда вы заняты. А вы получите уведомление, если что-то не так — и сможете позвонить именно тогда, когда это действительно нужно."
               },
               {
-                q: "Безопасны ли данные?",
-                a: "Данные надёжно защищены при хранении и передаче. Данные не используются для обучения моделей."
+                q: "Можно отменить подписку?",
+                a: "Да, в любой момент в 1 клик. Без привязки карты на пробном периоде. Первые 7 дней полностью бесплатно — попробуйте без обязательств."
               },
               {
-                q: "Можно ли настроить личность бота?",
-                a: "Да, вы выбираете имя, стиль общения (формальный/дружеский), темы для проактивных сообщений. Бот адаптируется под предпочтения родителя."
+                q: "Что если мама не ответит боту?",
+                a: "Если мама не отвечает на важное напоминание (например, о лекарствах) — через 15 минут вам придёт алерт. Вы сразу узнаете и сможете позвонить."
               },
               {
-                q: "Как работает защита от мошенников?",
-                a: "ИИ анализирует диалог в реальном времени и распознаёт 8 категорий угроз: банковские мошенники, социальная инженерия, фейковые службы, лотереи, и другие. При обнаружении — мгновенный алерт ребёнку."
+                q: "Сколько стоит?",
+                a: "От 490₽/мес за базовые функции. Самый популярный тариф — 990₽/мес с голосовыми сообщениями, распознаванием фото и защитой от мошенников. Первые 7 дней бесплатно."
               }
             ].map((item, i) => (
               <div
@@ -489,7 +562,7 @@ export default function LandingB() {
                   <ChevronDown className={`w-5 h-5 text-slate-500 transition-transform ${openFaq === i ? "rotate-180" : ""}`} />
                 </button>
                 {openFaq === i && (
-                  <div className="px-6 pb-4 text-sm text-slate-400 leading-relaxed">
+                  <div className="px-6 pb-4 text-sm text-slate-300 leading-relaxed">
                     {item.a}
                   </div>
                 )}
@@ -561,63 +634,6 @@ function VariantToggle({ current }: { current: "A" | "B" }) {
   );
 }
 
-function WaitlistFormDark() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email) return;
-    setLoading(true);
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSubmitted(true);
-        toast({ title: "Вы в списке!", description: data.message || "Мы сообщим о запуске." });
-      }
-    } catch {
-      toast({ title: "Ошибка", description: "Попробуйте позже", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (submitted) {
-    return (
-      <div className="flex items-center justify-center gap-3 text-sm text-emerald-400 bg-emerald-500/10 rounded-full px-5 py-3 w-fit mx-auto border border-emerald-500/20">
-        <CheckCircle2 className="w-5 h-5" />
-        <span>Спасибо! Мы вам напишем.</span>
-      </div>
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex gap-2 max-w-md mx-auto" data-testid="form-waitlist">
-      <div className="relative flex-1">
-        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-        <Input
-          type="email"
-          placeholder="Ваша электронная почта"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="pl-9 rounded-full h-11 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500 focus:border-cyan-500 focus:ring-cyan-500/20"
-          data-testid="input-waitlist-email"
-          required
-        />
-      </div>
-      <Button type="submit" className="rounded-full h-11 px-5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold" disabled={loading} data-testid="button-waitlist-submit">
-        {loading ? "..." : "Записаться"}
-      </Button>
-    </form>
-  );
-}
 
 function ArchCard({ icon, title, subtitle, description, gradient }: { icon: React.ReactNode; title: string; subtitle: string; description: string; gradient: string }) {
   return (
@@ -626,8 +642,8 @@ function ArchCard({ icon, title, subtitle, description, gradient }: { icon: Reac
         {icon}
       </div>
       <h3 className="font-bold text-lg mb-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>{title}</h3>
-      <p className="text-xs text-slate-500 mb-3">{subtitle}</p>
-      <p className="text-sm text-slate-400 leading-relaxed">{description}</p>
+      <p className="text-xs text-slate-400 mb-3">{subtitle}</p>
+      <p className="text-sm text-slate-300 leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -657,8 +673,8 @@ function FeatureCardTech({ icon, title, subtitle, description, tech, color }: { 
         {icon}
       </div>
       <h3 className="font-bold text-base mb-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>{title}</h3>
-      <p className="text-sm text-slate-400 mb-3">{subtitle}</p>
-      <p className="text-sm text-slate-500 leading-relaxed mb-4">{description}</p>
+      <p className="text-sm text-slate-300 mb-3">{subtitle}</p>
+      <p className="text-sm text-slate-400 leading-relaxed mb-4">{description}</p>
       <Badge className={`text-[10px] ${badgeColor[color]}`}>{tech}</Badge>
     </div>
   );
@@ -679,14 +695,14 @@ function UseCaseCard({ title, before, after, icon }: { title: string; before: st
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs font-mono text-red-400 bg-red-500/10 px-2 py-0.5 rounded">БЫЛО</span>
           </div>
-          <p className="text-sm text-slate-400">{before}</p>
+          <p className="text-sm text-slate-300">{before}</p>
         </div>
 
         <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">СТАЛО</span>
           </div>
-          <p className="text-sm text-slate-400">{after}</p>
+          <p className="text-sm text-slate-300">{after}</p>
         </div>
       </div>
     </div>
@@ -706,7 +722,7 @@ function PricingCardTech({ name, price, description, features, popular }: { name
 
       <div className="text-center mb-6 pt-2">
         <h3 className="font-bold text-xl mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>{name}</h3>
-        <p className="text-xs text-slate-500 mb-4">{description}</p>
+        <p className="text-xs text-slate-400 mb-4">{description}</p>
         <div>
           <span className="text-4xl font-bold">{price}₽</span>
           <span className="text-slate-500">/мес</span>
@@ -734,6 +750,26 @@ function PricingCardTech({ name, price, description, features, popular }: { name
   );
 }
 
+function TestimonialCardDark({ name, role, quote, rating }: { name: string; role: string; quote: string; rating: number }) {
+  return (
+    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 hover:border-cyan-500/30 transition-colors" data-testid={`testimonial-${name.toLowerCase()}`}>
+      <div className="flex items-center gap-1 mb-4">
+        {Array.from({ length: rating }).map((_, i) => (
+          <Star key={i} className="w-4 h-4 text-cyan-400 fill-cyan-400" />
+        ))}
+      </div>
+      <div className="mb-5">
+        <Quote className="w-5 h-5 text-cyan-500/30 mb-2" />
+        <p className="text-sm text-slate-300 leading-relaxed italic">{quote}</p>
+      </div>
+      <div className="border-t border-slate-800 pt-4">
+        <p className="font-semibold text-sm text-white">{name}</p>
+        <p className="text-xs text-slate-400">{role}</p>
+      </div>
+    </div>
+  );
+}
+
 function DashboardEvent({ icon, title, subtitle, time, status }: { icon: React.ReactNode; title: string; subtitle: string; time: string; status: "success" | "pending" | "alert" }) {
   const statusColors = {
     success: "border-slate-800",
@@ -748,7 +784,7 @@ function DashboardEvent({ icon, title, subtitle, time, status }: { icon: React.R
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm text-slate-200 truncate">{title}</p>
-        <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
+        <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
       </div>
       <span className="text-[10px] text-slate-600 shrink-0">{time}</span>
     </div>
