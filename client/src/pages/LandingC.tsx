@@ -62,9 +62,6 @@ export default function LandingC() {
             </span>
           </div>
           <div className="hidden md:flex gap-8 items-center text-sm font-medium text-slate-600">
-            <a href="#outcomes" className="hover:text-orange-600 transition-colors" data-testid="link-nav-outcomes-c">
-              Зачем
-            </a>
             <a href="#parents" className="hover:text-orange-600 transition-colors" data-testid="link-nav-parents-c">
               Для кого
             </a>
@@ -73,9 +70,6 @@ export default function LandingC() {
             </a>
             <a href="#pricing" className="hover:text-orange-600 transition-colors" data-testid="link-nav-pricing-c">
               Тарифы
-            </a>
-            <a href="#faq" className="hover:text-orange-600 transition-colors" data-testid="link-nav-faq-c">
-              Вопросы
             </a>
           </div>
           <Button
