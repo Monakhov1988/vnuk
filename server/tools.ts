@@ -1369,3 +1369,128 @@ export async function searchProduct(query: string, userId?: number): Promise<str
     return "Не удалось найти информацию о товаре. Попробуйте позже.";
   }
 }
+
+const VERIFY_TTL = 10 * 60 * 1000;
+
+const DATE_PATTERNS = /(?:\d{1,2}\s+(?:январ[яь]|феврал[яь]|март[аеу]?|апрел[яь]|ма[яй]|июн[яь]|июл[яь]|август[аеу]?|сентябр[яь]|октябр[яь]|ноябр[яь]|декабр[яь])|\d{1,2}\.\d{1,2}(?:\.\d{2,4})?|(?:в|с|до)\s+\d{1,2}[:.]\d{2}|\d{1,2}:\d{2})/i;
+
+const EVENT_CONTEXT_PATTERNS = /(?:концерт|спектакль|выставк|представлени|фестиваль|мероприяти|афиш|билет|расписани|рейс|поезд|электричк|автобус|приём врач|запись к|расписание приём|кино|театр|сеанс|премьер|матч|цирк|шоу|гастрол|куда сходить|куда пойти)/i;
+
+function extractKeyFact(searchResult: string, originalQuery: string): string | null {
+  const lines = searchResult.split("\n").filter(l => l.trim().length > 0);
+
+  const factsWithDates: string[] = [];
+  for (const line of lines) {
+    if (DATE_PATTERNS.test(line) && line.length > 10 && line.length < 300) {
+      const cleaned = line.replace(/^[\s\-•*\d.]+/, "").trim();
+      if (cleaned.length > 10) {
+        factsWithDates.push(cleaned);
+      }
+    }
+  }
+
+  if (factsWithDates.length === 0) return null;
+
+  return factsWithDates.slice(0, 2).join("; ");
+}
+
+export async function verifySearchResult(
+  originalQuery: string,
+  searchResult: string,
+  toolName: string,
+): Promise<{ verified: boolean; warning?: string }> {
+  if (!EVENT_CONTEXT_PATTERNS.test(originalQuery) && !EVENT_CONTEXT_PATTERNS.test(searchResult)) {
+    return { verified: true };
+  }
+
+  const keyFact = extractKeyFact(searchResult, originalQuery);
+  if (!keyFact) {
+    return { verified: true };
+  }
+
+  const cacheKey = `verify:${keyFact.slice(0, 80).toLowerCase()}`;
+  const cached = getCached<{ verified: boolean; warning?: string }>(cacheKey);
+  if (cached) return cached;
+
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+  if (!apiKey) return { verified: true };
+
+  try {
+    console.log(`[tools] Verification: checking "${keyFact.slice(0, 60)}..." for ${toolName}`);
+
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sonar",
+        messages: [
+          {
+            role: "system",
+            content: `Ты — факт-чекер. Проверь утверждение ниже. Ответь ОДНИМ словом: ПОДТВЕРЖДЕНО, НЕТОЧНО или НЕИЗВЕСТНО. Потом одно предложение — почему. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+          },
+          {
+            role: "user",
+            content: `Проверь: "${keyFact}"\nКонтекст запроса: "${originalQuery}"`,
+          },
+        ],
+        max_tokens: 150,
+        temperature: 0.1,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) {
+      console.error(`[tools] Verification HTTP ${response.status}`);
+      return { verified: true };
+    }
+
+    const data = await response.json() as any;
+    const content = (data.choices?.[0]?.message?.content || "").toLowerCase();
+
+    const tokensIn = data.usage?.prompt_tokens || 0;
+    const tokensOut = data.usage?.completion_tokens || 0;
+    storage.logAiUsage({
+      userId: null,
+      endpoint: `verify-${toolName}`,
+      model: "sonar",
+      tokensIn,
+      tokensOut,
+    });
+
+    console.log(`[tools] Verification result: "${content.slice(0, 80)}" (${tokensIn}+${tokensOut} tokens)`);
+
+    const isConfirmed = /подтвержд/i.test(content);
+    const isInaccurate = /неточн/i.test(content);
+    const isUnknown = /неизвестн/i.test(content);
+
+    let result: { verified: boolean; warning?: string };
+
+    if (isConfirmed && !isInaccurate) {
+      result = { verified: true };
+    } else if (isInaccurate) {
+      result = {
+        verified: false,
+        warning: "Перепроверка показала, что информация может быть неточной. Даты, время и детали могут отличаться — обязательно предупреди об этом и дай ссылку для самостоятельной проверки.",
+      };
+    } else if (isUnknown) {
+      result = {
+        verified: false,
+        warning: "Не удалось найти подтверждение этой информации в других источниках. Предупреди что даты и детали могут быть неточными и дай ссылку для проверки.",
+      };
+    } else {
+      result = {
+        verified: false,
+        warning: "Не удалось подтвердить конкретные даты и детали из другого источника. Предупреди что информация может быть неточной и дай ссылку для проверки.",
+      };
+    }
+
+    setCache(cacheKey, result, VERIFY_TTL);
+    return result;
+  } catch (err: any) {
+    console.error("[tools] Verification error:", err.message);
+    return { verified: true };
+  }
+}
