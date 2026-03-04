@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect, useState } from "react";
 import LandingA from "@/pages/LandingA";
 import LandingB from "@/pages/LandingB";
+import LandingC from "@/pages/LandingC";
 import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
 import PricingPage from "@/pages/PricingPage";
@@ -55,13 +56,14 @@ function trackEvent(variant: string, eventType: string, eventData?: string) {
   }).catch(() => {});
 }
 
-function ABLanding() {
-  const [variant, setVariant] = useState<"A" | "B" | null>(null);
+function ABCLanding() {
+  const [variant, setVariant] = useState<"A" | "B" | "C" | null>(null);
 
   useEffect(() => {
-    let v = localStorage.getItem("vnuchok_ab_variant") as "A" | "B" | null;
-    if (!v) {
-      v = Math.random() < 0.5 ? "A" : "B";
+    let v = localStorage.getItem("vnuchok_ab_variant") as "A" | "B" | "C" | null;
+    if (!v || !["A", "B", "C"].includes(v)) {
+      const idx = Math.floor(Math.random() * 3);
+      v = (["A", "B", "C"] as const)[idx];
       localStorage.setItem("vnuchok_ab_variant", v);
     }
     setVariant(v);
@@ -69,7 +71,9 @@ function ABLanding() {
   }, []);
 
   if (!variant) return null;
-  return variant === "A" ? <LandingA /> : <LandingB />;
+  if (variant === "A") return <LandingA />;
+  if (variant === "B") return <LandingB />;
+  return <LandingC />;
 }
 
 function LandingAPage() {
@@ -88,12 +92,21 @@ function LandingBPage() {
   return <LandingB />;
 }
 
+function LandingCPage() {
+  useEffect(() => {
+    localStorage.setItem("vnuchok_ab_variant", "C");
+    trackEvent("C", "landing_view");
+  }, []);
+  return <LandingC />;
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={ABLanding} />
+      <Route path="/" component={ABCLanding} />
       <Route path="/a" component={LandingAPage} />
       <Route path="/b" component={LandingBPage} />
+      <Route path="/c" component={LandingCPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/pricing" component={PricingPage} />

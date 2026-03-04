@@ -611,26 +611,48 @@ export default function LandingB() {
   );
 }
 
-function VariantToggle({ current }: { current: "A" | "B" }) {
+function VariantToggle({ current }: { current: "A" | "B" | "C" }) {
   const [, navigate] = useLocation();
-  const other = current === "A" ? "B" : "A";
-  const otherPath = current === "A" ? "/b" : "/a";
-  const otherLabel = current === "A" ? "Тех-дизайн" : "Эмоциональный";
+  const [open, setOpen] = useState(false);
+
+  const variants = [
+    { key: "A" as const, path: "/a", label: "Эмоциональный" },
+    { key: "B" as const, path: "/b", label: "Тех-дизайн" },
+    { key: "C" as const, path: "/c", label: "Гибрид" },
+  ];
+
+  const others = variants.filter((v) => v.key !== current);
 
   return (
-    <button
-      onClick={() => {
-        localStorage.setItem("vnuchok_ab_variant", other);
-        navigate(otherPath);
-      }}
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-slate-800 shadow-xl shadow-cyan-500/10 border border-cyan-500/30 hover:shadow-cyan-500/20 hover:scale-105 transition-all text-sm font-medium text-slate-300 group"
-      data-testid="button-switch-variant"
-    >
-      <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-      <span>Вариант {current}</span>
-      <span className="text-slate-600 mx-1">|</span>
-      <span className="text-cyan-400 group-hover:underline">{otherLabel}</span>
-    </button>
+    <div className="fixed bottom-6 right-6 z-50">
+      {open && (
+        <div className="mb-2 flex flex-col gap-2">
+          {others.map((v) => (
+            <button
+              key={v.key}
+              onClick={() => {
+                localStorage.setItem("vnuchok_ab_variant", v.key);
+                navigate(v.path);
+                setOpen(false);
+              }}
+              className="px-4 py-2.5 rounded-full bg-slate-800 shadow-lg border border-cyan-500/30 hover:bg-slate-700 text-sm font-medium text-slate-300 transition-all"
+              data-testid={`button-switch-to-${v.key.toLowerCase()}-b`}
+            >
+              {v.key}: {v.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 px-4 py-3 rounded-full bg-slate-800 shadow-xl shadow-cyan-500/10 border border-cyan-500/30 hover:shadow-cyan-500/20 hover:scale-105 transition-all text-sm font-medium text-slate-300"
+        data-testid="button-switch-variant"
+      >
+        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+        <span>Вариант {current}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+    </div>
   );
 }
 
