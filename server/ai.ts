@@ -988,10 +988,15 @@ async function extractMemoryFacts(
 Каждый объект: {"category": "...", "fact": "..."}
 Категории: family (имена родных, внуков, детей), health (болезни, лекарства, аллергии), preferences (любит/не любит еду, занятия), pets (питомцы), hobbies (увлечения, хобби), home (город, адрес, дача), important_dates (дни рождения, годовщины), work (профессия, работа)
 ПРАВИЛА:
-- Только конкретные факты. НЕ настроение, НЕ действия.
-- "У меня кот Барсик" → [{"category":"pets","fact":"Кот по кличке Барсик"}]
-- "Я работала учительницей" → [{"category":"work","fact":"Работала учительницей"}]
+- Извлекай ТОЛЬКО факты которые пользователь ЯВНО говорит О СЕБЕ или О СВОИХ близких.
+- "Мою дочь зовут Нина" → [{"category":"family","fact":"Дочь зовут Нина"}] — ДА, это о родных
+- "У меня кот Барсик" → [{"category":"pets","fact":"Кот по кличке Барсик"}] — ДА
+- "Я работала учительницей" → [{"category":"work","fact":"Работала учительницей"}] — ДА
+- "Моя соседка Нина ходит к врачу" → [] — НЕТ, это не о пользователе и не о его родных
+- "Я читала что аспирин помогает" → [] — НЕТ, это не факт о пользователе
+- "Наверное у меня аллергия на что-то" → [] — НЕТ, слишком неуверенно (наверное, может быть, кажется, вроде бы)
 - "Привет, как дела" → []
+- При ЛЮБОМ сомнении — НЕ сохраняй. Лучше пропустить факт, чем сохранить неверный.
 - Если фактов нет — верни пустой массив []
 - ЗАПРЕЩЕНО сохранять: номера карт, пин-коды, коды из СМС, пароли, номера паспортов, СНИЛС, ИНН, полные адреса с номером квартиры. Если в сообщении есть такие данные — ИГНОРИРУЙ их, НЕ включай в факты.
 Отвечай ТОЛЬКО JSON-массивом, без пояснений.`,
@@ -1026,8 +1031,13 @@ async function extractMemoryFacts(
       });
     }
 
+    const UNCERTAINTY_MARKERS = /(?:наверное|может быть|может быть|кажется|вроде бы|вроде|не уверен|не знаю точно|возможно|скорее всего|похоже что)/i;
     for (const f of facts.slice(0, 5)) {
       if (!f.fact || !f.category || f.fact.length < 3) continue;
+      if (UNCERTAINTY_MARKERS.test(f.fact)) {
+        console.log(`[memory] Skipped uncertain fact for user ${parentId}: ${f.fact}`);
+        continue;
+      }
       const existing = await storage.findUserMemoryByFact(parentId, f.fact);
       if (!existing) {
         await storage.createUserMemory({
@@ -1166,11 +1176,14 @@ function detectRequiredTool(message: string): string | null {
   ];
   if (placeWords.some(w => lower.includes(w))) return "search_place";
 
+  const pharmacyPlace = /(?:аптека отзыв|аптека на |аптека адрес|аптека телефон|аптека график|аптека режим|аптека часы|аптека работает|аптеки в )/;
+  if (pharmacyPlace.test(lower)) return "search_place";
+
   const medicineWords = [
     "лекарств", "таблетк", "препарат", "побочн", "аналог лекарств",
     "инструкция к ", "инструкция по применению", "противопоказан",
     "что за таблетк", "что за лекарств", "от чего помогает",
-    "дженерик", "аптек",
+    "дженерик", "в аптеке стоит", "цена в аптек",
   ];
   if (medicineWords.some(w => lower.includes(w))) return "search_medicine";
 
@@ -1507,7 +1520,7 @@ ${memoryLines}
         recipeToolResult = toolResult.text;
       }
 
-      const TOOLS_NEEDING_VERIFICATION = ["search_web", "search_transport", "search_clinic", "search_legal", "search_travel"];
+      const TOOLS_NEEDING_VERIFICATION = ["search_web", "search_transport", "search_clinic", "search_legal", "search_travel", "search_medicine", "search_gov_services", "search_movie", "search_tv"];
       let verificationWarning = "";
       if (TOOLS_NEEDING_VERIFICATION.includes(fnName)) {
         const queryForVerify = fnArgs.query || (fnArgs.from ? `${fnArgs.from} → ${fnArgs.to}` : lastUserMsg);

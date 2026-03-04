@@ -60,18 +60,31 @@ async function getEffectivePlan(userId: number): Promise<string> {
   const directPlan = await checkSub(userId);
   if (directPlan) return directPlan;
 
-  const children = await storage.getChildrenByParentId(userId);
-  for (const child of children) {
-    const childPlan = await checkSub(child.id);
-    if (childPlan) return childPlan;
+  const user = await storage.getUser(userId);
+  if (!user) return "none";
+
+  if (user.role === "child" && user.linkedParentId) {
+    const parentPlan = await checkSub(user.linkedParentId);
+    if (parentPlan) return parentPlan;
+  }
+
+  if (user.role === "parent") {
+    const children = await storage.getChildrenByParentId(userId);
+    for (const child of children) {
+      const childPlan = await checkSub(child.id);
+      if (childPlan) return childPlan;
+    }
   }
 
   return "none";
 }
 
 async function checkTelegramDailyLimit(userId: number): Promise<boolean> {
-  // TODO: включить обратно после тестирования
-  return true;
+  const plan = await getEffectivePlan(userId);
+  const limit = DAILY_MESSAGE_LIMITS[plan] ?? DAILY_MESSAGE_LIMITS.none;
+  if (limit === Infinity) return true;
+  const todayCount = await storage.countChatMessagesToday(userId);
+  return todayCount < limit;
 }
 
 export let bot: Bot | null = null;
@@ -1689,7 +1702,27 @@ export async function startTelegramBot() {
         return;
       }
     }
-    console.error("[telegram] Bot failed to start after " + MAX_RETRIES + " attempts. Giving up.");
+    console.error("[telegram] Bot failed to start after " + MAX_RETRIES + " attempts. Will retry in 5 minutes...");
+    const recoveryInterval = setInterval(async () => {
+      console.log("[telegram] Attempting bot recovery...");
+      try {
+        await bot.start({
+          drop_pending_updates: true,
+          onStart: () => {
+            botReady = true;
+            (bot as any).__ready = true;
+            console.log("[telegram] Bot recovered successfully!");
+            clearInterval(recoveryInterval);
+          },
+        });
+      } catch (err: any) {
+        if (err?.error_code === 409 || err?.message?.includes("409")) {
+          console.warn("[telegram] Recovery attempt: still 409 Conflict. Will retry in 5 minutes...");
+        } else {
+          console.error("[telegram] Recovery attempt failed:", err.message);
+        }
+      }
+    }, 5 * 60 * 1000);
   };
 
   startBotWithRetry().catch(err => {

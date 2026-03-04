@@ -456,31 +456,47 @@ export async function searchWeb(query: string, userId?: number): Promise<string>
           });
         }
       } else {
-        const response = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: `Ты — помощник для поиска информации. Отвечай кратко, по-русски. Если спрашивают про кино, театр, сериалы — назови конкретные примеры фильмов/спектаклей которые скорее всего идут сейчас (недавние российские и мировые премьеры). Если не уверен в точности — честно скажи "точное расписание лучше проверить на сайте". Если спрашивают про телепрограмму — назови популярные передачи каналов. Если про праздники — используй дату. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
-            },
-            { role: "user", content: safeQuery },
-          ],
-          max_tokens: 500,
-          temperature: 0.3,
-        });
-
-        const rawFallback = response.choices[0]?.message?.content || "Не удалось найти информацию.";
-        result = sanitizeWebContent(rawFallback);
-
-        const usage = response.usage;
-        if (usage) {
-          storage.logAiUsage({
-            userId: null,
-            endpoint: "search-web-fallback",
+        const lowerFallback = safeQuery.toLowerCase();
+        const isFactual = /(?:кино|фильм|расписани|билет|цена|стоимость|адрес|телефон|рейс|поезд|электричк|сеанс|афиш|что идёт|что идет|курс валют|погод)/.test(lowerFallback);
+        if (isFactual) {
+          let fallbackLinks = "К сожалению, поиск сейчас временно недоступен. Попробуйте позже или посмотрите на сайтах:";
+          if (/(?:кино|фильм|сеанс|афиш)/.test(lowerFallback)) {
+            fallbackLinks += "\nhttps://www.afisha.ru/msk/cinema/\nhttps://www.kinopoisk.ru/afisha/";
+          } else if (/(?:поезд|электричк|рейс|билет)/.test(lowerFallback)) {
+            fallbackLinks += "\nhttps://rasp.yandex.ru/\nhttps://www.tutu.ru/";
+          } else if (/(?:погод)/.test(lowerFallback)) {
+            fallbackLinks += "\nhttps://yandex.ru/pogoda/";
+          } else {
+            fallbackLinks += "\nhttps://yandex.ru/search/?text=" + encodeURIComponent(safeQuery);
+          }
+          result = fallbackLinks;
+        } else {
+          const response = await openai.chat.completions.create({
             model: "gpt-4o-mini",
-            tokensIn: usage.prompt_tokens,
-            tokensOut: usage.completion_tokens,
+            messages: [
+              {
+                role: "system",
+                content: `Ты — помощник для общих вопросов. Отвечай кратко, по-русски. СТРОГОЕ ПРАВИЛО: НЕ выдумывай конкретные факты (названия фильмов в прокате, расписания, цены, адреса, телефоны, курсы валют). Если не знаешь точного ответа — честно скажи: «Точную информацию лучше проверить на сайте.» Отвечай только на общие/справочные вопросы (праздники, традиции, советы, рецепты, общие знания). Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
+              },
+              { role: "user", content: safeQuery },
+            ],
+            max_tokens: 500,
+            temperature: 0.3,
           });
+
+          const rawFallback = response.choices[0]?.message?.content || "Не удалось найти информацию.";
+          result = sanitizeWebContent(rawFallback);
+
+          const usage = response.usage;
+          if (usage) {
+            storage.logAiUsage({
+              userId: null,
+              endpoint: "search-web-fallback",
+              model: "gpt-4o-mini",
+              tokensIn: usage.prompt_tokens,
+              tokensOut: usage.completion_tokens,
+            });
+          }
         }
       }
     } catch (err: any) {
@@ -522,6 +538,24 @@ export async function searchWeb(query: string, userId?: number): Promise<string>
   return result;
 }
 
+function addRecipeSafetyWarnings(result: string, dish: string): string {
+  const lower = (result + " " + dish).toLowerCase();
+  const warnings: string[] = [];
+  if (/грейпфрут/.test(lower) && !/взаимодейств|лекарств|статин|давлени/.test(lower)) {
+    warnings.push("Грейпфрут может взаимодействовать с лекарствами от давления и статинами. Если принимаете лекарства — уточните у врача.");
+  }
+  if (/зверобой/.test(lower) && !/взаимодейств|антидепрессант|кроверазжижающ/.test(lower)) {
+    warnings.push("Зверобой может взаимодействовать с антидепрессантами и кроверазжижающими. Уточните у врача.");
+  }
+  if (/сыр(?:ое|ые|ых)\s*яйц|сырой белок|белок сырой/.test(lower) && !/риск|осторожн|пастеризованн/.test(lower)) {
+    warnings.push("Сырые яйца могут содержать сальмонеллу. Для пожилых людей лучше использовать пастеризованные яйца.");
+  }
+  if (warnings.length > 0) {
+    result += "\n\nВажно для здоровья:\n" + warnings.join("\n");
+  }
+  return result;
+}
+
 export async function searchRecipe(dish: string, userId?: number): Promise<string> {
   const safeDish = stripPII(dish);
   const cacheKey = `recipe:${safeDish.toLowerCase()}`;
@@ -560,7 +594,14 @@ export async function searchRecipe(dish: string, userId?: number): Promise<strin
 - Используй ТОЛЬКО реальные рецепты с кулинарных сайтов. НЕ выдумывай пропорции и ингредиенты.
 - Указывай точные количества: граммы, миллилитры, штуки, столовые/чайные ложки.
 - Если блюдо незнакомое или не найдено — напиши: «Не нашёл такой рецепт. Уточните название блюда.»
-- Пиши простым текстом без маркдауна, как опытная хозяйка рассказывает рецепт. Нумеруй шаги цифрами.`,
+- Пиши простым текстом без маркдауна, как опытная хозяйка рассказывает рецепт. Нумеруй шаги цифрами.
+
+БЕЗОПАСНОСТЬ ДЛЯ ПОЖИЛЫХ:
+- Если рецепт содержит ГРЕЙПФРУТ или грейпфрутовый сок — предупреди: «Грейпфрут может взаимодействовать с лекарствами от давления и статинами. Если принимаете лекарства — уточните у врача.»
+- Если содержит много СОЛИ (больше 1 ч.л. на порцию) — предупреди: «Блюдо солёное, при повышенном давлении лучше уменьшить соль.»
+- Если содержит СЫРЫЕ яйца или непастеризованные продукты — предупреди о риске.
+- Если содержит ЗВЕРОБОЙ (в чаях/настоях) — предупреди о взаимодействии с антидепрессантами и кроверазжижающими.
+- Если содержит много САХАРА — предупреди: «При диабете лучше уменьшить сахар или заменить.»`,
             },
             { role: "user", content: `Рецепт: ${safeDish}` },
           ],
@@ -590,6 +631,7 @@ export async function searchRecipe(dish: string, userId?: number): Promise<strin
       });
 
       let result = sanitizeWebContent(content);
+      result = addRecipeSafetyWarnings(result, safeDish);
       const encodedDish = encodeURIComponent(safeDish + " рецепт с фото");
       result += `\n\nЕщё рецепты с фотографиями:\nhttps://www.povarenok.ru/search/name/${encodeURIComponent(safeDish)}/\nhttps://eda.ru/search?q=${encodeURIComponent(safeDish)}`;
 
@@ -607,7 +649,8 @@ export async function searchRecipe(dish: string, userId?: number): Promise<strin
       messages: [
         {
           role: "system",
-          content: "Ты — кулинарный помощник. Дай подробный пошаговый рецепт блюда на русском языке. Укажи ингредиенты с точными количествами и пошаговую инструкцию. Пиши просто и понятно, как для домашней хозяйки. НЕ используй маркдаун, заголовки (###), буллеты (-), звёздочки (**). Пиши обычным текстом как сообщение в мессенджере. Нумеруй шаги цифрами (1, 2, 3...).",
+          content: `Ты — кулинарный помощник. Дай подробный пошаговый рецепт блюда на русском языке. Укажи ингредиенты с точными количествами и пошаговую инструкцию. Пиши просто и понятно, как для домашней хозяйки. НЕ используй маркдаун, заголовки (###), буллеты (-), звёздочки (**). Пиши обычным текстом как сообщение в мессенджере. Нумеруй шаги цифрами (1, 2, 3...).
+ВАЖНО: готовишь для пожилого человека. Если в рецепте есть грейпфрут — предупреди о взаимодействии с лекарствами от давления/статинами. Если много соли — предупреди при гипертонии. Если сырые яйца — предупреди. Если много сахара — предупреди при диабете. Если зверобой — предупреди о взаимодействии с лекарствами.`,
         },
         { role: "user", content: `Рецепт: ${safeDish}` },
       ],
@@ -616,6 +659,7 @@ export async function searchRecipe(dish: string, userId?: number): Promise<strin
     });
 
     let result = response.choices[0]?.message?.content || "Не удалось найти рецепт.";
+    result = addRecipeSafetyWarnings(result, safeDish);
 
     const usage = response.usage;
     if (usage) {
@@ -1091,7 +1135,7 @@ export async function searchMedicine(query: string, userId?: number): Promise<st
           {
             role: "system",
             content: `Ты помогаешь найти информацию о лекарственном препарате. Пациент — пожилой человек. Ищи данные на сайтах: Видаль (vidal.ru), РЛС (rlsnet.ru), Аптека.ру (apteka.ru). Выведи:
-1. Полное торговое и международное непатентованное название
+1. Полное торговое и международное непатентованное название (МНН)
 2. Для чего применяется (показания) — кратко, понятным языком
 3. Основные побочные эффекты (самые частые)
 4. Противопоказания (основные)
@@ -1100,10 +1144,13 @@ export async function searchMedicine(query: string, userId?: number): Promise<st
 7. Ориентировочная цена в аптеках
 
 СТРОГИЕ ПРАВИЛА:
-- Используй ТОЛЬКО реальные данные из справочников лекарств. НЕ выдумывай названия, показания, побочки, цены.
+- Используй ТОЛЬКО реальные данные из справочников лекарств. НЕ выдумывай названия, МНН, показания, побочки, цены, дозировки.
+- Если не уверен в МНН (международном непатентованном названии) — напиши: «МНН уточните у фармацевта или в инструкции.»
 - Если препарат не найден — напиши: «Не нашёл такой препарат. Проверьте название или спросите у фармацевта.»
 - ОБЯЗАТЕЛЬНО добавляй: «Перед приёмом любого лекарства проконсультируйтесь с врачом. Не меняйте дозировку самостоятельно.»
+- Если дозировка для пожилых ОТЛИЧАЕТСЯ от стандартной — ОБЯЗАТЕЛЬНО укажи отдельно.
 - Предупреди о рисках взаимодействия с частыми лекарствами пожилых (от давления, для сердца, кроверазжижающие — варфарин, аспирин).
+- Если препарат НЕЛЬЗЯ совмещать с определёнными продуктами (грейпфрут, молоко, алкоголь) — ОБЯЗАТЕЛЬНО укажи.
 - НЕ рекомендуй конкретные лекарства. НЕ предлагай замену назначенного врачом препарата.
 - Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.`,
           },
@@ -1683,15 +1730,22 @@ const TRAVEL_CONTEXT_PATTERNS = /(?:отель|гостиниц|санатори
 
 const NUMERIC_FACT_PATTERNS = /(?:стать[яеи]\s*\d|№\s*\d|\d+\s*руб|\d+\s*₽|\d+\s*%|\d+\s*тыс|\d+\s*млн|\d+\s*балл)/i;
 
+const MEDICINE_CONTEXT_PATTERNS = /(?:дозировк|мг|мл|таблетк|капсул|раз в день|раза в день|побочн|противопоказан|аналог|дженерик|взаимодейств|несовместим)/i;
+
+const GOV_CONTEXT_PATTERNS = /(?:руб|₽|процент|%|тысяч|размер выплат|сумма|выплат|пенси|балл|пособи|компенсац|льгот|субсиди|материнск|стипенди)/i;
+
 function extractKeyFact(searchResult: string, originalQuery: string, toolName?: string): string | null {
   const lines = searchResult.split("\n").filter(l => l.trim().length > 0);
 
   const factsWithDates: string[] = [];
-  const isLegalOrTravel = toolName === "search_legal" || toolName === "search_travel";
+  const hasNumericTools = ["search_legal", "search_travel", "search_medicine", "search_gov_services"];
+  const isNumericTool = hasNumericTools.includes(toolName || "");
   for (const line of lines) {
     const hasDate = DATE_PATTERNS.test(line);
-    const hasNumericFact = isLegalOrTravel && NUMERIC_FACT_PATTERNS.test(line);
-    if ((hasDate || hasNumericFact) && line.length > 10 && line.length < 300) {
+    const hasNumericFact = isNumericTool && NUMERIC_FACT_PATTERNS.test(line);
+    const hasMedicineFact = toolName === "search_medicine" && MEDICINE_CONTEXT_PATTERNS.test(line);
+    const hasGovFact = toolName === "search_gov_services" && GOV_CONTEXT_PATTERNS.test(line);
+    if ((hasDate || hasNumericFact || hasMedicineFact || hasGovFact) && line.length > 10 && line.length < 300) {
       const cleaned = line.replace(/^[\s\-•*\d.]+/, "").trim();
       if (cleaned.length > 10) {
         factsWithDates.push(cleaned);
@@ -1712,7 +1766,10 @@ export async function verifySearchResult(
   const isEventContext = EVENT_CONTEXT_PATTERNS.test(originalQuery) || EVENT_CONTEXT_PATTERNS.test(searchResult);
   const isLegalContext = toolName === "search_legal" && (LEGAL_CONTEXT_PATTERNS.test(originalQuery) || LEGAL_CONTEXT_PATTERNS.test(searchResult));
   const isTravelContext = toolName === "search_travel" && (TRAVEL_CONTEXT_PATTERNS.test(originalQuery) || TRAVEL_CONTEXT_PATTERNS.test(searchResult));
-  if (!isEventContext && !isLegalContext && !isTravelContext) {
+  const isMedicineContext = toolName === "search_medicine";
+  const isGovContext = toolName === "search_gov_services";
+  const isMovieContext = toolName === "search_movie" || toolName === "search_tv";
+  if (!isEventContext && !isLegalContext && !isTravelContext && !isMedicineContext && !isGovContext && !isMovieContext) {
     return { verified: true };
   }
 

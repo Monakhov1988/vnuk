@@ -465,8 +465,12 @@ export async function registerRoutes(
   }
 
   async function checkDailyMessageLimit(userId: number): Promise<{ allowed: boolean; remaining: number; limit: number }> {
-    // TODO: включить обратно после тестирования
-    return { allowed: true, remaining: Infinity, limit: Infinity };
+    const plan = await getEffectivePlan(userId);
+    const limit = DAILY_MESSAGE_LIMITS[plan] ?? DAILY_MESSAGE_LIMITS.none;
+    if (limit === Infinity) return { allowed: true, remaining: Infinity, limit: Infinity };
+    const todayCount = await storage.countChatMessagesToday(userId);
+    const remaining = Math.max(0, limit - todayCount);
+    return { allowed: remaining > 0, remaining, limit };
   }
 
   app.post("/api/ai/chat", requireAuth, async (req, res) => {
