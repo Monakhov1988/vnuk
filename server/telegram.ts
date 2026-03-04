@@ -47,7 +47,7 @@ const DAILY_MESSAGE_LIMITS: Record<string, number> = {
   premium: Infinity,
 };
 
-const RATE_LIMIT_MESSAGE = "На сегодня наши разговоры закончились, но завтра я снова буду рядом! Если нужна срочная помощь — звони 112.";
+const RATE_LIMIT_MESSAGE = "Мы сегодня хорошо поговорили! 😊 Завтра утром я снова буду рядом. А если что-то срочное — звоните 112.";
 
 async function getEffectivePlan(userId: number): Promise<string> {
   const checkSub = async (uid: number): Promise<string | null> => {
@@ -108,7 +108,7 @@ async function maybeSendPaywallHint(userId: number, chatId: string, ctx: any): P
     await ctx.reply(
       `📊 Сегодня вы задали ${todayCount} из ${limit} вопросов.\n\n` +
       `Хотите безлимит + напоминания о лекарствах?\n` +
-      `Узнайте о подписке — попросите родственника зайти в личный кабинет Внучка.`
+      `Расскажите сыну или дочке, что вам нравится Внучок — они смогут оформить подписку для вас.`
     );
   } catch {}
 }
