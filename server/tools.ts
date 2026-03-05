@@ -839,6 +839,82 @@ export async function searchMovie(query: string, userId?: number): Promise<strin
 
 const CINEMA_TTL = 2 * 60 * 60 * 1000;
 
+async function fetchMovieRating(movieTitle: string, apiKey: string): Promise<{ title: string; rating: string } | null> {
+  try {
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sonar",
+        messages: [
+          {
+            role: "system",
+            content: `Найди рейтинг фильма на kinopoisk.ru. Ответь СТРОГО в формате: РЕЙТИНГ/10 (КОЛИЧЕСТВО оценок). Например: 7.2/10 (15 тыс. оценок). Если рейтинга на Кинопоиске нет — ответь: нет оценок. Ничего больше не пиши.`,
+          },
+          { role: "user", content: `Рейтинг фильма "${movieTitle}" на Кинопоиске` },
+        ],
+        max_tokens: 80,
+        temperature: 0.1,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json() as any;
+    const content = data.choices?.[0]?.message?.content?.trim();
+    if (!content) return null;
+
+    const tokensIn = data.usage?.prompt_tokens || 0;
+    const tokensOut = data.usage?.completion_tokens || 0;
+    storage.logAiUsage({
+      userId: null,
+      endpoint: "search-cinema-rating-perplexity",
+      model: "sonar",
+      tokensIn,
+      tokensOut,
+    });
+
+    console.log(`[tools] Movie rating lookup: "${movieTitle}" → "${content}" (${tokensIn}+${tokensOut} tokens)`);
+    return { title: movieTitle, rating: content };
+  } catch {
+    return null;
+  }
+}
+
+function extractMoviesWithoutRating(text: string): string[] {
+  const lines = text.split("\n");
+  const missing: string[] = [];
+  for (const line of lines) {
+    const match = line.match(/^\d+\.\s+(.+?)(?:\s*—|\s*–|\s*-)/);
+    if (!match) continue;
+    const title = match[1].trim();
+    const hasRating = /\d+\.\d*\/10/.test(line);
+    const isNewRelease = /новинка/i.test(line);
+    const ratingMissing = /рейтинг не указан|не указан|нет данных/i.test(line);
+    if (!hasRating || isNewRelease || ratingMissing) {
+      missing.push(title);
+    }
+  }
+  return missing.slice(0, 5);
+}
+
+function enrichResultWithRatings(text: string, ratings: Array<{ title: string; rating: string }>): string {
+  let result = text;
+  for (const { title, rating } of ratings) {
+    if (/нет оценок/i.test(rating)) continue;
+    const ratingClean = rating.replace(/^КП:\s*/i, "").trim();
+    const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    result = result.replace(
+      new RegExp(`(${escapedTitle}[^\\n]*?)(?:новинка|рейтинг не указан|не указан|нет данных)`, "i"),
+      `$1КП: ${ratingClean}`
+    );
+  }
+  return result;
+}
+
 export async function searchCinema(city?: string, userId?: number): Promise<string> {
   const safeCity = city ? stripPII(city) : "";
   const cacheKey = `cinema:${safeCity.toLowerCase() || "russia"}`;
@@ -875,7 +951,7 @@ export async function searchCinema(city?: string, userId?: number): Promise<stri
 
 ЗАДАЧА: Найди фильмы в прокате ${cityPart}, включая премьеры последних 3 дней. Используй данные с kinopoisk.ru.
 
-Для КАЖДОГО фильма ОБЯЗАТЕЛЬНО зайди на его страницу на kinopoisk.ru и укажи:
+Для КАЖДОГО фильма укажи:
 1. Название
 2. Жанр
 3. Рейтинг Кинопоиска и количество оценок
@@ -883,7 +959,7 @@ export async function searchCinema(city?: string, userId?: number): Promise<stri
 Формат вывода (строго):
 Название — жанр — КП: 7.2/10 (12 тыс. оценок)
 
-Слово "новинка" пиши ТОЛЬКО если фильм вышел 1-2 дня назад и на странице фильма на Кинопоиске рейтинг ещё не появился. Если рейтинг есть — ВСЕГДА указывай его с количеством оценок.
+Если рейтинга на Кинопоиске ещё нет — напиши "новинка".
 
 Также добавь раздел "Скоро в кино" — 2-3 ожидаемых фильма ближайшего месяца (с датой выхода и жанром).
 
@@ -920,6 +996,18 @@ export async function searchCinema(city?: string, userId?: number): Promise<stri
     });
 
     let result = sanitizeWebContent(content);
+    console.log(`[tools] Cinema search step 1: ${tokensIn}+${tokensOut} tokens for "${cityPart}"`);
+
+    const moviesWithoutRating = extractMoviesWithoutRating(result);
+    if (moviesWithoutRating.length > 0) {
+      console.log(`[tools] Cinema: ${moviesWithoutRating.length} movies missing ratings, enriching: ${moviesWithoutRating.join(", ")}`);
+      const ratingPromises = moviesWithoutRating.map(title => fetchMovieRating(title, apiKey));
+      const ratings = (await Promise.all(ratingPromises)).filter(Boolean) as Array<{ title: string; rating: string }>;
+      if (ratings.length > 0) {
+        result = enrichResultWithRatings(result, ratings);
+        console.log(`[tools] Cinema: enriched ${ratings.length} movies with ratings`);
+      }
+    }
 
     if (safeCity) {
       const encodedCity = encodeURIComponent(safeCity.toLowerCase());
@@ -928,7 +1016,6 @@ export async function searchCinema(city?: string, userId?: number): Promise<stri
       result += `\n\nТочное расписание сеансов:\nhttps://www.kinopoisk.ru/afisha/`;
     }
 
-    console.log(`[tools] Cinema search: ${tokensIn}+${tokensOut} tokens for "${cityPart}"`);
     setCache(cacheKey, result, CINEMA_TTL);
     return result;
   } catch (err: any) {
