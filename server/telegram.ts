@@ -41,9 +41,9 @@ function isEmergencyMessage(text: string): boolean {
 }
 
 const DAILY_MESSAGE_LIMITS: Record<string, number> = {
-  none: 10,
-  basic: 30,
-  standard: 100,
+  none: Infinity,
+  basic: Infinity,
+  standard: Infinity,
   premium: Infinity,
 };
 
