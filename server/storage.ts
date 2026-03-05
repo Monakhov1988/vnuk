@@ -15,8 +15,9 @@ import {
   type UserMemory, type InsertUserMemory,
   type TopicSetting, type PersonalitySetting,
   type InsertAnalyticsEvent, type AnalyticsEvent,
+  type InsertSearchQualityLog, type SearchQualityLog,
   users, reminders, events, utilityMetrics, memoirs, healthLogs, subscriptions, waitlist, chatMessages, aiUsageLogs, userMemory,
-  topicSettings, personalitySettings, analyticsEvents,
+  topicSettings, personalitySettings, analyticsEvents, searchQualityLogs,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -91,6 +92,9 @@ export interface IStorage {
 
   createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent>;
   getAnalyticsStats(variant?: string): Promise<{ variant: string; eventType: string; count: number }[]>;
+
+  logSearchQuality(log: InsertSearchQualityLog): Promise<SearchQualityLog>;
+  updateSearchQualityFeedback(id: number, feedback: string): Promise<void>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -433,6 +437,24 @@ export class DatabaseStorage implements IStorage {
       .where(conditions)
       .groupBy(analyticsEvents.variant, analyticsEvents.eventType);
     return rows.map(r => ({ variant: r.variant, eventType: r.eventType, count: Number(r.count) }));
+  }
+
+  async logSearchQuality(log: InsertSearchQualityLog): Promise<SearchQualityLog> {
+    try {
+      const [created] = await db.insert(searchQualityLogs).values(log).returning();
+      return created;
+    } catch (err) {
+      console.error("[logSearchQuality] Failed:", err);
+      return { id: 0, ...log, createdAt: new Date() } as SearchQualityLog;
+    }
+  }
+
+  async updateSearchQualityFeedback(id: number, feedback: string): Promise<void> {
+    try {
+      await db.update(searchQualityLogs).set({ userFeedback: feedback }).where(eq(searchQualityLogs.id, id));
+    } catch (err) {
+      console.error("[updateSearchQualityFeedback] Failed:", err);
+    }
   }
 }
 

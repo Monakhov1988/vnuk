@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
-import { searchPipeline, todayDateRu, currentMonthRu, fullDateRu } from "./searchPipeline";
+import { searchPipeline, searchPipelineText, todayDateRu, currentMonthRu, fullDateRu } from "./searchPipeline";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -589,7 +589,7 @@ export async function searchRecipe(dish: string, userId?: number): Promise<strin
 5. Калорийность (если есть на сайте-источнике)
 6. Источник рецепта (название сайта)`;
 
-  let result = await searchPipeline({
+  let result = await searchPipelineText({
     toolName: "recipe",
     cacheKey: `pipeline:recipe:${safeDish.toLowerCase()}`,
     cacheTtl: RECIPE_TTL,
@@ -974,7 +974,7 @@ export async function searchPlace(query: string, city?: string, userId?: number)
 
   const encodedQuery = encodeURIComponent(fullQuery);
 
-  return searchPipeline({
+  return searchPipelineText({
     toolName: "search-place",
     cacheKey: `place:${fullQuery.toLowerCase()}`,
     cacheTtl: 30 * 60 * 1000,
@@ -1036,7 +1036,7 @@ export async function searchTransport(from: string, to: string, date?: string, t
   const encodedFrom = encodeURIComponent(safeFrom);
   const encodedTo = encodeURIComponent(safeTo);
 
-  return searchPipeline({
+  return searchPipelineText({
     toolName: "transport",
     cacheKey,
     cacheTtl: 10 * 60 * 1000,
@@ -1091,7 +1091,7 @@ export async function searchClinic(query: string, city?: string, userId?: number
 
   const encodedQuery = encodeURIComponent(fullQuery);
 
-  return searchPipeline({
+  return searchPipelineText({
     toolName: "clinic",
     cacheKey,
     cacheTtl: 30 * 60 * 1000,
@@ -1147,13 +1147,14 @@ export async function searchMedicine(query: string, userId?: number): Promise<st
 
   const encodedQuery = encodeURIComponent(safeQuery);
 
-  return searchPipeline({
+  return searchPipelineText({
     toolName: "medicine",
     cacheKey,
     cacheTtl: 60 * 60 * 1000,
     queries: [
       {
         label: "info",
+        model: "sonar-pro",
         systemPrompt: `Ты помогаешь найти информацию о лекарственном препарате. Пациент — пожилой человек. Ищи данные на сайтах: Видаль (vidal.ru), РЛС (rlsnet.ru), Аптека.ру (apteka.ru). Выведи:
 1. Полное торговое и международное непатентованное название (МНН)
 2. Для чего применяется (показания) — кратко, понятным языком
@@ -1211,7 +1212,7 @@ export async function searchTV(channel?: string, date?: string, userId?: number)
     ? `Покажи программу канала «${channel}» на ${dateFull}.`
     : `Покажи программу основных каналов (Первый, Россия 1, НТВ, Культура, ТВ Центр) на ${dateFull}. По каждому каналу — 5-7 основных передач.`;
 
-  return searchPipeline({
+  return searchPipelineText({
     toolName: "tv",
     cacheKey,
     cacheTtl: 30 * 60 * 1000,
@@ -1262,13 +1263,14 @@ export async function searchGovServices(query: string, userId?: number): Promise
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) return "Сервис поиска госуслуг временно недоступен.";
 
-  return searchPipeline({
+  return searchPipelineText({
     toolName: "gov-services",
     cacheKey,
     cacheTtl: 60 * 60 * 1000,
     queries: [
       {
         label: "official",
+        model: "sonar-pro",
         systemPrompt: `Ты помогаешь человеку разобраться с государственными услугами в России. Ищи данные на сайтах: Госуслуги (gosuslugi.ru), СФР — Социальный фонд России (sfr.gov.ru), КонсультантПлюс (consultant.ru), Гарант (garant.ru), ФОМС (ffoms.gov.ru), ФНС (nalog.gov.ru). Выведи:
 1. Суть услуги/льготы — простым языком
 2. Кому положено (условия получения)
@@ -1331,7 +1333,7 @@ export async function searchGarden(query: string, region?: string, userId?: numb
 
   const encodedQuery = encodeURIComponent(fullQuery);
 
-  return searchPipeline({
+  return searchPipelineText({
     toolName: "garden",
     cacheKey,
     cacheTtl: 60 * 60 * 1000,
@@ -1379,7 +1381,7 @@ export async function searchProduct(query: string, userId?: number): Promise<str
 
   const encodedQuery = encodeURIComponent(safeQuery);
 
-  return searchPipeline({
+  return searchPipelineText({
     toolName: "search-product",
     cacheKey: `product:${safeQuery.toLowerCase()}`,
     cacheTtl: 15 * 60 * 1000,
@@ -1418,13 +1420,14 @@ export async function searchLegal(query: string, userId?: number): Promise<strin
 
   const encodedQuery = encodeURIComponent(safeQuery);
 
-  return searchPipeline({
+  return searchPipelineText({
     toolName: "legal",
     cacheKey,
     cacheTtl: 60 * 60 * 1000,
     queries: [
       {
         label: "main",
+        model: "sonar-pro",
         systemPrompt: `Ты помогаешь человеку разобраться с юридическим вопросом в России. Ищи данные на сайтах: КонсультантПлюс (consultant.ru), Гарант (garant.ru), Правовед (pravoved.ru), Госуслуги (gosuslugi.ru). Выведи:
 1. Суть вопроса — простым языком, без юридического жаргона
 2. Какие законы/статьи регулируют (номер закона и статьи)
@@ -1478,7 +1481,7 @@ export async function searchTravel(query: string, userId?: number): Promise<stri
 
   const encodedQuery = encodeURIComponent(safeQuery);
 
-  return searchPipeline({
+  return searchPipelineText({
     toolName: "search-travel",
     cacheKey: `travel:${safeQuery.toLowerCase()}`,
     cacheTtl: 30 * 60 * 1000,

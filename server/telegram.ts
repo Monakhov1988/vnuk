@@ -680,6 +680,14 @@ export async function startTelegramBot() {
           hasAlert: result.hasAlert,
         });
 
+        let feedbackKeyboard: InlineKeyboard | undefined;
+        if (result.searchLogIds && result.searchLogIds.length > 0) {
+          const logId = result.searchLogIds[result.searchLogIds.length - 1];
+          feedbackKeyboard = new InlineKeyboard()
+            .text("👍 Полезно", `sqfb:positive:${logId}`)
+            .text("👎 Неточно", `sqfb:negative:${logId}`);
+        }
+
         if (result.imageUrl) {
           try {
             await ctx.replyWithPhoto(result.imageUrl, { caption: result.reply.slice(0, 1024) });
@@ -687,7 +695,7 @@ export async function startTelegramBot() {
             await ctx.reply(result.reply);
           }
         } else {
-          await ctx.reply(result.reply);
+          await ctx.reply(result.reply, feedbackKeyboard ? { reply_markup: feedbackKeyboard } : undefined);
         }
         return;
       }
@@ -1047,6 +1055,25 @@ export async function startTelegramBot() {
     try {
       await ctx.editMessageText(`📌 ${topic.name}\n${topic.description}\n\nТекущий уровень: ${depthLabels[depth]}`, { reply_markup: keyboard });
     } catch {}
+  });
+
+  bot.callbackQuery(/^sqfb:(positive|negative):(\d+)$/, async (ctx) => {
+    const feedback = ctx.match[1];
+    const logId = parseInt(ctx.match[2], 10);
+    try {
+      await storage.updateSearchQualityFeedback(logId, feedback);
+      const emoji = feedback === "positive" ? "👍" : "👎";
+      await ctx.answerCallbackQuery({ text: feedback === "positive" ? "Спасибо! Рад, что помог 😊" : "Спасибо за отзыв, буду стараться лучше!" });
+      const originalText = ctx.callbackQuery.message?.text || "";
+      if (originalText) {
+        try {
+          await ctx.editMessageText(originalText + `\n\n${emoji}`, { reply_markup: undefined });
+        } catch {}
+      }
+    } catch (err) {
+      console.error("[telegram] sqfb error:", err);
+      try { await ctx.answerCallbackQuery({ text: "Не удалось сохранить" }); } catch {}
+    }
   });
 
   bot.command("settings", async (ctx) => {
@@ -1660,7 +1687,14 @@ export async function startTelegramBot() {
             await ctx.reply(result.reply);
           }
         } else {
-          await ctx.reply(result.reply);
+          let feedbackKb: InlineKeyboard | undefined;
+          if (result.searchLogIds && result.searchLogIds.length > 0) {
+            const logId = result.searchLogIds[result.searchLogIds.length - 1];
+            feedbackKb = new InlineKeyboard()
+              .text("👍 Полезно", `sqfb:positive:${logId}`)
+              .text("👎 Неточно", `sqfb:negative:${logId}`);
+          }
+          await ctx.reply(result.reply, feedbackKb ? { reply_markup: feedbackKb } : undefined);
         }
         await maybeSendPaywallHint(user.id, chatId, ctx);
         return;
@@ -1834,7 +1868,14 @@ export async function startTelegramBot() {
           await ctx.reply(result.reply);
         }
       } else {
-        await ctx.reply(result.reply);
+        let feedbackKb: InlineKeyboard | undefined;
+        if (result.searchLogIds && result.searchLogIds.length > 0) {
+          const logId = result.searchLogIds[result.searchLogIds.length - 1];
+          feedbackKb = new InlineKeyboard()
+            .text("👍 Полезно", `sqfb:positive:${logId}`)
+            .text("👎 Неточно", `sqfb:negative:${logId}`);
+        }
+        await ctx.reply(result.reply, feedbackKb ? { reply_markup: feedbackKb } : undefined);
       }
 
       const wantsVoice = /голос(ом|ом\s|овое)|поговори(ть|м)?\s*(голосом)?|хочу.*голос|скажи\s*голосом|аудио/i.test(userText);

@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
 import { getWeather, searchWeb, searchRecipe, generateImage, searchMovie, searchCinema, searchPlace, searchTransport, searchClinic, searchMedicine, searchTV, searchGovServices, searchGarden, searchProduct, searchLegal, searchTravel, checkSearchRateLimit, sanitizeWebContent, verifySearchResult } from "./tools";
+import { pipelineLogStorage } from "./searchPipeline";
 import { buildTopicPromptSection, buildPersonalityPromptSection, DEFAULT_PERSONALITY, type PersonalityConfig, type TopicDepth, getDefaultTopicsForPrompt } from "./topicCatalog";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -1320,7 +1321,7 @@ export async function chatWithGrandchild(
   userId?: number,
   onToolCall?: (toolName: string) => void,
   onResearchStatus?: (status: string) => void
-): Promise<{ reply: string; hasAlert: boolean; intent: string; imageUrl?: string }> {
+): Promise<{ reply: string; hasAlert: boolean; intent: string; imageUrl?: string; searchLogIds?: number[] }> {
   const { hours, minutes, timeOfDay, day, month, year } = getMoscowTime();
   const timeStr = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 
@@ -1328,6 +1329,7 @@ export async function chatWithGrandchild(
   const currentMonth = monthNames[month];
 
   let systemMessage = SYSTEM_PROMPT;
+  let userCity = "";
 
   let hasLinkedChild = false;
   if (userId) {
@@ -1383,7 +1385,8 @@ ${memoryLines}
         if (homeMemory) {
           const cityMatch = homeMemory.fact.match(/(?:живёт|живет|живу|проживает|проживаю|город|из)\s+(?:в\s+)?([А-ЯЁа-яё][А-ЯЁа-яё\s-]*[А-ЯЁа-яё])/i);
           if (cityMatch) {
-            systemMessage += `\n\nГород собеседника: ${cityMatch[1].trim()}. Используй его для погоды по умолчанию, если город не указан в сообщении.`;
+            userCity = cityMatch[1].trim();
+            systemMessage += `\n\nГород собеседника: ${userCity}. Используй его для погоды по умолчанию, если город не указан в сообщении.`;
           } else {
             systemMessage += `\n\nИнформация о доме: ${homeMemory.fact}. Если в этом факте есть город — используй его для погоды по умолчанию.`;
           }
@@ -1460,6 +1463,7 @@ ${memoryLines}
   ];
 
   let imageUrl: string | undefined;
+  const searchLogIds: number[] = [];
   let totalTokensIn = 0;
   let totalTokensOut = 0;
   let response: OpenAI.Chat.Completions.ChatCompletion;
@@ -1467,6 +1471,8 @@ ${memoryLines}
   const MAX_TOOL_ITERATIONS = 4;
   const MAX_SEARCH_PER_RESPONSE = 5;
   let searchCallsThisResponse = 0;
+
+  return pipelineLogStorage.run(searchLogIds, async () => {
 
   let researchLiteUsed = false;
   if (requiredTool === "search_web" && isComplexQuery(lastUserMsg)) {
@@ -1564,6 +1570,15 @@ ${memoryLines}
         }
       }
 
+      if (userCity) {
+        if ((fnName === "search_place" || fnName === "search_clinic" || fnName === "search_cinema") && !fnArgs.city) {
+          fnArgs.city = userCity;
+        }
+        if (fnName === "search_garden" && !fnArgs.region) {
+          fnArgs.region = userCity;
+        }
+      }
+
       console.log(`[ai] Calling tool: ${fnName}(${JSON.stringify(fnArgs)})`);
       if (onToolCall) {
         try { onToolCall(fnName); } catch {}
@@ -1578,7 +1593,7 @@ ${memoryLines}
         recipeToolResult = toolResult.text;
       }
 
-      const TOOLS_NEEDING_VERIFICATION = ["search_web", "search_transport", "search_clinic", "search_legal", "search_travel", "search_medicine", "search_gov_services", "search_movie", "search_tv"];
+      const TOOLS_NEEDING_VERIFICATION = ["search_web", "search_movie", "search_tv"];
       let verificationWarning = "";
       if (TOOLS_NEEDING_VERIFICATION.includes(fnName)) {
         const queryForVerify = fnArgs.query || (fnArgs.from ? `${fnArgs.from} → ${fnArgs.to}` : lastUserMsg);
@@ -1640,7 +1655,9 @@ ${memoryLines}
     hasAlert,
     intent,
     imageUrl,
+    searchLogIds: searchLogIds.length > 0 ? searchLogIds : undefined,
   };
+  });
 }
 
 export function detectIntentLocal(text: string, hasAlert: boolean): string {

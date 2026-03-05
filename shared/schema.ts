@@ -230,3 +230,25 @@ export const analyticsEvents = pgTable("analytics_events", {
 export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).omit({ id: true, createdAt: true });
 export type InsertAnalyticsEvent = z.infer<typeof insertAnalyticsEventSchema>;
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+
+export const searchQualityLogs = pgTable("search_quality_logs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  parentId: integer("parent_id"),
+  toolName: text("tool_name").notNull(),
+  query: text("query").notNull(),
+  sourcesCount: integer("sources_count").notNull().default(0),
+  mergeStrategy: text("merge_strategy"),
+  validationResult: text("validation_result"),
+  responseTimeMs: integer("response_time_ms"),
+  tokensTotal: integer("tokens_total").default(0),
+  userFeedback: text("user_feedback"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_sqlog_tool").on(table.toolName),
+  index("idx_sqlog_created").on(table.createdAt),
+  index("idx_sqlog_parent").on(table.parentId),
+]);
+
+export const insertSearchQualityLogSchema = createInsertSchema(searchQualityLogs).omit({ id: true, createdAt: true });
+export type InsertSearchQualityLog = z.infer<typeof insertSearchQualityLogSchema>;
+export type SearchQualityLog = typeof searchQualityLogs.$inferSelect;

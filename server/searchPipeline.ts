@@ -74,6 +74,7 @@ export interface PipelineQuery {
   maxTokens?: number;
   temperature?: number;
   label: string;
+  model?: string;
 }
 
 export interface PipelineConfig {
@@ -90,6 +91,11 @@ export interface PipelineConfig {
   errorMessage?: string;
 }
 
+export interface PipelineResult {
+  text: string;
+  logId?: number;
+}
+
 interface PerplexityResult {
   content: string;
   tokensIn: number;
@@ -103,6 +109,7 @@ export async function callPerplexity(
   maxTokens: number = 800,
   temperature: number = 0.2,
   timeoutMs: number = 15000,
+  model: string = "sonar",
 ): Promise<PerplexityResult> {
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) throw new Error("PERPLEXITY_API_KEY not set");
@@ -114,7 +121,7 @@ export async function callPerplexity(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "sonar",
+      model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },
@@ -236,7 +243,7 @@ function mergeResultsSimple(results: string[], strategy: "combine" | "compare"):
   return results.map((r, i) => `Источник ${i + 1}:\n${r}`).join("\n\n");
 }
 
-export async function searchPipeline(config: PipelineConfig): Promise<string> {
+export async function searchPipeline(config: PipelineConfig): Promise<PipelineResult> {
   const {
     toolName,
     cacheKey,
@@ -251,7 +258,7 @@ export async function searchPipeline(config: PipelineConfig): Promise<string> {
     errorMessage,
   } = config;
 
-  const cached = getPipelineCached<string>(cacheKey);
+  const cached = getPipelineCached<PipelineResult>(cacheKey);
   if (cached) {
     console.log(`[pipeline] ${toolName}: cache hit for "${cacheKey.slice(0, 60)}"`);
     return cached;
@@ -269,12 +276,14 @@ export async function searchPipeline(config: PipelineConfig): Promise<string> {
           q.userMessage,
           q.maxTokens || 800,
           q.temperature || 0.2,
+          15000,
+          q.model || "sonar",
         );
 
         storage.logAiUsage({
           userId: userId || null,
           endpoint: `pipeline-${toolName}-${q.label}`,
-          model: "sonar",
+          model: q.model || "sonar",
           tokensIn: result.tokensIn,
           tokensOut: result.tokensOut,
         });
@@ -328,11 +337,15 @@ export async function searchPipeline(config: PipelineConfig): Promise<string> {
       );
     }
 
+    let validationResult: string | null = null;
     if (validateFacts) {
       const originalQuery = queries[0]?.userMessage || "";
       const validation = await validateWithPerplexity(originalQuery, mergedResult, validatePrompt);
       if (validation.warning) {
         mergedResult += `\n\n⚠️ ${validation.warning}`;
+        validationResult = "inaccurate";
+      } else {
+        validationResult = "confirmed";
       }
     }
 
@@ -343,13 +356,52 @@ export async function searchPipeline(config: PipelineConfig): Promise<string> {
     const elapsed = Date.now() - startTime;
     console.log(`[pipeline] ${toolName}: completed in ${elapsed}ms (${successResults.length}/${queries.length} sources)`);
 
-    setPipelineCache(cacheKey, mergedResult, cacheTtl);
-    return mergedResult;
+    let totalTokens = 0;
+    for (const r of queryResults) {
+      if (r.status === "fulfilled") {
+        totalTokens += (r.value as any).tokensIn || 0;
+        totalTokens += (r.value as any).tokensOut || 0;
+      }
+    }
+
+    let logId: number | undefined;
+    try {
+      const logEntry = await storage.logSearchQuality({
+        parentId: userId || null,
+        toolName,
+        query: queries[0]?.userMessage?.slice(0, 500) || "",
+        sourcesCount: successResults.length,
+        mergeStrategy,
+        validationResult,
+        responseTimeMs: elapsed,
+        tokensTotal: totalTokens,
+        userFeedback: null,
+      });
+      logId = logEntry.id || undefined;
+    } catch (e) {
+      // non-critical
+    }
+
+    const result: PipelineResult = { text: mergedResult, logId };
+    setPipelineCache(cacheKey, result, cacheTtl);
+    return result;
   } catch (err: any) {
     const elapsed = Date.now() - startTime;
     console.error(`[pipeline] ${toolName}: error after ${elapsed}ms: ${err.message}`);
-    return errorMessage || "Не удалось найти информацию. Попробуйте позже.";
+    return { text: errorMessage || "Не удалось найти информацию. Попробуйте позже." };
   }
+}
+
+import { AsyncLocalStorage } from "node:async_hooks";
+export const pipelineLogStorage = new AsyncLocalStorage<number[]>();
+
+export async function searchPipelineText(config: PipelineConfig): Promise<string> {
+  const result = await searchPipeline(config);
+  if (result.logId) {
+    const store = pipelineLogStorage.getStore();
+    if (store) store.push(result.logId);
+  }
+  return result.text;
 }
 
 export function todayDateRu(): string {
