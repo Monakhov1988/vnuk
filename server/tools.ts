@@ -349,7 +349,7 @@ async function fetchPerplexity(query: string): Promise<string> {
           role: "system",
           content: `Ты помогаешь пожилому человеку (55-75 лет) найти информацию. Отвечай тепло, понятно, по-русски. Называй конкретные названия, даты, факты. Если есть расписание — укажи его. Пиши простым текстом как сообщение в мессенджере, без маркдауна (без ###, **, - списков). Нумеруй пункты цифрами если нужен список. Преобразуй результаты поиска в простую форму. Избегай профессионального IT-жаргона: не используй слова вроде «дедлайн», «фидбэк», «апдейт», «интерфейс», «таймлайн», «воркфлоу». Общеупотребительные слова (онлайн, кэшбэк, QR-код, приложение) — оставляй как есть. Если используешь слово, которое может быть незнакомо пожилому человеку — поясни его в скобках, но не заменяй. ВАЖНО: передавай только найденную информацию. Если точных данных нет — напиши «информация не найдена». Не придумывай события, места, названия, цены, расписания, адреса, телефоны. Лучше сказать «не нашёл» чем выдумать.${contextHint} Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
         },
-        { role: "user", content: query },
+        { role: "user", content: `${query} (дата запроса: ${new Date().toLocaleDateString("ru-RU")})` },
       ],
       max_tokens: 800,
       temperature: 0.3,
@@ -875,7 +875,9 @@ export async function searchCinema(city?: string, userId?: number): Promise<stri
 
 Сегодня: ${currentDate}.
 
-Найди фильмы которые СЕЙЧАС в прокате ${cityPart}. Для КАЖДОГО фильма ОБЯЗАТЕЛЬНО найди на kinopoisk.ru и укажи:
+Найди фильмы которые СЕЙЧАС в прокате ${cityPart}. ОБЯЗАТЕЛЬНО проверь премьеры текущей недели — не пропусти фильмы которые вышли сегодня (${currentDate}) или за последние 3 дня. Проверь kinopoisk.ru/afisha/ на актуальную афишу.
+
+Для КАЖДОГО фильма ОБЯЗАТЕЛЬНО найди на kinopoisk.ru и укажи:
 - Название
 - Жанр
 - Рейтинг Кинопоиска (число из 10) и количество оценок (например: 7.2/10, 12 тыс. оценок)
@@ -891,7 +893,7 @@ export async function searchCinema(city?: string, userId?: number): Promise<stri
 - Пиши простым текстом без маркдауна.
 - Максимум 8-10 фильмов в прокате.`,
           },
-          { role: "user", content: `Какие фильмы сейчас идут в кинотеатрах ${cityPart}?` },
+          { role: "user", content: `Какие фильмы идут в кинотеатрах ${cityPart} на ${currentDate}? Включи все премьеры этой недели, в том числе вышедшие сегодня ${currentDate}.` },
         ],
         max_tokens: 1200,
         temperature: 0.2,
@@ -1309,9 +1311,11 @@ export async function searchTV(channel?: string, date?: string, userId?: number)
   if (!apiKey) return "Сервис телепрограммы временно недоступен.";
 
   try {
+    const todayFull = new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+    const dateFull = date || todayFull;
     const channelInstruction = channel
-      ? `Покажи программу канала «${channel}» на ${dateLabel}.`
-      : `Покажи программу основных каналов (Первый, Россия 1, НТВ, Культура, ТВ Центр) на ${dateLabel}. По каждому каналу — 5-7 основных передач.`;
+      ? `Покажи программу канала «${channel}» на ${dateFull}.`
+      : `Покажи программу основных каналов (Первый, Россия 1, НТВ, Культура, ТВ Центр) на ${dateFull}. По каждому каналу — 5-7 основных передач.`;
 
     const response = await fetch("https://api.perplexity.ai/chat/completions", {
       method: "POST",
@@ -1338,7 +1342,7 @@ export async function searchTV(channel?: string, date?: string, userId?: number)
 - Пиши простым текстом без маркдауна. Нумеруй передачи по времени.
 - Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
           },
-          { role: "user", content: `Телепрограмма ${channelLabel} на ${dateLabel}` },
+          { role: "user", content: `Телепрограмма ${channelLabel} на ${dateFull}` },
         ],
         max_tokens: 1000,
         temperature: 0.2,
