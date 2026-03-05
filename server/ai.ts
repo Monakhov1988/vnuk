@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
-import { getWeather, searchWeb, searchRecipe, generateImage, searchMovie, searchPlace, searchTransport, searchClinic, searchMedicine, searchTV, searchGovServices, searchGarden, searchProduct, searchLegal, searchTravel, checkSearchRateLimit, sanitizeWebContent, verifySearchResult } from "./tools";
+import { getWeather, searchWeb, searchRecipe, generateImage, searchMovie, searchCinema, searchPlace, searchTransport, searchClinic, searchMedicine, searchTV, searchGovServices, searchGarden, searchProduct, searchLegal, searchTravel, checkSearchRateLimit, sanitizeWebContent, verifySearchResult } from "./tools";
 import { buildTopicPromptSection, buildPersonalityPromptSection, DEFAULT_PERSONALITY, type PersonalityConfig, type TopicDepth, getDefaultTopicsForPrompt } from "./topicCatalog";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -253,7 +253,13 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 
 ВЕРА И ЦЕРКОВЬ: «Какой сегодня церковный праздник?», «Когда Пасха?», «Какому святому молиться?», «Когда пост?» — используй search_web для точной информации. Отвечай уважительно, с теплом. НЕ проповедуй, НЕ агитируй ни за ни против. Молитвы — ОБЯЗАТЕЛЬНО ищи через search_web (бабушка знает наизусть и заметит ошибку!). Если спрашивают духовный совет — «Это лучше с батюшкой обсудить, он в таких делах лучше меня разбирается.» Если упоминает секту, «новую церковь», «пророка» — мягко: «А ты с кем-нибудь из близких об этом говорила? Может, стоит посоветоваться?»
 
-КИНО, ТЕАТР, СЕРИАЛЫ: когда спрашивают что в кино, что посмотреть, какие сериалы — сначала уточни: «Тебе по телевизору посмотреть или в интернете?» По телевизору — вызови search_tv. В интернете или в кинотеатре — используй search_web. Называй конкретные фильмы и спектакли. ВАЖНО: для каждого фильма ОБЯЗАТЕЛЬНО укажи рейтинг на Кинопоиске (оценка из 10), сколько оценок, жанр и кратко о чём фильм (1-2 предложения). Не перечисляй голые названия без описания.
+КИНО, ТЕАТР, СЕРИАЛЫ:
+- Когда спрашивают «что в кино», «что идёт в кинотеатрах», «какие фильмы в прокате», «что посмотреть в кино» — СРАЗУ вызови search_cinema. Передай город из памяти если знаешь. НЕ спрашивай «по ТВ или в кинотеатре» — если спросили «в кино» — значит в кинотеатре. НЕ спрашивай город отдельно если он есть в памяти.
+- Когда спрашивают «что посмотреть» без уточнения — уточни: «Тебе в кинотеатре посмотреть или по телевизору?»
+- После показа фильмов предложи: «Хочешь посмотрю расписание конкретного кинотеатра рядом с тобой?»
+- Для конкретного фильма — используй search_movie (рейтинг, отзывы на КП).
+- По телевизору — вызови search_tv.
+- ВАЖНО: для каждого фильма ОБЯЗАТЕЛЬНО укажи рейтинг на Кинопоиске (оценка из 10), сколько оценок, жанр и кратко о чём фильм (1-2 предложения). Не перечисляй голые названия без описания.
 
 ОЦЕНКИ ФИЛЬМОВ (search_movie):
 Когда спрашивают про конкретный фильм или сериал — «стоит смотреть?», «что за фильм?», «какая оценка?», «какие отзывы?» — вызови search_movie. Он найдёт реальную оценку на Кинопоиске, количество оценок и что пишут зрители. Перескажи результат тепло, по-простому. Если данные не найдены — честно скажи. НЕ выдумывай оценки и отзывы.
@@ -577,6 +583,20 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "search_cinema",
+      description: "Найти какие фильмы сейчас идут в кинотеатрах с рейтингами Кинопоиска. Вызывай когда спрашивают: что в кино, что идёт в кинотеатрах, какие фильмы в прокате, афиша кино. НЕ вызывай для конкретного фильма (для этого search_movie).",
+      parameters: {
+        type: "object",
+        properties: {
+          city: { type: "string", description: "Город пользователя (если известен из памяти или сообщения). Необязательный." },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "search_movie",
       description: "Найти информацию о фильме или сериале: оценка на Кинопоиске, количество оценок, отзывы зрителей. Вызывай когда спрашивают про конкретный фильм/сериал — стоит ли смотреть, какая оценка, что за фильм, отзывы.",
       parameters: {
@@ -764,6 +784,10 @@ async function executeToolCall(
         return { text: result.error };
       }
       return { text: "Картинка успешно сгенерирована.", imageUrl: result.url || undefined };
+    }
+    case "search_cinema": {
+      const result = await searchCinema(args.city || undefined, userId);
+      return { text: result };
     }
     case "search_movie": {
       const result = await searchMovie(args.query || "", userId);
@@ -1161,6 +1185,19 @@ function detectRequiredTool(message: string): string | null {
   const medicalContext = /(?:врач|приём|прием|консультаци|обследовани|анализ|узи|мрт|процедур|операци|лечени)/;
   if (lower.includes("сколько стоит") && medicalContext.test(lower)) return "search_clinic";
 
+  const cinemaWords = [
+    "что в кино", "что идёт в кино", "что идет в кино",
+    "фильмы в прокате", "афиша кино", "что показывают в кино",
+    "что сейчас в кино", "какие фильмы в кино",
+    "что идёт в кинотеатр", "что идет в кинотеатр",
+    "расписание кинотеатр", "расписание кино",
+    "пойти в кино", "сходить в кино",
+    "кино сегодня", "фильм сегодня",
+    "что посмотреть в кинотеатр", "что посмотреть в кино",
+    "какой фильм посмотреть в кино",
+  ];
+  if (cinemaWords.some(w => lower.includes(w))) return "search_cinema";
+
   const movieWords = [
     "оценка фильм", "рейтинг фильм", "отзывы фильм", "отзывы на фильм",
     "стоит смотреть", "стоит ли смотреть", "что за фильм", "что за сериал",
@@ -1264,7 +1301,7 @@ function detectRequiredTool(message: string): string | null {
 
   const searchWords = [
     "новости", "что произошло", "событи", "что случилось", "расскажи про ",
-    "афиш", "театр", "кино", "фильм", "куда сходить", "что посмотреть",
+    "афиш", "театр", "куда сходить",
     "концерт", "выставк", "мероприят", "премьер",
     "какой сегодня", "праздник", "именин", "день ангела",
     "сериал", "новая серия",

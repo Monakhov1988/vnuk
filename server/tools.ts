@@ -837,6 +837,103 @@ export async function searchMovie(query: string, userId?: number): Promise<strin
   }
 }
 
+const CINEMA_TTL = 2 * 60 * 60 * 1000;
+
+export async function searchCinema(city?: string, userId?: number): Promise<string> {
+  const safeCity = city ? stripPII(city) : "";
+  const cacheKey = `cinema:${safeCity.toLowerCase() || "russia"}`;
+  const cached = getCached<string>(cacheKey);
+  if (cached) return cached;
+
+  if (userId) {
+    const rateCheck = checkSearchRateLimit(userId);
+    if (!rateCheck.allowed) return rateCheck.message!;
+  }
+
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+  if (!apiKey) return "Сервис поиска фильмов временно недоступен.";
+
+  const now = new Date();
+  const monthNames = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+  const currentDate = `${now.getDate()} ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+
+  const cityPart = safeCity ? `в городе ${safeCity}` : "в России";
+
+  try {
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sonar",
+        messages: [
+          {
+            role: "system",
+            content: `Ты помогаешь найти какие фильмы сейчас идут в кинотеатрах. Используй ТОЛЬКО актуальные данные с kinopoisk.ru и афишу кинотеатров.
+
+Сегодня: ${currentDate}.
+
+Найди фильмы которые СЕЙЧАС в прокате ${cityPart}. Для каждого фильма укажи:
+- Название (и оригинальное если есть)
+- Жанр
+- Рейтинг Кинопоиска (число из 10) и количество оценок
+- Краткое описание (1-2 предложения)
+
+Также добавь раздел "Скоро в кино" — 2-3 самых ожидаемых фильма которые выйдут в ближайший месяц (с датой выхода).
+
+ПРАВИЛА:
+- Используй ТОЛЬКО реальные данные. НЕ выдумывай рейтинги и описания.
+- Если не уверен в рейтинге — напиши "рейтинг уточняется".
+- Пиши простым текстом без маркдауна.
+- Максимум 8-10 фильмов в прокате.`,
+          },
+          { role: "user", content: `Какие фильмы сейчас идут в кинотеатрах ${cityPart}?` },
+        ],
+        max_tokens: 1200,
+        temperature: 0.2,
+      }),
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
+    }
+
+    const data = await response.json() as any;
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("Perplexity: empty response");
+
+    const tokensIn = data.usage?.prompt_tokens || 0;
+    const tokensOut = data.usage?.completion_tokens || 0;
+    storage.logAiUsage({
+      userId: userId || null,
+      endpoint: "search-cinema-perplexity",
+      model: "sonar",
+      tokensIn,
+      tokensOut,
+    });
+
+    let result = sanitizeWebContent(content);
+
+    if (safeCity) {
+      const encodedCity = encodeURIComponent(safeCity.toLowerCase());
+      result += `\n\nТочное расписание сеансов:\nhttps://www.kinopoisk.ru/afisha/${encodedCity}/`;
+    } else {
+      result += `\n\nТочное расписание сеансов:\nhttps://www.kinopoisk.ru/afisha/`;
+    }
+
+    console.log(`[tools] Cinema search: ${tokensIn}+${tokensOut} tokens for "${cityPart}"`);
+    setCache(cacheKey, result, CINEMA_TTL);
+    return result;
+  } catch (err: any) {
+    console.error("[tools] Cinema search error:", err.message);
+    return "Не удалось найти актуальную афишу. Попробуйте позже или посмотрите на kinopoisk.ru/afisha/";
+  }
+}
+
 export async function searchPlace(query: string, city?: string, userId?: number): Promise<string> {
   const safeQuery = stripPII(query);
   const safeCity = city ? stripPII(city) : "";
