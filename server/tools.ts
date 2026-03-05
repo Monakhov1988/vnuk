@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
+import { searchPipeline, todayDateRu, currentMonthRu, fullDateRu } from "./searchPipeline";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -567,120 +568,57 @@ export async function searchRecipe(dish: string, userId?: number): Promise<strin
     if (!rateCheck.allowed) return rateCheck.message!;
   }
 
-  const apiKey = process.env.PERPLEXITY_API_KEY;
+  const safetyRules = `БЕЗОПАСНОСТЬ ДЛЯ ПОЖИЛЫХ:
+- Если рецепт содержит ГРЕЙПФРУТ или грейпфрутовый сок — предупреди: «Грейпфрут может взаимодействовать с лекарствами от давления и статинами. Если принимаете лекарства — уточните у врача.»
+- Если содержит много СОЛИ (больше 1 ч.л. на порцию) — предупреди: «Блюдо солёное, при повышенном давлении лучше уменьшить соль.»
+- Если содержит СЫРЫЕ яйца или непастеризованные продукты — предупреди о риске.
+- Если содержит ЗВЕРОБОЙ (в чаях/настоях) — предупреди о взаимодействии с антидепрессантами и кроверазжижающими.
+- Если содержит много САХАРА — предупреди: «При диабете лучше уменьшить сахар или заменить.»`;
 
-  if (apiKey) {
-    try {
-      const response = await fetch("https://api.perplexity.ai/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "sonar",
-          messages: [
-            {
-              role: "system",
-              content: `Ты помогаешь найти проверенный рецепт блюда. Ищи на кулинарных сайтах: povar.ru, eda.ru, russianfood.com, gastronom.ru. Выведи:
+  const commonRules = `СТРОГИЕ ПРАВИЛА:
+- Используй ТОЛЬКО реальные рецепты с кулинарных сайтов. НЕ выдумывай пропорции и ингредиенты.
+- Указывай точные количества: граммы, миллилитры, штуки, столовые/чайные ложки.
+- Если блюдо незнакомое или не найдено — напиши: «Не нашёл такой рецепт. Уточните название блюда.»
+- Пиши простым текстом без маркдауна, как опытная хозяйка рассказывает рецепт. Нумеруй шаги цифрами.`;
+
+  const recipeFields = `Выведи:
 1. Ингредиенты с точными количествами
 2. Пошаговую инструкцию приготовления
 3. Время приготовления
 4. Количество порций
 5. Калорийность (если есть на сайте-источнике)
-6. Источник рецепта (название сайта)
+6. Источник рецепта (название сайта)`;
 
-СТРОГИЕ ПРАВИЛА:
-- Используй ТОЛЬКО реальные рецепты с кулинарных сайтов. НЕ выдумывай пропорции и ингредиенты.
-- Указывай точные количества: граммы, миллилитры, штуки, столовые/чайные ложки.
-- Если блюдо незнакомое или не найдено — напиши: «Не нашёл такой рецепт. Уточните название блюда.»
-- Пиши простым текстом без маркдауна, как опытная хозяйка рассказывает рецепт. Нумеруй шаги цифрами.
+  let result = await searchPipeline({
+    toolName: "recipe",
+    cacheKey: `pipeline:recipe:${safeDish.toLowerCase()}`,
+    cacheTtl: RECIPE_TTL,
+    userId: userId || null,
+    queries: [
+      {
+        label: "folk",
+        systemPrompt: `Ты помогаешь найти проверенный народный рецепт блюда. Ищи на кулинарных сайтах: povar.ru, russianfood.com — народные проверенные рецепты. ${recipeFields}\n\n${commonRules}\n\n${safetyRules}\n\nДата сегодня: ${todayDateRu()}`,
+        userMessage: `Рецепт: ${safeDish}`,
+        maxTokens: 800,
+        temperature: 0.3,
+      },
+      {
+        label: "pro",
+        systemPrompt: `Ты помогаешь найти профессиональный рецепт блюда. Ищи на кулинарных сайтах: eda.ru, gastronom.ru — профессиональные рецепты. ${recipeFields}\n\n${commonRules}\n\n${safetyRules}\n\nДата сегодня: ${todayDateRu()}`,
+        userMessage: `Рецепт: ${safeDish}`,
+        maxTokens: 800,
+        temperature: 0.3,
+      },
+    ],
+    mergeStrategy: "best",
+    mergePrompt: "Выбери лучший рецепт из двух источников. Критерии: точные пропорции, полный список ингредиентов, понятные пошаговые инструкции. Выведи ОДИН лучший рецепт. Если оба хороши — объедини лучшее из каждого. Пиши простым текстом без маркдауна.",
+    suffix: `\n\nЕщё рецепты с фотографиями:\nhttps://www.povarenok.ru/search/name/${encodeURIComponent(safeDish)}/\nhttps://eda.ru/search?q=${encodeURIComponent(safeDish)}`,
+    errorMessage: "Не удалось найти рецепт. Попробуйте позже.",
+  });
 
-БЕЗОПАСНОСТЬ ДЛЯ ПОЖИЛЫХ:
-- Если рецепт содержит ГРЕЙПФРУТ или грейпфрутовый сок — предупреди: «Грейпфрут может взаимодействовать с лекарствами от давления и статинами. Если принимаете лекарства — уточните у врача.»
-- Если содержит много СОЛИ (больше 1 ч.л. на порцию) — предупреди: «Блюдо солёное, при повышенном давлении лучше уменьшить соль.»
-- Если содержит СЫРЫЕ яйца или непастеризованные продукты — предупреди о риске.
-- Если содержит ЗВЕРОБОЙ (в чаях/настоях) — предупреди о взаимодействии с антидепрессантами и кроверазжижающими.
-- Если содержит много САХАРА — предупреди: «При диабете лучше уменьшить сахар или заменить.»`,
-            },
-            { role: "user", content: `Рецепт: ${safeDish}` },
-          ],
-          max_tokens: 800,
-          temperature: 0.3,
-        }),
-        signal: AbortSignal.timeout(15000),
-      });
-
-      if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
-      }
-
-      const data = await response.json() as any;
-      const content = data.choices?.[0]?.message?.content;
-      if (!content) throw new Error("Perplexity: empty response");
-
-      const tokensIn = data.usage?.prompt_tokens || 0;
-      const tokensOut = data.usage?.completion_tokens || 0;
-      storage.logAiUsage({
-        userId: userId || null,
-        endpoint: "search-recipe-perplexity",
-        model: "sonar",
-        tokensIn,
-        tokensOut,
-      });
-
-      let result = sanitizeWebContent(content);
-      result = addRecipeSafetyWarnings(result, safeDish);
-      const encodedDish = encodeURIComponent(safeDish + " рецепт с фото");
-      result += `\n\nЕщё рецепты с фотографиями:\nhttps://www.povarenok.ru/search/name/${encodeURIComponent(safeDish)}/\nhttps://eda.ru/search?q=${encodeURIComponent(safeDish)}`;
-
-      console.log(`[tools] Recipe search (Perplexity): ${tokensIn}+${tokensOut} tokens for "${dish.slice(0, 50)}"`);
-      setCache(cacheKey, result, RECIPE_TTL);
-      return result;
-    } catch (err: any) {
-      console.error("[tools] Recipe Perplexity error, falling back to GPT:", err.message);
-    }
-  }
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: `Ты — кулинарный помощник. Дай подробный пошаговый рецепт блюда на русском языке. Укажи ингредиенты с точными количествами и пошаговую инструкцию. Пиши просто и понятно, как для домашней хозяйки. НЕ используй маркдаун, заголовки (###), буллеты (-), звёздочки (**). Пиши обычным текстом как сообщение в мессенджере. Нумеруй шаги цифрами (1, 2, 3...).
-ВАЖНО: готовишь для пожилого человека. Если в рецепте есть грейпфрут — предупреди о взаимодействии с лекарствами от давления/статинами. Если много соли — предупреди при гипертонии. Если сырые яйца — предупреди. Если много сахара — предупреди при диабете. Если зверобой — предупреди о взаимодействии с лекарствами.`,
-        },
-        { role: "user", content: `Рецепт: ${safeDish}` },
-      ],
-      max_tokens: 800,
-      temperature: 0.5,
-    });
-
-    let result = response.choices[0]?.message?.content || "Не удалось найти рецепт.";
-    result = addRecipeSafetyWarnings(result, safeDish);
-
-    const usage = response.usage;
-    if (usage) {
-      storage.logAiUsage({
-        userId: userId || null,
-        endpoint: "search-recipe-gpt-fallback",
-        model: "gpt-4o-mini",
-        tokensIn: usage.prompt_tokens,
-        tokensOut: usage.completion_tokens,
-      });
-    }
-
-    const encodedDish = encodeURIComponent(safeDish + " рецепт с фото");
-    result += `\n\n=== ССЫЛКИ (ОБЯЗАТЕЛЬНО ПЕРЕДАЙ В ОТВЕТЕ) ===\nПодробнее с фотографиями: https://yandex.ru/search/?text=${encodedDish}`;
-
-    setCache(cacheKey, result, RECIPE_TTL);
-    return result;
-  } catch (err: any) {
-    console.error("[tools] Recipe search error:", err.message);
-    return `Не удалось найти рецепт. Попробуйте позже.`;
-  }
+  result = addRecipeSafetyWarnings(result, safeDish);
+  setCache(cacheKey, result, RECIPE_TTL);
+  return result;
 }
 
 export async function generateImage(description: string, userId?: number): Promise<{ url: string | null; error: string | null }> {
@@ -1028,31 +966,23 @@ export async function searchPlace(query: string, city?: string, userId?: number)
   const safeQuery = stripPII(query);
   const safeCity = city ? stripPII(city) : "";
   const fullQuery = safeCity ? `${safeQuery} ${safeCity}` : safeQuery;
-  const cacheKey = `place:${fullQuery.toLowerCase()}`;
-  const cached = getCached<string>(cacheKey);
-  if (cached) return cached;
 
   if (userId) {
     const rateCheck = checkSearchRateLimit(userId);
     if (!rateCheck.allowed) return rateCheck.message!;
   }
 
-  const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) return "Сервис поиска заведений временно недоступен.";
+  const encodedQuery = encodeURIComponent(fullQuery);
 
-  try {
-    const response = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          {
-            role: "system",
-            content: `Ты помогаешь пожилому человеку найти информацию о заведении или сервисе. Ищи данные на Яндекс.Картах (yandex.ru/maps). Выведи:
+  return searchPipeline({
+    toolName: "search-place",
+    cacheKey: `place:${fullQuery.toLowerCase()}`,
+    cacheTtl: 30 * 60 * 1000,
+    userId,
+    queries: [
+      {
+        label: "yandex",
+        systemPrompt: `Ты помогаешь пожилому человеку найти информацию о заведении или сервисе. Ищи данные на Яндекс.Картах (yandex.ru/maps). Выведи:
 1. Полное название заведения
 2. Адрес
 3. Оценка (из 5) и количество отзывов
@@ -1066,47 +996,20 @@ export async function searchPlace(query: string, city?: string, userId?: number)
 - Если не уверен в данных — напиши: «Точную информацию лучше проверить на Яндекс.Картах.»
 - Если запрос общий (например «хороший ресторан в Москве») — предложи 2-3 варианта с оценками с Яндекс.Карт.
 - Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
-- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
-          },
-          { role: "user", content: `Найди на Яндекс.Картах: ${fullQuery}` },
-        ],
-        max_tokens: 800,
-        temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
-    }
-
-    const data = await response.json() as any;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Perplexity: empty response");
-
-    const tokensIn = data.usage?.prompt_tokens || 0;
-    const tokensOut = data.usage?.completion_tokens || 0;
-    storage.logAiUsage({
-      userId: userId || null,
-      endpoint: "search-place-perplexity",
-      model: "sonar",
-      tokensIn,
-      tokensOut,
-    });
-
-    let result = sanitizeWebContent(content);
-
-    const encodedQuery = encodeURIComponent(fullQuery);
-    result += `\n\nПосмотреть на Яндекс.Картах:\nhttps://yandex.ru/maps/?text=${encodedQuery}`;
-
-    console.log(`[tools] Place search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, PLACE_TTL);
-    return result;
-  } catch (err: any) {
-    console.error("[tools] Place search error:", err.message);
-    return "Не удалось найти информацию о заведении. Попробуйте позже.";
-  }
+- Дата сегодня: ${todayDateRu()}`,
+        userMessage: `Найди на Яндекс.Картах: ${fullQuery}`,
+      },
+      {
+        label: "2gis",
+        systemPrompt: `Ты помогаешь проверить информацию о заведении. Ищи на 2gis.ru, zoon.ru, tripadvisor.ru. Выведи: 1) Рейтинг и количество отзывов 2) Основные отзывы посетителей 3) Актуальный режим работы 4) Средний чек (если ресторан/кафе). Пиши кратко. Дата сегодня: ${todayDateRu()}`,
+        userMessage: `${fullQuery} 2гис отзывы рейтинг`,
+      },
+    ],
+    mergeStrategy: "combine",
+    mergePrompt: "Объедини информацию о заведении из двух источников. Источник 1 — Яндекс.Карты. Источник 2 — 2ГИС/другие площадки. Покажи рейтинги с обеих площадок если есть. Объедини адрес, режим работы, телефон, отзывы. Убери дубли. Пиши простым текстом.",
+    suffix: `\n\nПосмотреть на Яндекс.Картах:\nhttps://yandex.ru/maps/?text=${encodedQuery}`,
+    errorMessage: "Не удалось найти информацию о заведении. Попробуйте позже.",
+  });
 }
 
 export async function searchTransport(from: string, to: string, date?: string, transportType?: string, userId?: number): Promise<string> {
@@ -1126,23 +1029,21 @@ export async function searchTransport(from: string, to: string, date?: string, t
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) return "Сервис поиска расписания временно недоступен.";
 
-  try {
-    const dateInstruction = date
-      ? `Ищи рейсы на конкретную дату: ${date}.`
-      : `Ищи ближайшие рейсы. Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}.`;
+  const dateInstruction = date
+    ? `Ищи рейсы на конкретную дату: ${date}.`
+    : `Ищи ближайшие рейсы. Дата сегодня: ${todayDateRu()}.`;
 
-    const response = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          {
-            role: "system",
-            content: `Ты помогаешь найти расписание транспорта в России. Пассажир — пожилой человек. Ищи данные на сайтах: РЖД (rzd.ru), Яндекс.Расписания (rasp.yandex.ru), Туту.ру (tutu.ru), автовокзалы. Выведи:
+  const encodedFrom = encodeURIComponent(safeFrom);
+  const encodedTo = encodeURIComponent(safeTo);
+
+  return searchPipeline({
+    toolName: "transport",
+    cacheKey,
+    cacheTtl: 10 * 60 * 1000,
+    queries: [
+      {
+        label: "rzd",
+        systemPrompt: `Ты помогаешь найти расписание транспорта в России. Пассажир — пожилой человек. Ищи данные на сайтах: РЖД (rzd.ru), Яндекс.Расписания (rasp.yandex.ru). Выведи:
 1. Доступные рейсы (${typeLabel}) из ${safeFrom} в ${safeTo}
 2. Время отправления и прибытия
 3. Время в пути
@@ -1158,50 +1059,21 @@ ${dateInstruction}
 - Цены указывай как ориентировочные: «от ... руб» или «примерно ... руб».
 - Рекомендуй нижние полки в поездах. Если есть скидки для пенсионеров — упомяни.
 - Пиши простым текстом без маркдауна. Нумеруй рейсы цифрами.`,
-          },
-          { role: "user", content: `Расписание ${typeLabel} из ${safeFrom} в ${safeTo}${date ? ` на ${date}` : ""}` },
-        ],
-        max_tokens: 800,
-        temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
-    }
-
-    const data = await response.json() as any;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Perplexity: empty response");
-
-    const tokensIn = data.usage?.prompt_tokens || 0;
-    const tokensOut = data.usage?.completion_tokens || 0;
-    storage.logAiUsage({
-      userId: userId || null,
-      endpoint: "search-transport-perplexity",
-      model: "sonar",
-      tokensIn,
-      tokensOut,
-    });
-
-    let result = sanitizeWebContent(content);
-
-    const encodedFrom = encodeURIComponent(safeFrom);
-    const encodedTo = encodeURIComponent(safeTo);
-    result += `\n\nГде купить билеты и проверить расписание:`;
-    result += `\nhttps://rasp.yandex.ru/search/?fromName=${encodedFrom}&toName=${encodedTo}`;
-    result += `\nhttps://www.tutu.ru/`;
-    result += `\nhttps://www.rzd.ru/`;
-
-    console.log(`[tools] Transport search: ${tokensIn}+${tokensOut} tokens for "${from} -> ${to}"`);
-    setCache(cacheKey, result, TRANSPORT_TTL);
-    return result;
-  } catch (err: any) {
-    console.error("[tools] Transport search error:", err.message);
-    return "Не удалось найти расписание. Попробуйте позже.";
-  }
+        userMessage: `Расписание ${typeLabel} из ${safeFrom} в ${safeTo}${date ? ` на ${date}` : ""}`,
+      },
+      {
+        label: "tutu",
+        systemPrompt: `Ты помогаешь найти альтернативные варианты транспорта. Ищи на tutu.ru, aviasales.ru, busfor.ru. Выведи: 1) Альтернативные рейсы (другие поезда, автобусы, самолёты) 2) Сравнение цен 3) Акции и скидки для пенсионеров (если есть). Пиши кратко. Дата сегодня: ${todayDateRu()}`,
+        userMessage: `${safeFrom} ${safeTo} ${typeLabel} цены скидки пенсионерам`,
+      },
+    ],
+    mergeStrategy: "combine",
+    mergePrompt: "Объедини информацию о транспорте из двух источников. Источник 1 — основное расписание (РЖД, Яндекс). Источник 2 — альтернативные варианты и цены. Объедини в единый ответ: сначала основные рейсы, потом альтернативы. Убери дубли. Пиши простым текстом.",
+    validateFacts: true,
+    suffix: `\n\nГде купить билеты и проверить расписание:\nhttps://rasp.yandex.ru/search/?fromName=${encodedFrom}&toName=${encodedTo}\nhttps://www.tutu.ru/\nhttps://www.rzd.ru/`,
+    userId,
+    errorMessage: "Не удалось найти расписание. Попробуйте позже.",
+  });
 }
 
 export async function searchClinic(query: string, city?: string, userId?: number): Promise<string> {
@@ -1217,22 +1089,16 @@ export async function searchClinic(query: string, city?: string, userId?: number
     if (!rateCheck.allowed) return rateCheck.message!;
   }
 
-  const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) return "Сервис поиска клиник временно недоступен.";
+  const encodedQuery = encodeURIComponent(fullQuery);
 
-  try {
-    const response = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          {
-            role: "system",
-            content: `Ты помогаешь найти врача или клинику в России. Пациент — пожилой человек. Ищи данные на сайтах: ПроДокторов (prodoctorov.ru), ДокДок (docdoc.ru), СберЗдоровье (sberhealth.ru), Яндекс.Карты. Выведи:
+  return searchPipeline({
+    toolName: "clinic",
+    cacheKey,
+    cacheTtl: 30 * 60 * 1000,
+    queries: [
+      {
+        label: "prodoctorov",
+        systemPrompt: `Ты помогаешь найти врача или клинику в России. Пациент — пожилой человек. Ищи данные на сайтах: ПроДокторов (prodoctorov.ru), ДокДок (docdoc.ru). Выведи:
 1. Название клиники или ФИО врача
 2. Специализация
 3. Адрес
@@ -1248,51 +1114,21 @@ export async function searchClinic(query: string, city?: string, userId?: number
 - Если есть информация о доступности (лифт, пандус, 1 этаж) — укажи. Приоритет врачам с опытом работы с пожилыми пациентами.
 - Всегда добавляй: «Для записи лучше позвонить в клинику или записаться через сайт.»
 - Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
-- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
-          },
-          { role: "user", content: `Найди врача или клинику: ${fullQuery}` },
-        ],
-        max_tokens: 800,
-        temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
-    }
-
-    const data = await response.json() as any;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Perplexity: empty response");
-
-    const tokensIn = data.usage?.prompt_tokens || 0;
-    const tokensOut = data.usage?.completion_tokens || 0;
-    storage.logAiUsage({
-      userId: userId || null,
-      endpoint: "search-clinic-perplexity",
-      model: "sonar",
-      tokensIn,
-      tokensOut,
-    });
-
-    let result = sanitizeWebContent(content);
-
-    const encodedQuery = encodeURIComponent(fullQuery);
-    result += `\n\nГде записаться и почитать отзывы:`;
-    result += `\nhttps://prodoctorov.ru/search/?q=${encodedQuery}`;
-    result += `\nhttps://docdoc.ru/`;
-    result += `\nhttps://sberhealth.ru/`;
-    result += `\nhttps://www.gosuslugi.ru/`;
-
-    console.log(`[tools] Clinic search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, CLINIC_TTL);
-    return result;
-  } catch (err: any) {
-    console.error("[tools] Clinic search error:", err.message);
-    return "Не удалось найти информацию о враче или клинике. Попробуйте позже.";
-  }
+- Дата сегодня: ${todayDateRu()}`,
+        userMessage: `Найди врача или клинику: ${fullQuery}`,
+      },
+      {
+        label: "sber2gis",
+        systemPrompt: `Ты помогаешь проверить рейтинг врача или клиники. Ищи данные на СберЗдоровье (sberhealth.ru), 2ГИС (2gis.ru), Яндекс.Карты. Выведи: 1) Рейтинг и количество отзывов на каждой площадке 2) Основные отзывы пациентов 3) Наличие записи онлайн 4) Стоимость приёма. Пиши кратко, только факты. Дата сегодня: ${todayDateRu()}`,
+        userMessage: `${fullQuery} рейтинг отзывы сберздоровье 2гис`,
+      },
+    ],
+    mergeStrategy: "combine",
+    mergePrompt: "Объедини информацию о враче/клинике из двух источников. Источник 1 — ПроДокторов/ДокДок. Источник 2 — СберЗдоровье/2ГИС. Покажи рейтинги с ОБЕИХ площадок. Объедини отзывы. Убери дубли. Пиши простым текстом. Добавь: 'Для записи лучше позвонить в клинику или записаться через сайт.'",
+    suffix: `\n\nГде записаться и почитать отзывы:\nhttps://prodoctorov.ru/search/?q=${encodedQuery}\nhttps://docdoc.ru/\nhttps://sberhealth.ru/\nhttps://www.gosuslugi.ru/`,
+    userId,
+    errorMessage: "Не удалось найти информацию о враче или клинике. Попробуйте позже.",
+  });
 }
 
 export async function searchMedicine(query: string, userId?: number): Promise<string> {
@@ -1309,19 +1145,16 @@ export async function searchMedicine(query: string, userId?: number): Promise<st
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) return "Сервис поиска лекарств временно недоступен.";
 
-  try {
-    const response = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          {
-            role: "system",
-            content: `Ты помогаешь найти информацию о лекарственном препарате. Пациент — пожилой человек. Ищи данные на сайтах: Видаль (vidal.ru), РЛС (rlsnet.ru), Аптека.ру (apteka.ru). Выведи:
+  const encodedQuery = encodeURIComponent(safeQuery);
+
+  return searchPipeline({
+    toolName: "medicine",
+    cacheKey,
+    cacheTtl: 60 * 60 * 1000,
+    queries: [
+      {
+        label: "info",
+        systemPrompt: `Ты помогаешь найти информацию о лекарственном препарате. Пациент — пожилой человек. Ищи данные на сайтах: Видаль (vidal.ru), РЛС (rlsnet.ru), Аптека.ру (apteka.ru). Выведи:
 1. Полное торговое и международное непатентованное название (МНН)
 2. Для чего применяется (показания) — кратко, понятным языком
 3. Основные побочные эффекты (самые частые)
@@ -1340,45 +1173,21 @@ export async function searchMedicine(query: string, userId?: number): Promise<st
 - Если препарат НЕЛЬЗЯ совмещать с определёнными продуктами (грейпфрут, молоко, алкоголь) — ОБЯЗАТЕЛЬНО укажи.
 - НЕ рекомендуй конкретные лекарства. НЕ предлагай замену назначенного врачом препарата.
 - Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.`,
-          },
-          { role: "user", content: `Информация о лекарстве: ${safeQuery}` },
-        ],
-        max_tokens: 800,
-        temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
-    }
-
-    const data = await response.json() as any;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Perplexity: empty response");
-
-    const tokensIn = data.usage?.prompt_tokens || 0;
-    const tokensOut = data.usage?.completion_tokens || 0;
-    storage.logAiUsage({
-      userId: userId || null,
-      endpoint: "search-medicine-perplexity",
-      model: "sonar",
-      tokensIn,
-      tokensOut,
-    });
-
-    let result = sanitizeWebContent(content);
-    const encodedQuery = encodeURIComponent(safeQuery);
-    result += `\n\nПодробная инструкция и цены:\nhttps://www.vidal.ru/search?t=all&q=${encodedQuery}\nhttps://apteka.ru/search/?q=${encodedQuery}`;
-
-    console.log(`[tools] Medicine search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, MEDICINE_TTL);
-    return result;
-  } catch (err: any) {
-    console.error("[tools] Medicine search error:", err.message);
-    return "Не удалось найти информацию о лекарстве. Попробуйте позже.";
-  }
+        userMessage: `Информация о лекарстве: ${safeQuery}`,
+      },
+      {
+        label: "analogs",
+        systemPrompt: `Ты помогаешь найти аналоги и цены на лекарство. Ищи на apteka.ru, eapteka.ru, zdravcity.ru. Выведи: 1) Аналоги (дженерики) с тем же действующим веществом — до 5 вариантов 2) Цены на каждый аналог (от-до) 3) Наличие в крупных аптечных сетях. Пиши кратко, только факты. Дата сегодня: ${todayDateRu()}`,
+        userMessage: `${safeQuery} аналоги дженерики цена аптека`,
+      },
+    ],
+    mergeStrategy: "combine",
+    mergePrompt: "Объедини информацию о лекарстве из двух источников. Источник 1 — основная информация (показания, побочные, противопоказания, особенности для пожилых). Источник 2 — аналоги и цены. Добавь раздел 'Аналоги и цены' из второго источника к основной информации. Убери дубли. Пиши простым текстом без маркдауна. ОБЯЗАТЕЛЬНО сохрани предупреждение: 'Перед приёмом любого лекарства проконсультируйтесь с врачом.'",
+    validateFacts: true,
+    suffix: `\n\nПодробная инструкция и цены:\nhttps://www.vidal.ru/search?t=all&q=${encodedQuery}\nhttps://apteka.ru/search/?q=${encodedQuery}`,
+    userId,
+    errorMessage: "Не удалось найти информацию о лекарстве. Попробуйте позже.",
+  });
 }
 
 export async function searchTV(channel?: string, date?: string, userId?: number): Promise<string> {
@@ -1396,25 +1205,20 @@ export async function searchTV(channel?: string, date?: string, userId?: number)
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) return "Сервис телепрограммы временно недоступен.";
 
-  try {
-    const todayFull = new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
-    const dateFull = date || todayFull;
-    const channelInstruction = channel
-      ? `Покажи программу канала «${channel}» на ${dateFull}.`
-      : `Покажи программу основных каналов (Первый, Россия 1, НТВ, Культура, ТВ Центр) на ${dateFull}. По каждому каналу — 5-7 основных передач.`;
+  const todayFull = fullDateRu();
+  const dateFull = date || todayFull;
+  const channelInstruction = channel
+    ? `Покажи программу канала «${channel}» на ${dateFull}.`
+    : `Покажи программу основных каналов (Первый, Россия 1, НТВ, Культура, ТВ Центр) на ${dateFull}. По каждому каналу — 5-7 основных передач.`;
 
-    const response = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          {
-            role: "system",
-            content: `Ты помогаешь пожилому человеку узнать телепрограмму. Ищи данные на сайтах: tv.yandex.ru, teleprogramma.pro, tv.mail.ru. ${channelInstruction}
+  return searchPipeline({
+    toolName: "tv",
+    cacheKey,
+    cacheTtl: 30 * 60 * 1000,
+    queries: [
+      {
+        label: "yandex",
+        systemPrompt: `Ты помогаешь пожилому человеку узнать телепрограмму. Ищи данные ТОЛЬКО на tv.yandex.ru. ${channelInstruction}
 
 Для каждой передачи укажи:
 - Время начала
@@ -1426,45 +1230,22 @@ export async function searchTV(channel?: string, date?: string, userId?: number)
 - Если программа на указанную дату не найдена — напиши: «Точную программу лучше посмотреть на сайте» и дай ссылку.
 - Выделяй вечерние фильмы и популярные передачи (Время, Пусть говорят, Поле чудес и т.д.)
 - Пиши простым текстом без маркдауна. Нумеруй передачи по времени.
-- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
-          },
-          { role: "user", content: `Телепрограмма ${channelLabel} на ${dateFull}` },
-        ],
-        max_tokens: 1000,
-        temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
-    }
-
-    const data = await response.json() as any;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Perplexity: empty response");
-
-    const tokensIn = data.usage?.prompt_tokens || 0;
-    const tokensOut = data.usage?.completion_tokens || 0;
-    storage.logAiUsage({
-      userId: userId || null,
-      endpoint: "search-tv-perplexity",
-      model: "sonar",
-      tokensIn,
-      tokensOut,
-    });
-
-    let result = sanitizeWebContent(content);
-    result += `\n\nПолная телепрограмма:\nhttps://tv.yandex.ru/`;
-
-    console.log(`[tools] TV search: ${tokensIn}+${tokensOut} tokens for "${channelLabel} ${dateLabel}"`);
-    setCache(cacheKey, result, TV_TTL);
-    return result;
-  } catch (err: any) {
-    console.error("[tools] TV search error:", err.message);
-    return "Не удалось найти телепрограмму. Попробуйте позже.";
-  }
+- Дата сегодня: ${todayDateRu()}`,
+        userMessage: `Телепрограмма ${channelLabel} на ${dateFull}`,
+        maxTokens: 1000,
+      },
+      {
+        label: "mail",
+        systemPrompt: `Ты помогаешь узнать телепрограмму. Ищи данные на teleprogramma.pro, tv.mail.ru. ${channelInstruction} Для каждой передачи укажи время начала, название, жанр. Пиши простым текстом. Дата сегодня: ${todayDateRu()}`,
+        userMessage: `Телепрограмма ${channelLabel} на ${dateFull}`,
+      },
+    ],
+    mergeStrategy: "best",
+    mergePrompt: "Выбери более полную и точную телепрограмму из двух источников. Если программы совпадают — бери из первого источника. Если второй источник содержит передачи, которых нет в первом — добавь их. Выведи единую программу по времени. Пиши простым текстом.",
+    suffix: "\n\nПолная телепрограмма:\nhttps://tv.yandex.ru/",
+    userId,
+    errorMessage: "Не удалось найти телепрограмму. Попробуйте позже.",
+  });
 }
 
 export async function searchGovServices(query: string, userId?: number): Promise<string> {
@@ -1481,19 +1262,14 @@ export async function searchGovServices(query: string, userId?: number): Promise
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) return "Сервис поиска госуслуг временно недоступен.";
 
-  try {
-    const response = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          {
-            role: "system",
-            content: `Ты помогаешь человеку разобраться с государственными услугами в России. Ищи данные на сайтах: Госуслуги (gosuslugi.ru), СФР — Социальный фонд России (sfr.gov.ru), КонсультантПлюс (consultant.ru), Гарант (garant.ru), ФОМС (ffoms.gov.ru), ФНС (nalog.gov.ru). Выведи:
+  return searchPipeline({
+    toolName: "gov-services",
+    cacheKey,
+    cacheTtl: 60 * 60 * 1000,
+    queries: [
+      {
+        label: "official",
+        systemPrompt: `Ты помогаешь человеку разобраться с государственными услугами в России. Ищи данные на сайтах: Госуслуги (gosuslugi.ru), СФР — Социальный фонд России (sfr.gov.ru), КонсультантПлюс (consultant.ru), Гарант (garant.ru), ФОМС (ffoms.gov.ru), ФНС (nalog.gov.ru). Выведи:
 1. Суть услуги/льготы — простым языком
 2. Кому положено (условия получения)
 3. Какие документы нужны
@@ -1514,51 +1290,28 @@ export async function searchGovServices(query: string, userId?: number): Promise
 - Упомяни что можно оформить через соцработника или с помощью родных, а не только через интернет.
 - Объясняй ПРОСТЫМ языком, без юридических терминов. Если используешь термин — поясни в скобках.
 - Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
-- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
-          },
-          { role: "user", content: `Государственные услуги: ${safeQuery}` },
-        ],
-        max_tokens: 800,
-        temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
-    }
-
-    const data = await response.json() as any;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Perplexity: empty response");
-
-    const tokensIn = data.usage?.prompt_tokens || 0;
-    const tokensOut = data.usage?.completion_tokens || 0;
-    storage.logAiUsage({
-      userId: userId || null,
-      endpoint: "search-gov-perplexity",
-      model: "sonar",
-      tokensIn,
-      tokensOut,
-    });
-
-    let result = sanitizeWebContent(content);
-    result += `\n\nПолезные ссылки:\nhttps://www.gosuslugi.ru/\nhttps://sfr.gov.ru/`;
-
-    console.log(`[tools] Gov services search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, GOV_TTL);
-    return result;
-  } catch (err: any) {
-    console.error("[tools] Gov services search error:", err.message);
-    return "Не удалось найти информацию о госуслуге. Попробуйте позже.";
-  }
+- Дата сегодня: ${todayDateRu()}`,
+        userMessage: `Государственные услуги: ${safeQuery}`,
+      },
+      {
+        label: "updates",
+        systemPrompt: `Ты проверяешь актуальность данных о государственных услугах в России. Найди ПОСЛЕДНИЕ изменения по запросу пользователя. Ищи на sfr.gov.ru, gosuslugi.ru, consultant.ru. Укажи: 1) Актуальные суммы/размеры на 2026 год 2) Были ли изменения в последние 6 месяцев 3) Даты вступления изменений в силу. Пиши кратко, только факты. Дата сегодня: ${todayDateRu()}`,
+        userMessage: `${safeQuery} актуальные суммы размеры 2026 последние изменения`,
+      },
+    ],
+    mergeStrategy: "combine",
+    mergePrompt: "Объедини информацию из двух источников о государственных услугах. Источник 1 — основная информация. Источник 2 — проверка актуальности и последние изменения. Если суммы/размеры/даты РАСХОДЯТСЯ — укажи оба варианта и предупреди. Выведи единый ответ простым текстом без маркдауна. Нумеруй пункты цифрами.",
+    validateFacts: true,
+    suffix: "\n\nПолезные ссылки:\nhttps://www.gosuslugi.ru/\nhttps://sfr.gov.ru/",
+    userId,
+    errorMessage: "Не удалось найти информацию о госуслуге. Попробуйте позже.",
+  });
 }
 
 export async function searchGarden(query: string, region?: string, userId?: number): Promise<string> {
   const safeQuery = stripPII(query);
   const safeRegion = region ? stripPII(region) : "";
-  const currentMonth = new Date().toLocaleDateString("ru-RU", { month: "long" });
+  const currentMonth = currentMonthRu();
   const fullQuery = safeRegion ? `${safeQuery} ${safeRegion}` : safeQuery;
   const cacheKey = `garden:${fullQuery}:${currentMonth}`.toLowerCase();
   const cached = getCached<string>(cacheKey);
@@ -1572,23 +1325,20 @@ export async function searchGarden(query: string, region?: string, userId?: numb
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) return "Сервис садоводства временно недоступен.";
 
-  try {
-    const regionInstruction = safeRegion
-      ? `Учитывай регион: ${safeRegion}.`
-      : `Если регион не указан — давай общие рекомендации для средней полосы России.`;
+  const regionInstruction = safeRegion
+    ? `Учитывай регион: ${safeRegion}.`
+    : `Если регион не указан — давай общие рекомендации для средней полосы России.`;
 
-    const response = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          {
-            role: "system",
-            content: `Ты помогаешь опытному пожилому садоводу-огороднику. Ищи данные на сайтах: Антонов Сад (antonovsad.ru), 7 Дач (7dach.ru), Ботаничка (botanichka.ru). Сейчас месяц: ${currentMonth}. ${regionInstruction}
+  const encodedQuery = encodeURIComponent(fullQuery);
+
+  return searchPipeline({
+    toolName: "garden",
+    cacheKey,
+    cacheTtl: 60 * 60 * 1000,
+    queries: [
+      {
+        label: "agro",
+        systemPrompt: `Ты помогаешь опытному пожилому садоводу-огороднику. Ищи данные на сайтах: Антонов Сад (antonovsad.ru), 7 Дач (7dach.ru), Ботаничка (botanichka.ru). Сейчас месяц: ${currentMonth}. ${regionInstruction}
 
 Выведи:
 1. Конкретные рекомендации с учётом текущего сезона и месяца
@@ -1602,130 +1352,55 @@ export async function searchGarden(query: string, region?: string, userId?: numb
 - Не рекомендуй тяжёлую физическую работу (перекопка лопатой, перетаскивание тяжестей). Предлагай облегчённые варианты (мульчирование вместо прополки, высокие грядки, капельный полив).
 - Если препарат для обработки — указывай точное название и дозировку из инструкции.
 - Пиши простым текстом без маркдауна, как опытная соседка по даче. Нумеруй пункты цифрами.
-- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
-          },
-          { role: "user", content: `Садоводство/огород: ${fullQuery}` },
-        ],
-        max_tokens: 800,
-        temperature: 0.3,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
-    }
-
-    const data = await response.json() as any;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Perplexity: empty response");
-
-    const tokensIn = data.usage?.prompt_tokens || 0;
-    const tokensOut = data.usage?.completion_tokens || 0;
-    storage.logAiUsage({
-      userId: userId || null,
-      endpoint: "search-garden-perplexity",
-      model: "sonar",
-      tokensIn,
-      tokensOut,
-    });
-
-    let result = sanitizeWebContent(content);
-    const encodedQuery = encodeURIComponent(fullQuery);
-    result += `\n\nПодробнее:\nhttps://7dach.ru/search/?q=${encodedQuery}`;
-
-    console.log(`[tools] Garden search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, GARDEN_TTL);
-    return result;
-  } catch (err: any) {
-    console.error("[tools] Garden search error:", err.message);
-    return "Не удалось найти информацию по садоводству. Попробуйте позже.";
-  }
+- Дата сегодня: ${todayDateRu()}`,
+        userMessage: `Садоводство/огород: ${fullQuery}`,
+      },
+      {
+        label: "lunar",
+        systemPrompt: `Ты помогаешь садоводу найти лунный календарь и народные приметы. Ищи на lunnyj-kalendar.ru, moyadacha.su, ogorod.guru. Выведи: 1) Лунный календарь садовода-огородника на текущий месяц — благоприятные и неблагоприятные дни для посадки 2) Фаза Луны сейчас 3) Народные приметы на текущий месяц для садовода. Пиши кратко. Дата сегодня: ${todayDateRu()}`,
+        userMessage: `лунный календарь садовода ${currentMonthRu()} ${new Date().getFullYear()} благоприятные дни посадки`,
+      },
+    ],
+    mergeStrategy: "combine",
+    mergePrompt: "Объедини информацию для садовода из двух источников. Источник 1 — агрономические рекомендации по запросу. Источник 2 — лунный календарь и приметы. Добавь раздел 'Лунный календарь' после основных рекомендаций. Пиши простым текстом как опытная соседка по даче.",
+    suffix: `\n\nПодробнее:\nhttps://7dach.ru/search/?q=${encodedQuery}`,
+    userId,
+    errorMessage: "Не удалось найти информацию по садоводству. Попробуйте позже.",
+  });
 }
 
 export async function searchProduct(query: string, userId?: number): Promise<string> {
   const safeQuery = stripPII(query);
-  const cacheKey = `product:${safeQuery.toLowerCase()}`;
-  const cached = getCached<string>(cacheKey);
-  if (cached) return cached;
 
   if (userId) {
     const rateCheck = checkSearchRateLimit(userId);
     if (!rateCheck.allowed) return rateCheck.message!;
   }
 
-  const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) return "Сервис поиска товаров временно недоступен.";
+  const encodedQuery = encodeURIComponent(safeQuery);
 
-  try {
-    const response = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+  return searchPipeline({
+    toolName: "search-product",
+    cacheKey: `product:${safeQuery.toLowerCase()}`,
+    cacheTtl: 15 * 60 * 1000,
+    userId,
+    queries: [
+      {
+        label: "prices",
+        systemPrompt: `Ты помогаешь пожилому человеку найти товар и сравнить цены. Ищи на market.yandex.ru, ozon.ru, wildberries.ru. Выведи: 1) Модели/варианты товара 2) Цены на каждой площадке 3) Наличие доставки. Рекомендуй товары с простым управлением, крупными кнопками/экраном. Пиши простым текстом. Дата сегодня: ${todayDateRu()}`,
+        userMessage: `Найди товар: ${safeQuery}`,
       },
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          {
-            role: "system",
-            content: `Ты помогаешь пожилому человеку выбрать товар. Ищи данные на сайтах: Яндекс.Маркет (market.yandex.ru), Ozon (ozon.ru), Wildberries (wildberries.ru). Выведи:
-1. Название товара / модель
-2. Цена (диапазон от-до если на разных площадках)
-3. Рейтинг и количество отзывов
-4. Основные плюсы и минусы по отзывам покупателей
-5. Если запрос общий (например «стиральная машина для бабушки») — предложи 2-3 варианта в разных ценовых категориях с пояснением чем отличаются
-
-СТРОГИЕ ПРАВИЛА:
-- Используй ТОЛЬКО реальные данные с маркетплейсов. НЕ выдумывай цены, модели, отзывы.
-- Если товар не найден — напиши: «Не нашёл такой товар. Попробуйте уточнить название.»
-- Цены указывай как ориентировочные: «от ... руб» или «примерно ... руб».
-- Покупатель — пожилой человек. Рекомендуй товары с крупными кнопками/экраном, простым управлением, надёжностью. Избегай сложных технологических решений.
-- Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
-- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
-          },
-          { role: "user", content: `Найди товар: ${safeQuery}` },
-        ],
-        max_tokens: 800,
-        temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
-    }
-
-    const data = await response.json() as any;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Perplexity: empty response");
-
-    const tokensIn = data.usage?.prompt_tokens || 0;
-    const tokensOut = data.usage?.completion_tokens || 0;
-    storage.logAiUsage({
-      userId: userId || null,
-      endpoint: "search-product-perplexity",
-      model: "sonar",
-      tokensIn,
-      tokensOut,
-    });
-
-    let result = sanitizeWebContent(content);
-    const encodedQuery = encodeURIComponent(safeQuery);
-    result += `\n\nГде посмотреть и купить:`;
-    result += `\nhttps://market.yandex.ru/search?text=${encodedQuery}`;
-    result += `\nhttps://www.ozon.ru/search/?text=${encodedQuery}`;
-    result += `\nhttps://www.wildberries.ru/catalog/0/search.aspx?search=${encodedQuery}`;
-
-    console.log(`[tools] Product search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, PRODUCT_TTL);
-    return result;
-  } catch (err: any) {
-    console.error("[tools] Product search error:", err.message);
-    return "Не удалось найти информацию о товаре. Попробуйте позже.";
-  }
+      {
+        label: "reviews",
+        systemPrompt: `Ты помогаешь выбрать товар по отзывам покупателей. Ищи на otzovik.com, irecommend.ru, market.yandex.ru. Выведи: 1) Рейтинг товара и количество отзывов 2) Основные плюсы и минусы по отзывам 3) Какой вариант рекомендуют чаще всего 4) На что обратить внимание при покупке. Пиши кратко. Дата сегодня: ${todayDateRu()}`,
+        userMessage: `${safeQuery} отзывы рейтинг лучший по отзывам`,
+      },
+    ],
+    mergeStrategy: "combine",
+    mergePrompt: "Объедини информацию о товаре из двух источников. Источник 1 — цены и наличие. Источник 2 — отзывы и рекомендации. Создай единый ответ: сначала варианты с ценами, потом что говорят покупатели. Убери дубли. Пиши простым текстом.",
+    suffix: `\n\nГде посмотреть и купить:\nhttps://market.yandex.ru/search?text=${encodedQuery}\nhttps://www.ozon.ru/search/?text=${encodedQuery}\nhttps://www.wildberries.ru/catalog/0/search.aspx?search=${encodedQuery}`,
+    errorMessage: "Не удалось найти информацию о товаре. Попробуйте позже.",
+  });
 }
 
 export async function searchLegal(query: string, userId?: number): Promise<string> {
@@ -1741,22 +1416,16 @@ export async function searchLegal(query: string, userId?: number): Promise<strin
     if (!rateCheck.allowed) return rateCheck.message!;
   }
 
-  const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) return "Сервис юридической информации временно недоступен.";
+  const encodedQuery = encodeURIComponent(safeQuery);
 
-  try {
-    const response = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          {
-            role: "system",
-            content: `Ты помогаешь человеку разобраться с юридическим вопросом в России. Ищи данные на сайтах: КонсультантПлюс (consultant.ru), Гарант (garant.ru), Правовед (pravoved.ru), Госуслуги (gosuslugi.ru). Выведи:
+  return searchPipeline({
+    toolName: "legal",
+    cacheKey,
+    cacheTtl: 60 * 60 * 1000,
+    queries: [
+      {
+        label: "main",
+        systemPrompt: `Ты помогаешь человеку разобраться с юридическим вопросом в России. Ищи данные на сайтах: КонсультантПлюс (consultant.ru), Гарант (garant.ru), Правовед (pravoved.ru), Госуслуги (gosuslugi.ru). Выведи:
 1. Суть вопроса — простым языком, без юридического жаргона
 2. Какие законы/статьи регулируют (номер закона и статьи)
 3. Порядок действий — пошагово
@@ -1772,83 +1441,52 @@ export async function searchLegal(query: string, userId?: number): Promise<strin
 - Если вопрос про трудовые права — укажи статьи Трудового кодекса и куда жаловаться (трудовая инспекция, прокуратура).
 - Объясняй ПРОСТЫМ языком. Если используешь юридический термин — поясни в скобках.
 - Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
-- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
-          },
-          { role: "user", content: `Юридический вопрос: ${safeQuery}` },
-        ],
-        max_tokens: 900,
-        temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
-    }
-
-    const data = await response.json() as any;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Perplexity: empty response");
-
-    const tokensIn = data.usage?.prompt_tokens || 0;
-    const tokensOut = data.usage?.completion_tokens || 0;
-    storage.logAiUsage({
-      userId: userId || null,
-      endpoint: "search-legal-perplexity",
-      model: "sonar",
-      tokensIn,
-      tokensOut,
-    });
-
-    let result = sanitizeWebContent(content);
-    const encodedQuery = encodeURIComponent(safeQuery);
-    result += `\n\nПодробнее:\nhttps://www.consultant.ru/search/?q=${encodedQuery}\nhttps://www.garant.ru/search/?q=${encodedQuery}`;
-
-    console.log(`[tools] Legal search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, LEGAL_TTL);
-    return result;
-  } catch (err: any) {
-    console.error("[tools] Legal search error:", err.message);
-    return "Не удалось найти юридическую информацию. Попробуйте позже.";
-  }
+- Дата сегодня: ${todayDateRu()}`,
+        userMessage: `Юридический вопрос: ${safeQuery}`,
+        maxTokens: 900,
+      },
+      {
+        label: "updates",
+        systemPrompt: `Ты проверяешь актуальность юридической информации в России. Найди ПОСЛЕДНИЕ изменения и поправки по запросу. Ищи на consultant.ru, garant.ru, publication.pravo.gov.ru. Укажи: 1) Действующая редакция закона 2) Были ли поправки в 2025-2026 годах 3) Даты вступления изменений в силу. Пиши кратко, только факты. Дата сегодня: ${todayDateRu()}`,
+        userMessage: `${safeQuery} изменения 2025 2026 актуальная редакция поправки`,
+      },
+    ],
+    mergeStrategy: "combine",
+    mergePrompt: "Объедини юридическую информацию из двух источников. Источник 1 — основная информация о законе/процедуре. Источник 2 — проверка актуальности и последние поправки. Если номера статей или суммы РАСХОДЯТСЯ — предупреди. Добавь раздел 'Актуальные изменения' если есть новые поправки. Пиши простым текстом. ОБЯЗАТЕЛЬНО добавь: 'Для принятия решения проконсультируйтесь с нотариусом или юристом.'",
+    validateFacts: true,
+    suffix: `\n\nПодробнее:\nhttps://www.consultant.ru/search/?q=${encodedQuery}\nhttps://www.garant.ru/search/?q=${encodedQuery}`,
+    userId,
+    errorMessage: "Не удалось найти юридическую информацию. Попробуйте позже.",
+  });
 }
 
 export async function searchTravel(query: string, userId?: number): Promise<string> {
   let safeQuery = stripPII(query);
   if (!safeQuery.trim()) return "Уточните, пожалуйста, куда хотите поехать или что ищете.";
   if (safeQuery.length > 500) safeQuery = safeQuery.slice(0, 500);
-  const cacheKey = `travel:${safeQuery.toLowerCase()}`;
-  const cached = getCached<string>(cacheKey);
-  if (cached) return cached;
 
   if (userId) {
     const rateCheck = checkSearchRateLimit(userId);
     if (!rateCheck.allowed) return rateCheck.message!;
   }
 
-  const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) return "Сервис поиска путешествий временно недоступен.";
+  const currentMonth = currentMonthRu();
+  const isSanatorium = /(?:санатор|курорт|лечебн|оздоровительн)/.test(safeQuery.toLowerCase());
+  const sanatoriumHint = isSanatorium
+    ? ` Это запрос про санаторий/курорт за свой счёт (НЕ по льготе). Ищи коммерческие предложения с ценами, рейтингами, профилями лечения. Источники: sanatoriums.com, kurort26.ru, sanatory-mashuk.ru.`
+    : "";
 
-  try {
-    const currentMonth = new Date().toLocaleDateString("ru-RU", { month: "long" });
-    const isSanatorium = /(?:санатор|курорт|лечебн|оздоровительн)/.test(safeQuery.toLowerCase());
-    const sanatoriumHint = isSanatorium
-      ? ` Это запрос про санаторий/курорт за свой счёт (НЕ по льготе). Ищи коммерческие предложения с ценами, рейтингами, профилями лечения. Источники: sanatoriums.com, kurort26.ru, sanatory-mashuk.ru.`
-      : "";
+  const encodedQuery = encodeURIComponent(safeQuery);
 
-    const response = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          {
-            role: "system",
-            content: `Ты помогаешь человеку 50-65 лет спланировать поездку по России. Сейчас месяц: ${currentMonth}. Ищи данные на сайтах: Островок (ostrovok.ru), Суточно (sutochno.ru), Туту (tutu.ru), Tripadvisor, Яндекс.Путешествия.${sanatoriumHint} Выведи:
+  return searchPipeline({
+    toolName: "search-travel",
+    cacheKey: `travel:${safeQuery.toLowerCase()}`,
+    cacheTtl: 30 * 60 * 1000,
+    userId,
+    queries: [
+      {
+        label: "main",
+        systemPrompt: `Ты помогаешь человеку 50-65 лет спланировать поездку по России. Сейчас месяц: ${currentMonth}. Ищи данные на сайтах: Островок (ostrovok.ru), Суточно (sutochno.ru), Туту (tutu.ru), Tripadvisor, Яндекс.Путешествия.${sanatoriumHint} Выведи:
 1. Что посмотреть / чем заняться — основные достопримечательности и активности
 2. Где остановиться — 2-3 варианта в разных ценовых категориях (бюджетный / средний / комфорт) с ориентировочными ценами за ночь
 3. Как добраться — поезд, самолёт, автобус с ориентировочными ценами
@@ -1862,49 +1500,22 @@ export async function searchTravel(query: string, userId?: number): Promise<stri
 - Рекомендуй комфортные маршруты без экстрима. Учитывай что путешественник не молод — пологие маршруты, удобная обувь, не слишком длинные переезды.
 - Если направление не подходит по сезону — предложи альтернативу.
 - Пиши простым текстом без маркдауна. Нумеруй пункты цифрами.
-- Дата сегодня: ${new Date().toLocaleDateString("ru-RU")}`,
-          },
-          { role: "user", content: `Путешествие: ${safeQuery}` },
-        ],
-        max_tokens: 900,
+- Дата сегодня: ${todayDateRu()}`,
+        userMessage: `Путешествие: ${safeQuery}`,
+        maxTokens: 900,
         temperature: 0.3,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`Perplexity HTTP ${response.status}: ${text.slice(0, 200)}`);
-    }
-
-    const data = await response.json() as any;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Perplexity: empty response");
-
-    const tokensIn = data.usage?.prompt_tokens || 0;
-    const tokensOut = data.usage?.completion_tokens || 0;
-    storage.logAiUsage({
-      userId: userId || null,
-      endpoint: "search-travel-perplexity",
-      model: "sonar",
-      tokensIn,
-      tokensOut,
-    });
-
-    let result = sanitizeWebContent(content);
-    const encodedQuery = encodeURIComponent(safeQuery);
-    result += `\n\nГде забронировать:`;
-    result += `\nhttps://ostrovok.ru/search/?q=${encodedQuery}`;
-    result += `\nhttps://travel.yandex.ru/`;
-    result += `\nhttps://sutochno.ru/`;
-
-    console.log(`[tools] Travel search: ${tokensIn}+${tokensOut} tokens for "${query.slice(0, 50)}"`);
-    setCache(cacheKey, result, TRAVEL_TTL);
-    return result;
-  } catch (err: any) {
-    console.error("[tools] Travel search error:", err.message);
-    return "Не удалось найти информацию о путешествии. Попробуйте позже.";
-  }
+      },
+      {
+        label: "prices",
+        systemPrompt: `Ты помогаешь найти актуальные цены и свежие отзывы о путешествии. Ищи на ostrovok.ru, sutochno.ru, tripadvisor.ru, otzovik.com. Выведи: 1) Актуальные цены на проживание (от-до за ночь) 2) Цены на транспорт (поезд/самолёт) 3) Свежие отзывы туристов (за последние 6 месяцев) — плюсы и минусы 4) Советы от тех кто уже ездил. Пиши кратко, только факты. Дата сегодня: ${todayDateRu()}`,
+        userMessage: `${safeQuery} цены ${currentMonthRu()} 2026 отзывы туристов свежие`,
+      },
+    ],
+    mergeStrategy: "combine",
+    mergePrompt: "Объедини информацию о путешествии из двух источников. Источник 1 — общая информация (достопримечательности, как добраться, где остановиться). Источник 2 — актуальные цены и свежие отзывы. Добавь цены и отзывы к основной информации. Убери дубли. Пиши простым текстом без маркдауна.",
+    suffix: `\n\nГде забронировать:\nhttps://ostrovok.ru/search/?q=${encodedQuery}\nhttps://travel.yandex.ru/\nhttps://sutochno.ru/`,
+    errorMessage: "Не удалось найти информацию о путешествии. Попробуйте позже.",
+  });
 }
 
 const VERIFY_TTL = 10 * 60 * 1000;
