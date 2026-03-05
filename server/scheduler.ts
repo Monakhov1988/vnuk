@@ -141,6 +141,17 @@ function isBotReady(): boolean {
   return bot && (bot as any).__ready === true;
 }
 
+const proactiveLock = new Set<number>();
+
+function hasProactiveToday(messages: any[], dateStr: string): boolean {
+  return messages.some(m => {
+    if (m.intent !== "proactive") return false;
+    if (!m.createdAt) return false;
+    const msgDate = new Date(m.createdAt.toLocaleString("en-US", { timeZone: "Europe/Moscow" })).toISOString().slice(0, 10);
+    return msgDate === dateStr;
+  });
+}
+
 async function checkProactiveMessages() {
   if (!isBotReady()) return;
 
@@ -152,15 +163,11 @@ async function checkProactiveMessages() {
     const parents = await storage.getAllActiveParents();
 
     for (const parent of parents) {
+      if (proactiveLock.has(parent.id)) continue;
+
       try {
         const recentMessages = await storage.getChatMessages(parent.id, 20);
-        const alreadySentToday = recentMessages.some(m => {
-          if (m.intent !== "proactive") return false;
-          if (!m.createdAt) return false;
-          const msgDate = new Date(m.createdAt.toLocaleString("en-US", { timeZone: "Europe/Moscow" })).toISOString().slice(0, 10);
-          return msgDate === dateStr;
-        });
-        if (alreadySentToday) continue;
+        if (hasProactiveToday(recentMessages, dateStr)) continue;
 
         const lastMsgTime = await storage.getLastMessageTime(parent.id);
 
@@ -169,21 +176,34 @@ async function checkProactiveMessages() {
         const hoursSinceLastMsg = (Date.now() - lastMsgTime.getTime()) / (1000 * 60 * 60);
         if (hoursSinceLastMsg < 4) continue;
 
-        const message = await generateProactiveMessage(parent.id);
-        if (!message) continue;
+        proactiveLock.add(parent.id);
 
-        await bot.api.sendMessage(parent.telegramChatId!, message);
+        try {
+          const message = await generateProactiveMessage(parent.id);
+          if (!message) continue;
 
-        await storage.createChatMessage({
-          parentId: parent.id,
-          role: "assistant",
-          content: message,
-          intent: "proactive",
-          hasAlert: false,
-        });
+          const doubleCheck = await storage.getChatMessages(parent.id, 20);
+          if (hasProactiveToday(doubleCheck, dateStr)) {
+            console.log(`[scheduler] Proactive already sent to parent ${parent.id} (double-check), skipping`);
+            continue;
+          }
 
-        console.log(`[scheduler] Sent proactive message to parent ${parent.id}`);
+          await storage.createChatMessage({
+            parentId: parent.id,
+            role: "assistant",
+            content: message,
+            intent: "proactive",
+            hasAlert: false,
+          });
+
+          await bot.api.sendMessage(parent.telegramChatId!, message);
+
+          console.log(`[scheduler] Sent proactive message to parent ${parent.id}`);
+        } finally {
+          proactiveLock.delete(parent.id);
+        }
       } catch (err) {
+        proactiveLock.delete(parent.id);
         console.error(`[scheduler] Error sending proactive message to parent ${parent.id}:`, err);
       }
     }
@@ -201,7 +221,15 @@ async function resetDailyStatuses() {
   }
 }
 
+let schedulerStarted = false;
+
 export function startScheduler() {
+  if (schedulerStarted) {
+    console.warn("[scheduler] Already started, skipping duplicate init");
+    return;
+  }
+  schedulerStarted = true;
+
   cron.schedule("* * * * *", async () => {
     try {
       await checkReminders();
