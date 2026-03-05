@@ -164,47 +164,42 @@ async function checkProactiveMessages() {
 
     for (const parent of parents) {
       if (proactiveLock.has(parent.id)) continue;
+      proactiveLock.add(parent.id);
 
       try {
         const recentMessages = await storage.getChatMessages(parent.id, 20);
         if (hasProactiveToday(recentMessages, dateStr)) continue;
 
         const lastMsgTime = await storage.getLastMessageTime(parent.id);
-
         if (!lastMsgTime) continue;
 
         const hoursSinceLastMsg = (Date.now() - lastMsgTime.getTime()) / (1000 * 60 * 60);
         if (hoursSinceLastMsg < 4) continue;
 
-        proactiveLock.add(parent.id);
+        const message = await generateProactiveMessage(parent.id);
+        if (!message) continue;
 
-        try {
-          const message = await generateProactiveMessage(parent.id);
-          if (!message) continue;
-
-          const doubleCheck = await storage.getChatMessages(parent.id, 20);
-          if (hasProactiveToday(doubleCheck, dateStr)) {
-            console.log(`[scheduler] Proactive already sent to parent ${parent.id} (double-check), skipping`);
-            continue;
-          }
-
-          await storage.createChatMessage({
-            parentId: parent.id,
-            role: "assistant",
-            content: message,
-            intent: "proactive",
-            hasAlert: false,
-          });
-
-          await bot.api.sendMessage(parent.telegramChatId!, message);
-
-          console.log(`[scheduler] Sent proactive message to parent ${parent.id}`);
-        } finally {
-          proactiveLock.delete(parent.id);
+        const doubleCheck = await storage.getChatMessages(parent.id, 20);
+        if (hasProactiveToday(doubleCheck, dateStr)) {
+          console.log(`[scheduler] Proactive already sent to parent ${parent.id} (double-check), skipping`);
+          continue;
         }
+
+        await storage.createChatMessage({
+          parentId: parent.id,
+          role: "assistant",
+          content: message,
+          intent: "proactive",
+          hasAlert: false,
+        });
+
+        await bot.api.sendMessage(parent.telegramChatId!, message);
+
+        console.log(`[scheduler] Sent proactive message to parent ${parent.id}`);
       } catch (err) {
-        proactiveLock.delete(parent.id);
         console.error(`[scheduler] Error sending proactive message to parent ${parent.id}:`, err);
+      } finally {
+        proactiveLock.delete(parent.id);
       }
     }
   } catch (err) {

@@ -1922,30 +1922,35 @@ export async function analyzeIntent(text: string, userId?: number): Promise<{
 
 export async function generateProactiveMessage(parentId: number): Promise<string | null> {
   try {
-    const recentMessages = await storage.getChatMessages(parentId, 10);
+    const recentMessages = await storage.getChatMessages(parentId, 20);
     const memories = await storage.getUserMemory(parentId, 30);
     const personality = await storage.getPersonalitySettings(parentId);
 
     const formality = personality?.formality || "ты";
-    const memorySnippet = memories.slice(0, 5).map(m => `- ${m.fact}`).join("\n") || "Пока нет сохранённых фактов.";
+    const memorySnippet = memories.slice(0, 8).map(m => `- ${m.fact}`).join("\n") || "Пока нет сохранённых фактов.";
 
     const ageMemory = memories.find(m => m.fact.includes("Возрастная группа:"));
     let ageTone = "";
     if (ageMemory) {
       if (ageMemory.fact.includes("55–60")) {
-        ageTone = `\nВозрастная группа: 55–60. Тон: деловой, уважительный помощник. Предлагай полезные факты: изменения в законах, льготы предпенсионерам, транспорт, практические советы. НЕ сюсюкай, не спрашивай «покушал ли».`;
+        ageTone = `\nВозрастная группа: 55–60. Тон: деловой, уважительный помощник. НЕ сюсюкай.`;
       } else if (ageMemory.fact.includes("60–70")) {
-        ageTone = `\nВозрастная группа: 60–70. Тон: тёплый, компетентный. Спрашивай как дела, предлагай рецепты, путешествия, интересные факты. Совмещай заботу с уважением.`;
+        ageTone = `\nВозрастная группа: 60–70. Тон: тёплый, компетентный. Совмещай заботу с уважением.`;
       } else if (ageMemory.fact.includes("старше 70")) {
-        ageTone = `\nВозрастная группа: старше 70. Тон: заботливый, внимательный. Спрашивай про самочувствие, напоминай про давление, предлагай зарядку. Будь терпеливым и тёплым.`;
+        ageTone = `\nВозрастная группа: старше 70. Тон: заботливый, внимательный. Будь терпеливым и тёплым.`;
       }
     }
 
     const recentContext = recentMessages
-      .slice(0, 6)
+      .slice(0, 10)
       .reverse()
-      .map(m => `${m.role === "user" ? "Собеседник" : "Внучок"}: ${m.content.slice(0, 200)}`)
+      .map(m => `${m.role === "user" ? "Собеседник" : "Внучок"}: ${m.content.slice(0, 300)}`)
       .join("\n") || "Нет недавних сообщений.";
+
+    const nonProactiveMessages = recentMessages.filter(m => m.intent !== "proactive");
+    const hasSubstantiveConversation = nonProactiveMessages.some(m =>
+      m.content.length > 15
+    );
 
     const DISCOVERABLE_FEATURES: Record<string, { keywords: RegExp; suggestion: string }> = {
       transport: { keywords: /электричк|расписани|поезд|автобус|маршрут/i, suggestion: "расписание электричек и поездов (напиши «электричка до...» или «поезд...»)" },
@@ -1959,16 +1964,18 @@ export async function generateProactiveMessage(parentId: number): Promise<string
     };
 
     let featureHint = "";
-    try {
-      const allContent = recentMessages.map(m => m.content).join(" ");
-      const unusedFeatures = Object.values(DISCOVERABLE_FEATURES)
-        .filter(f => !f.keywords.test(allContent))
-        .map(f => f.suggestion);
-      if (unusedFeatures.length > 0) {
-        const randomFeature = unusedFeatures[Math.floor(Math.random() * unusedFeatures.length)];
-        featureHint = `\n\nМОЖНО предложить попробовать новую функцию (но не обязательно, только если органично впишется): ${randomFeature}`;
-      }
-    } catch {}
+    if (!hasSubstantiveConversation) {
+      try {
+        const allContent = recentMessages.map(m => m.content).join(" ");
+        const unusedFeatures = Object.values(DISCOVERABLE_FEATURES)
+          .filter(f => !f.keywords.test(allContent))
+          .map(f => f.suggestion);
+        if (unusedFeatures.length > 0) {
+          const randomFeature = unusedFeatures[Math.floor(Math.random() * unusedFeatures.length)];
+          featureHint = `\n\nВ последних сообщениях нет конкретной темы. Можно ненавязчиво предложить: ${randomFeature}`;
+        }
+      } catch {}
+    }
 
     const now = new Date();
     const mskHour = parseInt(now.toLocaleString("en-US", { timeZone: "Europe/Moscow", hour: "numeric", hour12: false }));
@@ -1983,29 +1990,37 @@ export async function generateProactiveMessage(parentId: number): Promise<string
 Что ты знаешь о собеседнике:
 ${memorySnippet}
 
-Последние сообщения:
+Последние сообщения (внимательно прочитай — это ГЛАВНЫЙ контекст):
 ${recentContext}
 
-Напиши ОДНО короткое тёплое сообщение-инициативу (1-3 предложения). Варианты:
-- Спроси про что-то из контекста прошлых разговоров (здоровье, дела, готовка)
-- Предложи чем-то заняться (загадку, рецепт, прогулку)
-- Спроси как день проходит, как самочувствие
-- Напомни про давление или лекарства (если в памяти есть)${featureHint}
+Напиши ОДНО короткое тёплое сообщение-инициативу (1-3 предложения).
 
-ПРАВИЛА:
-- Никогда не начинай с "Привет" если вечер
+ПРИОРИТЕТ (строго в этом порядке):
+1. ПРОДОЛЖИ тему из последних сообщений. Примеры:
+   - Говорили о здоровье/давлении → спроси как самочувствие сегодня
+   - Обсуждали рецепт/блюдо → спроси получилось ли, понравилось ли
+   - Искали врача/клинику → спроси записался ли, как прошёл приём
+   - Обсуждали поездку/путешествие → спроси как подготовка
+   - Говорили о внуках/детях → спроси как у них дела
+   - Решали бытовой вопрос → спроси решилось ли
+2. Если в памяти есть важные факты (лекарства, давление, события) → спроси по ним
+3. ТОЛЬКО если в последних сообщениях нет конкретной темы → спроси как день проходит${featureHint}
+
+СТРОГИЕ ЗАПРЕТЫ:
+- НЕ предлагай загадки, зарядку, рецепты или развлечения, если разговор был о другой теме
+- НЕ игнорируй контекст последних сообщений ради generic фразы
+- НЕ начинай с "Привет" если вечер
+- НЕ упоминай что ты бот или ИИ
+- НЕ ставь пометки типа [proactive]
+- НЕ ВЫДУМЫВАЙ факты, события, истории, «интересные факты дня»
 - Будь естественным, как будто вспомнил и решил написать
-- Не упоминай что ты бот или ИИ
-- Если утро и нет сообщений — можно поздороваться
-- Используй обращение на «${formality}»
-- НЕ ставь никаких пометок типа [proactive] или подобного
-- НЕ ВЫДУМЫВАЙ факты, события, истории, «интересные факты дня». Только тёплые вопросы и предложения.`;
+- Используй обращение на «${formality}»`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 200,
-      temperature: 0.9,
+      temperature: 0.7,
     });
 
     const text = response.choices[0]?.message?.content?.trim();
