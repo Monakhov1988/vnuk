@@ -21,7 +21,13 @@ function getCached<T>(key: string): T | null {
   return entry.data as T;
 }
 
+const MAX_CACHE_SIZE = 1000;
+
 function setCache<T>(key: string, data: T, ttlMs: number): void {
+  if (cache.size >= MAX_CACHE_SIZE) {
+    const firstKey = cache.keys().next().value;
+    if (firstKey !== undefined) cache.delete(firstKey);
+  }
   cache.set(key, { data, expiresAt: Date.now() + ttlMs });
 }
 

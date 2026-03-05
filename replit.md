@@ -183,6 +183,12 @@
   - **Авто-инъекция города**: при вызове search_place, search_clinic, search_cinema, search_garden — если город/регион не указан в аргументах, автоматически подставляется из user_memory (категория "home")
   - **sonar-pro для критичных запросов**: searchMedicine, searchGovServices, searchLegal — первый запрос в Pipeline использует sonar-pro (более точная модель) для медицины, госуслуг, юридики. Второй запрос остаётся на sonar
   - **Оптимизация верификации**: Pipeline-инструменты (gov/legal/medicine/transport) больше не проходят двойную верификацию — только встроенная в Pipeline. TOOLS_NEEDING_VERIFICATION: только search_web, search_movie, search_tv
+  - **Anti-flood**: burst rate-limiter 3 сообщения / 15 сек на пользователя. Экстренные обходят лимит. Мягкое "подожди немножко"
+  - **Детекция повторных вопросов**: если пользователь задаёт тот же вопрос 3+ раз за 24ч — возврат кэшированного ответа с "Напомню!" (экономия API, когнитивная поддержка)
+  - **Обрезка длинных сообщений**: user messages > 2000 символов обрезаются перед отправкой в API
+  - **Кэш с ограничением размера**: pipelineCache max 500 записей, tools cache max 1000 записей (FIFO eviction). Защита от утечки памяти
+  - **Merge стратегии Pipeline**: best (выбирает один лучший), combine (объединяет), compare (показывает оба). Fallback на simple merge при ошибке GPT
+  - **Safety**: идентичность бота — "студент университета, любит биологию" (убрано позиционирование "медстудент/терапевт")
   - Встроенная классификация intent через regex (detectIntentLocal) — без доп. API-вызова; intents: home_danger, lost, emergency, scam, health_complaint, reminder, utility, memoir, chat
   - Уточнение перед поиском: при медицинском контексте (врач, приём, поликлиника) или маркерах неопределённости (кажется, вроде, не помню) — AI задаёт уточняющий вопрос вместо автоматического поиска. Реализовано: правила в промпте + ambiguity gate в detectRequiredTool (возвращает null вместо search_web)
   - 104 темы в 15 категориях (server/topicCatalog.ts) с настраиваемой глубиной экспертизы (basic/detailed/expert) + 6 настроек личности бота (formality, humor, softness, verbosity, emoji, encouragement). Настройки через веб-дашборд (/settings/topics) и Telegram (/темы, /настройки). Естественная речь для смены настроек в Telegram

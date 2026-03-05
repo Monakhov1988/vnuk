@@ -89,6 +89,41 @@ async function checkTelegramDailyLimit(userId: number): Promise<boolean> {
 
 const paywallNotifiedToday = new Map<string, string>();
 
+const BURST_LIMIT = 3;
+const BURST_WINDOW_MS = 15_000;
+const BURST_CLEANUP_INTERVAL_MS = 60_000;
+const BURST_LIMIT_MESSAGE = "Подожди немножко, я ещё думаю! 😊";
+const burstTimestamps = new Map<string, number[]>();
+
+let lastBurstCleanup = Date.now();
+
+function checkBurstLimit(chatId: string): boolean {
+  const now = Date.now();
+  if (now - lastBurstCleanup > BURST_CLEANUP_INTERVAL_MS) {
+    lastBurstCleanup = now;
+    burstTimestamps.forEach((timestamps, key) => {
+      const recent = timestamps.filter((t: number) => now - t < BURST_WINDOW_MS);
+      if (recent.length === 0) {
+        burstTimestamps.delete(key);
+      } else {
+        burstTimestamps.set(key, recent);
+      }
+    });
+  }
+
+  const timestamps = burstTimestamps.get(chatId) || [];
+  const recent = timestamps.filter((t: number) => now - t < BURST_WINDOW_MS);
+
+  if (recent.length >= BURST_LIMIT) {
+    burstTimestamps.set(chatId, recent);
+    return false;
+  }
+
+  recent.push(now);
+  burstTimestamps.set(chatId, recent);
+  return true;
+}
+
 async function maybeSendPaywallHint(userId: number, chatId: string, ctx: any): Promise<void> {
   try {
     const plan = await getEffectivePlan(userId);
@@ -1352,6 +1387,10 @@ export async function startTelegramBot() {
       }
 
       if (!isEmergencyMessage(userText)) {
+        if (!checkBurstLimit(chatId)) {
+          await ctx.reply(BURST_LIMIT_MESSAGE);
+          return;
+        }
         const allowed = await checkTelegramDailyLimit(user.id);
         if (!allowed) {
           await ctx.reply(RATE_LIMIT_MESSAGE);
@@ -1611,6 +1650,10 @@ export async function startTelegramBot() {
         console.log(`[telegram] Voice confirmed: "${confirmedText.slice(0, 50)}"`);
 
         if (!isEmergencyMessage(confirmedText)) {
+          if (!checkBurstLimit(chatId)) {
+            await ctx.reply(BURST_LIMIT_MESSAGE);
+            return;
+          }
           const allowed = await checkTelegramDailyLimit(user.id);
           if (!allowed) {
             await ctx.reply(RATE_LIMIT_MESSAGE);
@@ -1738,6 +1781,10 @@ export async function startTelegramBot() {
     }
 
     if (!isEmergencyMessage(userText)) {
+      if (!checkBurstLimit(chatId)) {
+        await ctx.reply(BURST_LIMIT_MESSAGE);
+        return;
+      }
       const allowed = await checkTelegramDailyLimit(user.id);
       if (!allowed) {
         await ctx.reply(RATE_LIMIT_MESSAGE);

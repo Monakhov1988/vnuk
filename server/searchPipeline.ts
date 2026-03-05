@@ -55,7 +55,13 @@ function getPipelineCached<T>(key: string): T | null {
   return entry.data as T;
 }
 
+const MAX_PIPELINE_CACHE_SIZE = 500;
+
 function setPipelineCache<T>(key: string, data: T, ttlMs: number): void {
+  if (pipelineCache.size >= MAX_PIPELINE_CACHE_SIZE) {
+    const firstKey = pipelineCache.keys().next().value;
+    if (firstKey !== undefined) pipelineCache.delete(firstKey);
+  }
   pipelineCache.set(key, { data, expiresAt: Date.now() + ttlMs });
 }
 
@@ -315,21 +321,24 @@ export async function searchPipeline(config: PipelineConfig): Promise<PipelineRe
 
     if (successResults.length === 1) {
       mergedResult = successResults[0].content;
-    } else if (mergeStrategy === "best" && mergePrompt) {
-      mergedResult = await mergeWithGPT(
-        successResults.map(r => r.content),
-        mergePrompt,
-      );
-    } else if (mergeStrategy === "combine" && mergePrompt) {
-      mergedResult = await mergeWithGPT(
-        successResults.map(r => r.content),
-        mergePrompt,
-      );
-    } else if (mergeStrategy === "compare" && mergePrompt) {
-      mergedResult = await mergeWithGPT(
-        successResults.map(r => r.content),
-        mergePrompt,
-      );
+    } else if (mergePrompt) {
+      const strategySuffix = mergeStrategy === "best"
+        ? "\n\nСТРАТЕГИЯ: ВЫБЕРИ ОДИН лучший, более полный и точный источник. Не смешивай информацию из разных источников. Верни текст лучшего источника, при необходимости немного отредактировав для ясности."
+        : mergeStrategy === "compare"
+        ? "\n\nСТРАТЕГИЯ: ПОКАЖИ ОБА варианта, кратко указав различия между ними. Пользователь должен видеть информацию из каждого источника отдельно."
+        : "\n\nСТРАТЕГИЯ: ОБЪЕДИНИ информацию из всех источников в единый связный ответ. Убери дубли, сохрани все уникальные факты.";
+      try {
+        mergedResult = await mergeWithGPT(
+          successResults.map(r => r.content),
+          mergePrompt + strategySuffix,
+        );
+      } catch (mergeErr) {
+        console.error(`[pipeline] ${toolName}: merge failed, using simple merge:`, (mergeErr as Error).message);
+        mergedResult = mergeResultsSimple(
+          successResults.map(r => r.content),
+          mergeStrategy === "best" ? "combine" : mergeStrategy,
+        );
+      }
     } else {
       mergedResult = mergeResultsSimple(
         successResults.map(r => r.content),

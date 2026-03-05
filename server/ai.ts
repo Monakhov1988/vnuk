@@ -12,7 +12,7 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 КТО ТЫ
 ═══════════════════════════════════════
 
-Тебе 25 лет. Ты учишься на последнем курсе медицинского, мечтаешь стать терапевтом. Вырос у бабушки (или дедушки) — каждое лето проводил на даче. Помнишь запах пирогов, как вместе собирали малину, как тебя учили отличать укроп от петрушки. Ты обожаешь своего родного человека всем сердцем. Ты звонишь каждый день не потому что надо — а потому что скучаешь.
+Тебе 25 лет. Ты учишься в университете, любишь биологию и здоровый образ жизни. Вырос у бабушки (или дедушки) — каждое лето проводил на даче. Помнишь запах пирогов, как вместе собирали малину, как тебя учили отличать укроп от петрушки. Ты обожаешь своего родного человека всем сердцем. Ты звонишь каждый день не потому что надо — а потому что скучаешь.
 
 Ты знаешь про огород всё. Про варенье — всё. Про то, как вывести пятно с белой скатерти — тоже. Ты начитанный, любишь историю и стихи. Ты в курсе новостей, но фильтруешь — рассказываешь только хорошее и интересное. Плохими новостями не грузишь.
 
@@ -1315,6 +1315,79 @@ function detectRequiredTool(message: string): string | null {
   return null;
 }
 
+function normalizeText(text: string): string {
+  return text.toLowerCase().replace(/[^a-zа-яёa-z0-9\s]/gi, "").replace(/\s+/g, " ").trim();
+}
+
+function stringSimilarity(a: string, b: string): number {
+  if (a === b) return 1;
+  if (!a || !b) return 0;
+  const longer = a.length >= b.length ? a : b;
+  const shorter = a.length < b.length ? a : b;
+  if (longer.length === 0) return 1;
+  const costs: number[] = [];
+  for (let i = 0; i <= longer.length; i++) {
+    let lastVal = i;
+    for (let j = 0; j <= shorter.length; j++) {
+      if (i === 0) { costs[j] = j; }
+      else if (j > 0) {
+        let newVal = costs[j - 1];
+        if (longer[i - 1] !== shorter[j - 1]) {
+          newVal = Math.min(newVal, lastVal, costs[j]) + 1;
+        }
+        costs[j - 1] = lastVal;
+        lastVal = newVal;
+      }
+    }
+    if (i > 0) costs[shorter.length] = lastVal;
+  }
+  return 1 - costs[shorter.length] / longer.length;
+}
+
+async function detectRepeatedQuestion(
+  currentMsg: string,
+  userId: number
+): Promise<{ isRepeat: boolean; cachedReply?: string }> {
+  try {
+    const recentDbMessages = await storage.getChatMessages(userId, 100);
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const normalizedCurrent = normalizeText(currentMsg);
+    if (normalizedCurrent.length < 5) return { isRepeat: false };
+
+    let matchCount = 0;
+    let lastMatchedReply: string | undefined;
+
+    for (let i = 0; i < recentDbMessages.length; i++) {
+      const msg = recentDbMessages[i];
+      if (msg.role !== "user") continue;
+      const msgTime = msg.createdAt ? new Date(msg.createdAt).getTime() : 0;
+      if (now - msgTime > DAY_MS) continue;
+
+      const normalizedMsg = normalizeText(msg.content);
+      if (stringSimilarity(normalizedCurrent, normalizedMsg) > 0.8) {
+        matchCount++;
+        if (!lastMatchedReply) {
+          for (let j = i - 1; j >= 0; j--) {
+            if (recentDbMessages[j].role === "assistant") {
+              lastMatchedReply = recentDbMessages[j].content;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (matchCount >= 2 && lastMatchedReply) {
+      console.log(`[ai] REPEAT-DETECT: question repeated ${matchCount + 1} times in 24h, returning cached answer`);
+      return { isRepeat: true, cachedReply: lastMatchedReply };
+    }
+  } catch (err: any) {
+    console.error("[ai] repeat detection error:", err.message);
+  }
+  return { isRepeat: false };
+}
+
 export async function chatWithGrandchild(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   parentName?: string,
@@ -1440,12 +1513,36 @@ ${memoryLines}
     }
   }
 
-  const recentMessages = messages.slice(-20);
+  const MAX_USER_MSG_LENGTH = 2000;
+  const recentMessages = messages.slice(-20).map(m =>
+    m.role === "user" && m.content.length > MAX_USER_MSG_LENGTH
+      ? { ...m, content: m.content.slice(0, MAX_USER_MSG_LENGTH) + "…" }
+      : m
+  );
 
   const lastUserMsg = recentMessages.filter(m => m.role === "user").pop()?.content || "";
 
   const DANGER_INTENTS = ["emergency", "scam", "home_danger", "lost", "financial_risk"];
   const serverDetectedIntent = detectIntentLocal(lastUserMsg, false);
+
+  if (userId && lastUserMsg && !DANGER_INTENTS.includes(serverDetectedIntent)) {
+    const repeatResult = await detectRepeatedQuestion(lastUserMsg, userId);
+    if (repeatResult.isRepeat && repeatResult.cachedReply) {
+      const prefixes = [
+        "Да-да, напомню! ",
+        "Конечно, повторю! ",
+        "Ещё разок расскажу! ",
+      ];
+      const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+      console.log(`[ai] REPEAT-DETECT: returning cached answer for "${lastUserMsg.slice(0, 60)}"`);
+      return {
+        reply: prefix + repeatResult.cachedReply,
+        hasAlert: false,
+        intent: serverDetectedIntent,
+        searchLogIds: [],
+      };
+    }
+  }
   const serverDetectedDanger = DANGER_INTENTS.includes(serverDetectedIntent);
   if (serverDetectedDanger) {
     console.log(`[ai] SERVER SAFETY: detected "${serverDetectedIntent}" in user message — alert will be forced`);
