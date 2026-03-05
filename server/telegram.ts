@@ -619,7 +619,85 @@ export async function startTelegramBot() {
       return;
     }
     try { await ctx.answerCallbackQuery(); } catch {}
-    await ctx.reply(question);
+
+    try {
+      const chatId = ctx.chat?.id?.toString();
+      const user = chatId ? await storage.getUserByTelegramChatId(chatId) : null;
+
+      const autoProcessActions: Record<string, string> = {
+        hint_cinema: "что сейчас в кино",
+        hint_tv: "что сейчас по ТВ",
+        hint_riddle: "загадай загадку",
+      };
+
+      if (user && autoProcessActions[action]) {
+        const syntheticMessage = autoProcessActions[action];
+
+        const allowed = await checkTelegramDailyLimit(user.id);
+        if (!allowed) {
+          await ctx.reply(RATE_LIMIT_MESSAGE);
+          return;
+        }
+
+        await storage.createChatMessage({
+          parentId: user.id,
+          role: "user",
+          content: syntheticMessage,
+          intent: null,
+          hasAlert: false,
+        });
+
+        const chatHistory = await storage.getChatMessages(user.id, 20);
+        const messages: Array<{ role: "user" | "assistant"; content: string }> = chatHistory
+          .reverse()
+          .filter(m => m.intent !== "voice_confirm")
+          .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
+
+        const stopTyping = startTypingLoop(ctx);
+        let result;
+        try {
+          result = await chatWithGrandchild(messages, user.name, user.id);
+        } finally {
+          stopTyping();
+        }
+
+        await storage.createChatMessage({
+          parentId: user.id,
+          role: "assistant",
+          content: result.reply,
+          intent: result.intent,
+          hasAlert: result.hasAlert,
+        });
+
+        if (result.imageUrl) {
+          try {
+            await ctx.replyWithPhoto(result.imageUrl, { caption: result.reply.slice(0, 1024) });
+          } catch {
+            await ctx.reply(result.reply);
+          }
+        } else {
+          await ctx.reply(result.reply);
+        }
+        return;
+      }
+
+      await ctx.reply(question);
+
+      if (user) {
+        await storage.createChatMessage({
+          parentId: user.id,
+          role: "assistant",
+          content: question,
+          intent: null,
+          hasAlert: false,
+        });
+      }
+    } catch (err: any) {
+      console.error("[telegram] Hint callback error:", err?.message || err);
+      try {
+        await ctx.reply("Произошла ошибка, попробуйте ещё раз через минутку.");
+      } catch {}
+    }
   });
 
   bot.command("link", async (ctx) => {
