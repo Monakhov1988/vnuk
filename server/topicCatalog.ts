@@ -1139,3 +1139,11 @@ export function buildPersonalityPromptSection(config: PersonalityConfig): string
 
   return lines.join("\n");
 }
+
+export function getAllTopicIds(): string[] {
+  return TOPIC_CATALOG.map(t => t.id);
+}
+
+export function getDefaultTopicsForPrompt(): Array<{ topicId: string; depth: TopicDepth }> {
+  return TOPIC_CATALOG.map(t => ({ topicId: t.id, depth: "detailed" as TopicDepth }));
+}

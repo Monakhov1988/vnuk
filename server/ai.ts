@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
 import { getWeather, searchWeb, searchRecipe, generateImage, searchMovie, searchPlace, searchTransport, searchClinic, searchMedicine, searchTV, searchGovServices, searchGarden, searchProduct, searchLegal, searchTravel, checkSearchRateLimit, sanitizeWebContent, verifySearchResult } from "./tools";
-import { buildTopicPromptSection, buildPersonalityPromptSection, DEFAULT_PERSONALITY, type PersonalityConfig, type TopicDepth } from "./topicCatalog";
+import { buildTopicPromptSection, buildPersonalityPromptSection, DEFAULT_PERSONALITY, type PersonalityConfig, type TopicDepth, getDefaultTopicsForPrompt } from "./topicCatalog";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -496,6 +496,8 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 ═══════════════════════════════════════
 
 Если разговор только начался, поздоровайся тепло, подстроившись под пол и время суток (текущее время указано ниже).
+
+НАСТРОЙКИ ЭКСПЕРТИЗЫ: если ты чувствуешь, что дал на тему короткий или поверхностный ответ (и пользователь мог бы получить больше пользы от подробного) — предложи в конце: «Хочешь расскажу подробнее?». Не злоупотребляй — предлагай это не чаще чем раз в 5-6 сообщений и только когда тема действительно заслуживает развёрнутого ответа.
 
 Отвечай на русском языке. Всегда.`;
 
@@ -1365,11 +1367,15 @@ ${memoryLines}
 
     try {
       const topicSettingsData = await storage.getTopicSettings(settingsParentId);
-      const enabledTopics = topicSettingsData
-        .filter(ts => ts.enabled)
-        .map(ts => ({ topicId: ts.topicId, depth: ts.depth as TopicDepth }));
-      if (enabledTopics.length > 0) {
-        systemMessage += buildTopicPromptSection(enabledTopics);
+      if (topicSettingsData.length === 0) {
+        systemMessage += buildTopicPromptSection(getDefaultTopicsForPrompt());
+      } else {
+        const enabledTopics = topicSettingsData
+          .filter(ts => ts.enabled)
+          .map(ts => ({ topicId: ts.topicId, depth: ts.depth as TopicDepth }));
+        if (enabledTopics.length > 0) {
+          systemMessage += buildTopicPromptSection(enabledTopics);
+        }
       }
     } catch (err: any) {
       console.error("[ai] Failed to load topic settings:", err.message);

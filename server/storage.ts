@@ -79,6 +79,7 @@ export interface IStorage {
 
   getTopicSettings(parentId: number): Promise<TopicSetting[]>;
   upsertTopicSetting(parentId: number, topicId: string, depth: "basic" | "detailed" | "expert", enabled: boolean): Promise<TopicSetting>;
+  bulkInitTopicSettings(parentId: number, topicIds: string[], depth: "basic" | "detailed" | "expert"): Promise<void>;
   deleteTopicSettings(parentId: number): Promise<void>;
 
   getPersonalitySettings(parentId: number): Promise<PersonalitySetting | undefined>;
@@ -350,6 +351,12 @@ export class DatabaseStorage implements IStorage {
       .values({ parentId, topicId, depth, enabled })
       .returning();
     return created;
+  }
+
+  async bulkInitTopicSettings(parentId: number, topicIds: string[], depth: "basic" | "detailed" | "expert"): Promise<void> {
+    if (topicIds.length === 0) return;
+    const values = topicIds.map(topicId => ({ parentId, topicId, depth, enabled: true }));
+    await db.insert(topicSettings).values(values);
   }
 
   async deleteTopicSettings(parentId: number): Promise<void> {

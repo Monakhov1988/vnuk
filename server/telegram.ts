@@ -270,6 +270,13 @@ async function registerUserFromTelegram(chatId: string, name: string): Promise<{
   await storage.updateUserLinkCode(user.id, linkCode);
   await storage.updateUserTelegramChatId(user.id, chatId);
 
+  try {
+    const { getAllTopicIds } = await import("./topicCatalog");
+    await storage.bulkInitTopicSettings(user.id, getAllTopicIds(), "detailed");
+  } catch (err: any) {
+    console.error("[telegram] Failed to initialize default topics:", err?.message);
+  }
+
   onboardingState.set(chatId, {
     step: "city",
     userId: user.id,
@@ -407,6 +414,11 @@ async function handleOnboardingStep(chatId: string, userText: string, ctx: any):
     );
 
     await ctx.reply("🎤 Кстати, вы можете не печатать — просто нажмите микрофон и скажите голосом. Я всё пойму!");
+
+    await ctx.reply(
+      "📚 Я настроен отвечать подробно по всем темам — от рецептов до здоровья и льгот.\n\n" +
+      "Если захотите изменить глубину ответов (кратко / подробно / экспертно) — нажмите 📋 Ещё → ⚙️ Настройки → 📚 Темы и экспертиза"
+    );
 
     return true;
   }
