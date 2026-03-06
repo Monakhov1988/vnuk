@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
-import { getWeather, searchWeb, searchRecipe, generateImage, searchGreetingCard, searchMovie, searchCinema, searchPlace, searchTransport, searchClinic, searchMedicine, searchTV, searchGovServices, searchGarden, searchProduct, searchLegal, searchTravel, checkSearchRateLimit, sanitizeWebContent, verifySearchResult } from "./tools";
+import { getWeather, searchWeb, searchRecipe, generateImage, searchGreetingCard, overlayTextOnCard, searchMovie, searchCinema, searchPlace, searchTransport, searchClinic, searchMedicine, searchTV, searchGovServices, searchGarden, searchProduct, searchLegal, searchTravel, checkSearchRateLimit, sanitizeWebContent, verifySearchResult } from "./tools";
 import { pipelineLogStorage } from "./searchPipeline";
 import { buildTopicPromptSection, buildPersonalityPromptSection, DEFAULT_PERSONALITY, type PersonalityConfig, type TopicDepth, getDefaultTopicsForPrompt } from "./topicCatalog";
 
@@ -193,7 +193,22 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 Когда просят ОТКРЫТКУ, ПОЗДРАВИТЕЛЬНУЮ КАРТИНКУ, картинку ко дню рождения, 8 марта, юбилею и т.д. — ВСЕГДА используй find_greeting_card. Он находит красивые готовые открытки с русским текстом.
 — Передавай запрос НА РУССКОМ языке: «открытка с днём рождения женщине», «открытка 8 марта с цветами»
 — Если человек уточнил тему (для подруги, маме, с юбилеем 60 лет) — включи это в запрос
-— Уточняющие вопросы НЕ НУЖНЫ — сразу ищи по тому, что попросили
+
+УТОЧНЕНИЕ ПЕРЕД ПОИСКОМ ОТКРЫТКИ:
+— Если запрос КОНКРЕТНЫЙ (есть повод: день рождения, 8 марта, юбилей, именины, Новый год и т.д.) — ищи СРАЗУ, без лишних вопросов.
+— Если запрос ОБЩИЙ (просто «найди открытку», «поздравительную картинку», «открыточку» без указания повода) — сначала УТОЧНИ:
+  1) К какому поводу нужна открытка? (день рождения, праздник, просто так?)
+  2) Для кого? (маме, подруге, коллеге?)
+  3) Есть ли пожелания по стилю? (с цветами, яркую, нежную?)
+  Спроси ЭТО В ОДНОМ сообщении, коротко и тепло. Например: «С удовольствием найду! А к какому поводу нужна открытка? Для кого — для подруги, для мамы? Может, с цветочками или яркую?»
+— Не задавай больше одного уточняющего сообщения — после ответа сразу ищи.
+
+ТЕКСТ НА ОТКРЫТКЕ (add_text_to_card):
+— После того как нашёл и отправил открытку, ВСЕГДА предложи: «Хочешь, добавлю красивую надпись на открытку? Напиши текст, или я сам придумаю поздравление!»
+— Если человек даёт текст — вызови add_text_to_card с этим текстом и буфером предыдущей открытки.
+— Если человек просит придумать текст — сначала придумай короткое тёплое поздравление (2-4 строки, стихи или проза), покажи его и спроси «Нравится? Наложить на открытку?». Если да — вызови add_text_to_card.
+— Текст должен быть коротким (до 100 символов оптимально, максимум 200).
+
 — После отправки открытки добавь тёплое поздравление в текстовом сообщении (стихи, пожелания)
 — Если find_greeting_card не нашёл — он автоматически нарисует через DALL-E
 
@@ -560,6 +575,20 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "add_text_to_card",
+      description: "Наложить красивый текст (надпись, поздравление) на открытку. Вызывай ПОСЛЕ find_greeting_card, когда пользователь хочет добавить текст на найденную открытку. Текст будет красиво наложен снизу открытки с полупрозрачным фоном.",
+      parameters: {
+        type: "object",
+        properties: {
+          text: { type: "string", description: "Текст для наложения на открытку (до 200 символов). Например: 'С Днём Рождения, дорогая мамочка!', 'С 8 марта! Счастья и радости!'" },
+        },
+        required: ["text"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "generate_image",
       description: "Нарисовать УНИКАЛЬНУЮ картинку по описанию. Используй ТОЛЬКО когда просят НАРИСОВАТЬ что-то авторское (портрет, пейзаж, иллюстрацию). НЕ используй для открыток — для них find_greeting_card.",
       parameters: {
@@ -764,6 +793,8 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   },
 ];
 
+const lastCardBufferByUser = new Map<number, Buffer>();
+
 async function executeToolCall(
   toolName: string,
   args: Record<string, string>,
@@ -788,13 +819,44 @@ async function executeToolCall(
     case "find_greeting_card": {
       const cardResult = await searchGreetingCard(args.query || "", userId);
       if (cardResult.buffer) {
+        if (userId) lastCardBufferByUser.set(userId, cardResult.buffer);
         return { text: `Нашёл красивую открытку!`, imageBuffer: cardResult.buffer };
       }
       const fallback = await generateImage(args.query || "", userId);
       if (fallback.error) {
         return { text: fallback.error };
       }
+      if (fallback.url && userId) {
+        try {
+          const resp = await fetch(fallback.url, { signal: AbortSignal.timeout(10000) });
+          if (resp.ok) {
+            const buf = Buffer.from(await resp.arrayBuffer());
+            if (buf.length > 1000) {
+              lastCardBufferByUser.set(userId, buf);
+              return { text: "Нарисовал открытку специально!", imageBuffer: buf };
+            }
+          }
+        } catch {}
+      }
       return { text: "Нарисовал открытку специально!", imageUrl: fallback.url || undefined };
+    }
+    case "add_text_to_card": {
+      const text = args.text || "";
+      if (!text.trim()) {
+        return { text: "Текст не указан. Напиши, какой текст наложить на открытку." };
+      }
+      const cardBuffer = userId ? lastCardBufferByUser.get(userId) : undefined;
+      if (!cardBuffer) {
+        return { text: "Сначала нужно найти открытку. Попроси найти открытку, а потом добавим текст!" };
+      }
+      try {
+        const resultBuffer = await overlayTextOnCard(cardBuffer, text);
+        if (userId) lastCardBufferByUser.set(userId, resultBuffer);
+        return { text: "Добавил надпись на открытку!", imageBuffer: resultBuffer };
+      } catch (err: any) {
+        console.error("[ai] Text overlay error:", err.message);
+        return { text: "Не получилось наложить текст на открытку. Попробуем ещё раз?" };
+      }
     }
     case "generate_image": {
       const result = await generateImage(args.description || "", userId);
@@ -935,6 +997,7 @@ function getToolErrorMessage(toolName: string, err: any): string {
     case "get_weather": return "Не удалось узнать погоду. Попробуем позже?";
     case "generate_image": return "Не получилось нарисовать картинку. Попробуем ещё раз?";
     case "find_greeting_card": return "Не получилось найти открытку. Попробуем ещё раз?";
+    case "add_text_to_card": return "Не получилось наложить текст на открытку. Попробуем ещё раз?";
     case "search_legal": return "Не получилось найти юридическую информацию. Попробуем позже?";
     case "search_travel": return "Не получилось найти информацию о путешествии. Попробуем позже?";
     default: return "Что-то не получилось. Попробуем позже?";

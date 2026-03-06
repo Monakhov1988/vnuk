@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import sharp from "sharp";
 import { storage } from "./storage";
 import { searchPipeline, searchPipelineText, todayDateRu, currentMonthRu, fullDateRu } from "./searchPipeline";
 
@@ -881,6 +882,60 @@ export async function searchGreetingCard(query: string, userId?: number): Promis
     console.error("[tools] Greeting card search error:", err.message);
     return { buffer: null, error: null };
   }
+}
+
+export async function overlayTextOnCard(imageBuffer: Buffer, text: string): Promise<Buffer> {
+  const metadata = await sharp(imageBuffer).metadata();
+  const imgWidth = metadata.width || 800;
+  const imgHeight = metadata.height || 600;
+
+  const cleanText = text.trim().slice(0, 200);
+
+  const maxCharsPerLine = Math.max(15, Math.floor(imgWidth / 28));
+  const words = cleanText.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = "";
+  for (const word of words) {
+    if (currentLine.length + word.length + 1 > maxCharsPerLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = currentLine ? currentLine + " " + word : word;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+
+  const lineCount = lines.length;
+  let fontSize = Math.max(18, Math.min(56, Math.floor(imgWidth / 16)));
+  if (lineCount > 3) fontSize = Math.max(16, Math.floor(fontSize * 0.8));
+  if (lineCount > 5) fontSize = Math.max(14, Math.floor(fontSize * 0.75));
+  const lineHeight = fontSize * 1.4;
+
+  const blockHeight = lineCount * lineHeight + fontSize;
+  const paddingY = fontSize * 0.5;
+  const bgHeight = blockHeight + paddingY * 2;
+  const bgY = imgHeight - bgHeight - fontSize * 0.3;
+
+  const escapedLines = lines.map(l =>
+    l.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  );
+
+  const textElements = escapedLines.map((line, i) => {
+    const y = bgY + paddingY + fontSize + i * lineHeight;
+    return `<text x="${imgWidth / 2}" y="${y}" font-family="DejaVu Serif, serif" font-size="${fontSize}" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="auto" stroke="#333" stroke-width="1.5" paint-order="stroke">${line}</text>`;
+  }).join("\n    ");
+
+  const svgOverlay = `<svg width="${imgWidth}" height="${imgHeight}">
+    <rect x="0" y="${bgY}" width="${imgWidth}" height="${bgHeight}" rx="12" fill="rgba(0,0,0,0.45)"/>
+    ${textElements}
+  </svg>`;
+
+  const result = await sharp(imageBuffer)
+    .composite([{ input: Buffer.from(svgOverlay), top: 0, left: 0 }])
+    .jpeg({ quality: 90 })
+    .toBuffer();
+
+  return result;
 }
 
 export async function searchMovie(query: string, userId?: number): Promise<string> {
