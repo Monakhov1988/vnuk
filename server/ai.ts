@@ -1236,7 +1236,17 @@ function detectRequiredTool(message: string): string | null {
   if (weatherWords.some(w => lower.includes(w))) return "get_weather";
 
   const greetingCardWords = ["открытк", "поздравительн", "поздравлени"];
-  if (greetingCardWords.some(w => lower.includes(w))) return "find_greeting_card";
+  if (greetingCardWords.some(w => lower.includes(w))) {
+    const occasionWords = [
+      "рождени", "днём рождени", "день рождени", "др ", "юбиле",
+      "8 марта", "восьм марта", "новый год", "новым годом",
+      "рождеств", "пасх", "свадьб", "именин", "крещени",
+      "23 феврал", "9 мая", "победы", "1 сентябр",
+      "выпускн", "годовщин", "валентин", "масленниц",
+    ];
+    if (occasionWords.some(w => lower.includes(w))) return "find_greeting_card";
+    return null;
+  }
 
   const imageWords = ["нарисуй", "нарисовать", "фото блюда", "сгенерируй", "картинк"];
   if (imageWords.some(w => lower.includes(w))) return "generate_image";
