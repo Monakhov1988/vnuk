@@ -757,12 +757,16 @@ async function downloadImage(imgUrl: string, referer: string): Promise<Buffer | 
   }
 }
 
+const CARD_IMG_BOOST = /otkrytk|pozdrav|8.?mart|marta|rojden|jubile|card.*8|happy|prazdni|congratul/i;
+const CARD_IMG_REJECT = /doctor|clinic|advert|promo|widget|sidebar|footer|header[_-]|nav[_-]|menu|social|share|comment|author|profile|user[_-]pic/i;
+
 function extractImageUrls(pageHtml: string, pageUrl: string): string[] {
-  const urls: string[] = [];
-  const imgRegex = /<img[^>]+src=["']([^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["'][^>]*>/gi;
+  const candidates: { url: string; score: number }[] = [];
+  const imgRegex = /<img[^>]+src=["']([^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["']([^>]*)>/gi;
   let imgMatch;
   while ((imgMatch = imgRegex.exec(pageHtml)) !== null) {
     let imgUrl = imgMatch[1];
+    const attrs = imgMatch[2] || "";
     if (imgUrl.startsWith("//")) imgUrl = "https:" + imgUrl;
     else if (imgUrl.startsWith("/")) {
       try {
@@ -773,12 +777,39 @@ function extractImageUrls(pageHtml: string, pageUrl: string): string[] {
     if (!imgUrl.startsWith("http")) continue;
     const lower = imgUrl.toLowerCase();
     if (lower.includes("logo") || lower.includes("icon") || lower.includes("avatar") ||
-        lower.includes("banner") || lower.includes("thumb") || lower.includes("lazy") ||
-        lower.includes("pixel") || lower.includes("blank") || lower.includes("spinner")) continue;
+        lower.includes("pixel") || lower.includes("blank") || lower.includes("spinner") ||
+        lower.includes("lazy-placeholder")) continue;
     if (imgUrl.length < 40) continue;
-    urls.push(imgUrl);
+    if (CARD_IMG_REJECT.test(lower)) continue;
+
+    let score = 0;
+    if (CARD_IMG_BOOST.test(lower)) score += 3;
+
+    const altMatch = attrs.match(/alt=["']([^"']*)["']/i);
+    if (altMatch) {
+      const alt = altMatch[1].toLowerCase();
+      if (CARD_IMG_BOOST.test(alt)) score += 2;
+      if (CARD_IMG_REJECT.test(alt)) continue;
+    }
+
+    const widthMatch = attrs.match(/width=["']?(\d+)/i);
+    const heightMatch = attrs.match(/height=["']?(\d+)/i);
+    if (widthMatch && heightMatch) {
+      const w = parseInt(widthMatch[1], 10);
+      const h = parseInt(heightMatch[1], 10);
+      if (w < 200 || h < 200) continue;
+      if (w >= 400 && h >= 400) score += 2;
+      const ratio = w / h;
+      if (ratio > 2.5 || ratio < 0.3) continue;
+    }
+
+    if (lower.includes("thumb")) score -= 1;
+
+    candidates.push({ url: imgUrl, score });
   }
-  return urls;
+
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates.map(c => c.url);
 }
 
 async function ddgSearchPages(searchQuery: string): Promise<string[]> {
@@ -807,6 +838,20 @@ async function ddgSearchPages(searchQuery: string): Promise<string[]> {
   return pageUrls;
 }
 
+async function validateCardImage(buffer: Buffer): Promise<boolean> {
+  try {
+    const meta = await sharp(buffer).metadata();
+    const w = meta.width || 0;
+    const h = meta.height || 0;
+    if (w < 400 || h < 400) return false;
+    const ratio = w / h;
+    if (ratio > 2.5 || ratio < 0.3) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function tryDownloadFromPages(pageUrls: string[]): Promise<Buffer | null> {
   for (const pageUrl of pageUrls) {
     try {
@@ -823,12 +868,16 @@ async function tryDownloadFromPages(pageUrls: string[]): Promise<Buffer | null> 
       const pageHtml = await pageResp.text();
       const imgUrls = extractImageUrls(pageHtml, pageUrl);
 
-      for (const imgUrl of imgUrls.slice(0, 8)) {
+      for (const imgUrl of imgUrls.slice(0, 10)) {
         const buffer = await downloadImage(imgUrl, pageUrl);
-        if (buffer) {
-          console.log(`[tools] Downloaded greeting card: ${buffer.length} bytes from ${imgUrl.slice(0, 80)}`);
-          return buffer;
+        if (!buffer) continue;
+        const valid = await validateCardImage(buffer);
+        if (!valid) {
+          console.log(`[tools] Rejected card image (bad size/ratio): ${imgUrl.slice(0, 80)}`);
+          continue;
         }
+        console.log(`[tools] Downloaded greeting card: ${buffer.length} bytes from ${imgUrl.slice(0, 80)}`);
+        return buffer;
       }
     } catch {
       continue;
