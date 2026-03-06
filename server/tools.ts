@@ -700,6 +700,91 @@ export async function generateImage(description: string, userId?: number): Promi
   }
 }
 
+export async function searchGreetingCard(query: string, userId?: number): Promise<{ urls: string[]; error: string | null }> {
+  const safeQuery = stripPII(query);
+  const cacheKey = `greeting_card:${safeQuery.toLowerCase()}`;
+  const cached = getCached<{ urls: string[]; error: string | null }>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const searchQuery = `${safeQuery} открытка картинка site:pozdravok.com OR site:bonnycards.ru OR site:kartinki-life.ru OR site:otkritkiok.ru`;
+    const encoded = encodeURIComponent(searchQuery);
+
+    const response = await fetch(`https://html.duckduckgo.com/html/?q=${encoded}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "ru-RU,ru;q=0.9",
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) throw new Error(`DDG HTTP ${response.status}`);
+    const html = await response.text();
+
+    const titleRegex = /result__a[^>]*href="[^"]*uddg=([^&"]+)[^"]*"/g;
+    const pageUrls: string[] = [];
+    let match;
+    while ((match = titleRegex.exec(html)) !== null) {
+      try {
+        pageUrls.push(decodeURIComponent(match[1]));
+      } catch {
+        pageUrls.push(match[1]);
+      }
+    }
+
+    const cardUrls: string[] = [];
+    const cardSites = pageUrls
+      .filter(u => /pozdravok\.com|bonnycards\.ru|kartinki-life\.ru|otkritkiok\.ru/i.test(u))
+      .slice(0, 3);
+
+    for (const pageUrl of cardSites) {
+      try {
+        const pageResp = await fetch(pageUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "text/html",
+          },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!pageResp.ok) continue;
+        const pageHtml = await pageResp.text();
+
+        const imgRegex = /<img[^>]+src=["']([^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["'][^>]*>/gi;
+        let imgMatch;
+        while ((imgMatch = imgRegex.exec(pageHtml)) !== null) {
+          let imgUrl = imgMatch[1];
+          if (imgUrl.startsWith("//")) imgUrl = "https:" + imgUrl;
+          else if (imgUrl.startsWith("/")) {
+            const base = new URL(pageUrl);
+            imgUrl = base.origin + imgUrl;
+          }
+          if (imgUrl.includes("logo") || imgUrl.includes("icon") || imgUrl.includes("avatar") || imgUrl.includes("banner")) continue;
+          if (imgUrl.length < 30) continue;
+          cardUrls.push(imgUrl);
+          if (cardUrls.length >= 5) break;
+        }
+        if (cardUrls.length >= 5) break;
+      } catch {
+        continue;
+      }
+    }
+
+    if (cardUrls.length > 0) {
+      console.log(`[tools] Found ${cardUrls.length} greeting cards for "${query.slice(0, 50)}"`);
+      const result = { urls: cardUrls, error: null };
+      setCache(cacheKey, result, 3600000);
+      return result;
+    }
+
+    console.log(`[tools] No greeting cards found for "${query.slice(0, 50)}", will fallback to DALL-E`);
+    return { urls: [], error: null };
+  } catch (err: any) {
+    console.error("[tools] Greeting card search error:", err.message);
+    return { urls: [], error: null };
+  }
+}
+
 export async function searchMovie(query: string, userId?: number): Promise<string> {
   const safeQuery = stripPII(query);
   const cacheKey = `movie:${safeQuery.toLowerCase()}`;

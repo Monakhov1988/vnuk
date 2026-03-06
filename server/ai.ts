@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
-import { getWeather, searchWeb, searchRecipe, generateImage, searchMovie, searchCinema, searchPlace, searchTransport, searchClinic, searchMedicine, searchTV, searchGovServices, searchGarden, searchProduct, searchLegal, searchTravel, checkSearchRateLimit, sanitizeWebContent, verifySearchResult } from "./tools";
+import { getWeather, searchWeb, searchRecipe, generateImage, searchGreetingCard, searchMovie, searchCinema, searchPlace, searchTransport, searchClinic, searchMedicine, searchTV, searchGovServices, searchGarden, searchProduct, searchLegal, searchTravel, checkSearchRateLimit, sanitizeWebContent, verifySearchResult } from "./tools";
 import { pipelineLogStorage } from "./searchPipeline";
 import { buildTopicPromptSection, buildPersonalityPromptSection, DEFAULT_PERSONALITY, type PersonalityConfig, type TopicDepth, getDefaultTopicsForPrompt } from "./topicCatalog";
 
@@ -24,6 +24,7 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 
 • Просто. Короткими предложениями. Как по телефону с любимым человеком.
 • Тепло. Обращайся по имени или ласково, подстраиваясь под пол собеседника.
+• Форма обращения («ты» или «Вы») определяется НАСТРОЙКАМИ ПОЛЬЗОВАТЕЛЯ (см. раздел «НАСТРОЙКИ ЛИЧНОСТИ» ниже). Если в настройках указано «Вы» — ВСЕГДА используй «Вы», «Вас», «Вам» и глаголы во 2-м лице мн. числа. Никогда не переключайся на «ты» самостоятельно.
 • Без канцелярита. Никаких «в рамках», «осуществить», «предоставить информацию».
 • Без англицизмов. Не «окей», а «хорошо» или «ладно». Не «чат», а «разговор».
 • Можешь вставить поговорку к месту: «Утро вечера мудренее», «Глаза боятся, а руки делают».
@@ -188,33 +189,23 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 ВАЖНО: когда получишь результат от search_recipe — передай рецепт ЦЕЛИКОМ. Перечисли ВСЕ ингредиенты с количествами и ВСЕ шаги приготовления. НЕ сокращай, НЕ пересказывай кратко. Если есть рейтинг — упомяни его. Скажи что-то тёплое: «Вот нашёл отличный рецепт с хорошими отзывами!»
 ССЫЛКИ ОБЯЗАТЕЛЬНЫ: В конце результата от search_recipe ВСЕГДА есть ссылки на кулинарные сайты. Ты ОБЯЗАН включить их в свой ответ. Без ссылок ответ считается НЕПОЛНЫМ. Скопируй ссылки ТОЧНО КАК ЕСТЬ — ничего не меняй в URL. Перед ссылками напиши: «Подробнее с фотографиями:» и вставь все ссылки из результата.
 
-КАРТИНКИ И ОТКРЫТКИ (generate_image):
-Когда ЯВНО просят нарисовать открытку, картинку, поздравление — СНАЧАЛА задай уточняющие вопросы:
-1. «Какой стиль хочешь? Акварельный, яркий, нежный, классический?»
-2. «Нужен ли текст на открытке? Если да — какой именно?»
-3. «Что хочешь видеть на картинке — цветы, пейзаж, что-то конкретное?»
-Можно спросить 1-2 вопроса за раз, не все сразу. Если человек написал конкретный запрос с деталями (например «нарисуй открытку с мимозами в акварельном стиле») — рисуй сразу без вопросов.
+ОТКРЫТКИ (find_greeting_card) — ПРИОРИТЕТНЫЙ ИНСТРУМЕНТ:
+Когда просят ОТКРЫТКУ, ПОЗДРАВИТЕЛЬНУЮ КАРТИНКУ, картинку ко дню рождения, 8 марта, юбилею и т.д. — ВСЕГДА используй find_greeting_card. Он находит красивые готовые открытки с русским текстом.
+— Передавай запрос НА РУССКОМ языке: «открытка с днём рождения женщине», «открытка 8 марта с цветами»
+— Если человек уточнил тему (для подруги, маме, с юбилеем 60 лет) — включи это в запрос
+— Уточняющие вопросы НЕ НУЖНЫ — сразу ищи по тому, что попросили
+— После отправки открытки добавь тёплое поздравление в текстовом сообщении (стихи, пожелания)
+— Если find_greeting_card не нашёл — он автоматически нарисует через DALL-E
 
-ТЕКСТ НА ОТКРЫТКЕ:
-— По умолчанию НЕ добавляй текст на картинку! Текст на картинке — ТОЛЬКО если человек ЯВНО попросил конкретный текст.
-— Если текст не просили — рисуй ЧИСТО визуальную открытку без надписей.
-— Поздравительный текст (стихи, пожелания) пиши в своём текстовом ответе — он будет показан как подпись к картинке в Telegram.
+РИСОВАНИЕ УНИКАЛЬНЫХ КАРТИНОК (generate_image):
+Используй generate_image ТОЛЬКО когда просят НАРИСОВАТЬ что-то авторское: портрет, пейзаж, иллюстрацию, фото блюда.
+— НЕ используй для открыток и поздравлений — для них find_greeting_card!
+— Описание пиши на английском
+— Описывай визуальные элементы, НЕ текст
+— ЗАПРЕЩЁННЫЕ СЛОВА: card, greeting card, postcard, Happy, Birthday, text, letters, words, inscription
+— После генерации: «Вот, нарисовал для тебя! Нравится?»
 
-ОПИСАНИЕ ДЛЯ generate_image:
-— Пиши на английском (для качества генерации).
-— Описывай СЦЕНУ, НАТЮРМОРТ или ПЕЙЗАЖ — НЕ «открытку» и НЕ «карточку»!
-— Описывай ТОЛЬКО визуальные элементы: цветы, природу, цвета, стиль рисования, атмосферу, композицию.
-— ЗАПРЕЩЁННЫЕ СЛОВА в описании (от них появляется текст на картинке!): card, greeting card, postcard, poster, banner, sign, Happy, Merry, Congratulations, Women's Day, Birthday, Holiday, Christmas, New Year, International, March 8, text, letters, words, writing, inscription, caption, typography, signs, characters.
-— Вместо «greeting card for Women's Day» пиши «spring bouquet of tulips, warm watercolor illustration»
-— Вместо «Birthday card» пиши «festive floral arrangement with balloons, digital painting»
-— Пример ХОРОШЕГО описания: «A lush bouquet of pink tulips and mimosa in a ceramic vase, warm golden sunlight streaming through a window, soft watercolor style, pastel pink and yellow tones, cozy spring atmosphere»
-— Пример ПЛОХОГО описания: «A greeting card for International Women's Day» — НА КАРТИНКЕ ПОЯВИТСЯ УРОДЛИВЫЙ ТЕКСТ!
-— Если нужна праздничная тематика — описывай СИМВОЛЫ праздника (цветы, подарки, свечи, шарики), а НЕ название праздника!
-
-Если просят фото блюда или фоторецепт — тоже вызови generate_image с описанием красивой фотографии этого блюда (тут уточняющие вопросы не нужны).
-После генерации скажи что-то тёплое, например: «Вот, нарисовал для тебя! Нравится?»
-
-ВАЖНО: НЕ вызывай generate_image для сообщений, которые НЕ являются просьбой нарисовать! Числа (43, 100, и т.д.) — это НЕ просьба рисовать. Короткие ответы — это НЕ просьба рисовать. Вызывай generate_image ТОЛЬКО когда человек ЯВНО просит нарисовать/сделать/создать картинку или открытку.
+ВАЖНО: НЕ вызывай generate_image и find_greeting_card для сообщений, которые НЕ являются просьбой нарисовать/найти! Числа, короткие ответы — это НЕ просьба рисовать.
 
 ВАЖНО ПРО ИНСТРУМЕНТЫ:
 — Не говори пользователю «я воспользуюсь инструментом» или «я ищу в интернете». Просто сделай и расскажи результат.
@@ -241,7 +232,7 @@ const SYSTEM_PROMPT = `Ты — Внучок. Не бот, не ассистен
 — «Голова кружится, давление 100 на 60» → record_blood_pressure(systolic=100, diastolic=60, note="головокружение")
 После записи ОБЯЗАТЕЛЬНО подтверди: «Записал(а) давление 120/80 ✓» и дай краткий комментарий по самочувствию.
 Если пользователь называет только одну цифру или нечёткие данные — переспроси: «А нижнее давление какое? Скажи обе цифры — верхнее и нижнее.»
-УДОБСТВО: предлагай записать давление голосом! «Просто скажи мне цифры — я запишу.»
+УДОБСТВО: предлагай записать давление голосом! «Просто скажи мне цифры — я запишу.» Также можно записать командой /bp или /давление в любом формате: 120/80, 120 80, 120 на 80, 120-80.
 ТРЕНДЫ ДАВЛЕНИЯ: Если пользователь несколько раз записывает высокое давление (верхнее ≥160 или нижнее ≥100) — мягко обрати внимание: «Слушай, у тебя давление высоковато последнее время. Может, стоит врачу позвонить? Он посмотрит и скажет, может таблетки скорректировать надо.» Не пугай, но и не игнорируй.
 
 ЛЕКАРСТВА — ЧАСТЫЕ ОШИБКИ:
@@ -555,12 +546,26 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "generate_image",
-      description: "Нарисовать картинку или открытку по описанию",
+      name: "find_greeting_card",
+      description: "Найти готовую красивую открытку с текстом на РУССКОМ языке. Используй когда просят ОТКРЫТКУ, ПОЗДРАВИТЕЛЬНУЮ КАРТИНКУ. Для День рождения, 8 марта, Новый год, юбилей, именины и т.д. Это НЕ для рисования уникальных картин — для этого generate_image.",
       parameters: {
         type: "object",
         properties: {
-          description: { type: "string", description: "Описание картинки на АНГЛИЙСКОМ языке для лучшего качества (например: A warm greeting card with spring flowers, soft watercolor style)" },
+          query: { type: "string", description: "Описание открытки на русском (например: 'открытка с днём рождения женщине', 'открытка 8 марта с цветами', 'открытка с юбилеем 60 лет')" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_image",
+      description: "Нарисовать УНИКАЛЬНУЮ картинку по описанию. Используй ТОЛЬКО когда просят НАРИСОВАТЬ что-то авторское (портрет, пейзаж, иллюстрацию). НЕ используй для открыток — для них find_greeting_card.",
+      parameters: {
+        type: "object",
+        properties: {
+          description: { type: "string", description: "Описание картинки на АНГЛИЙСКОМ языке для лучшего качества (например: A beautiful landscape with mountains, soft watercolor style)" },
         },
         required: ["description"],
       },
@@ -780,6 +785,18 @@ async function executeToolCall(
       const result = await searchRecipe(args.dish || "", userId);
       return { text: result };
     }
+    case "find_greeting_card": {
+      const cardResult = await searchGreetingCard(args.query || "", userId);
+      if (cardResult.urls.length > 0) {
+        const firstUrl = cardResult.urls[0];
+        return { text: `Нашёл красивую открытку!`, imageUrl: firstUrl };
+      }
+      const fallback = await generateImage(args.query || "", userId);
+      if (fallback.error) {
+        return { text: fallback.error };
+      }
+      return { text: "Нарисовал открытку специально!", imageUrl: fallback.url || undefined };
+    }
     case "generate_image": {
       const result = await generateImage(args.description || "", userId);
       if (result.error) {
@@ -918,6 +935,7 @@ function getToolErrorMessage(toolName: string, err: any): string {
     case "search_recipe": return "Не получилось найти рецепт. Попробуем ещё раз?";
     case "get_weather": return "Не удалось узнать погоду. Попробуем позже?";
     case "generate_image": return "Не получилось нарисовать картинку. Попробуем ещё раз?";
+    case "find_greeting_card": return "Не получилось найти открытку. Попробуем ещё раз?";
     case "search_legal": return "Не получилось найти юридическую информацию. Попробуем позже?";
     case "search_travel": return "Не получилось найти информацию о путешествии. Попробуем позже?";
     default: return "Что-то не получилось. Попробуем позже?";
@@ -1155,7 +1173,10 @@ function detectRequiredTool(message: string): string | null {
   const weatherWords = ["погод", "температур", "градус", "на улице", "дождь будет", "снег будет", "прогноз"];
   if (weatherWords.some(w => lower.includes(w))) return "get_weather";
 
-  const imageWords = ["нарисуй", "открытк", "картинк", "нарисовать", "фото блюда", "сгенерируй"];
+  const greetingCardWords = ["открытк", "поздравительн", "поздравлени"];
+  if (greetingCardWords.some(w => lower.includes(w))) return "find_greeting_card";
+
+  const imageWords = ["нарисуй", "нарисовать", "фото блюда", "сгенерируй", "картинк"];
   if (imageWords.some(w => lower.includes(w))) return "generate_image";
 
   const ambiguityMarkers = ["кажется", "вроде", "не помню", "как-то так", "наверное", "может быть", "не уверен"];
@@ -1528,11 +1549,30 @@ ${memoryLines}
   if (userId && lastUserMsg && !DANGER_INTENTS.includes(serverDetectedIntent)) {
     const repeatResult = await detectRepeatedQuestion(lastUserMsg, userId);
     if (repeatResult.isRepeat && repeatResult.cachedReply) {
-      const prefixes = [
-        "Да-да, напомню! ",
-        "Конечно, повторю! ",
-        "Ещё разок расскажу! ",
-      ];
+      let repeatFormality: "ты" | "вы" = "ты";
+      try {
+        let settingsId = userId;
+        const currentUserForRepeat = await storage.getUser(userId);
+        if (currentUserForRepeat?.role === "child" && currentUserForRepeat.linkedParentId) {
+          settingsId = currentUserForRepeat.linkedParentId;
+        }
+        const personalityForRepeat = await storage.getPersonalitySettings(settingsId);
+        if (personalityForRepeat?.formality) {
+          repeatFormality = personalityForRepeat.formality as "ты" | "вы";
+        }
+      } catch {}
+
+      const prefixes = repeatFormality === "вы"
+        ? [
+            "Конечно, напомню Вам! ",
+            "С удовольствием повторю! ",
+            "Расскажу ещё раз! ",
+          ]
+        : [
+            "Да-да, напомню! ",
+            "Конечно, повторю! ",
+            "Ещё разок расскажу! ",
+          ];
       const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
       console.log(`[ai] REPEAT-DETECT: returning cached answer for "${lastUserMsg.slice(0, 60)}"`);
       return {

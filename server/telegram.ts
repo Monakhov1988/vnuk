@@ -148,6 +148,37 @@ async function maybeSendPaywallHint(userId: number, chatId: string, ctx: any): P
   } catch {}
 }
 
+function parseBpInput(input: string): { systolic: number; diastolic: number; note: string | null } | null {
+  if (!input) return null;
+
+  const bpPattern = /^(\d{2,3})\s*[\/\-]\s*(\d{2,3})(.*)/;
+  const bpSpacePattern = /^(\d{2,3})\s+(?:на\s+)?(\d{2,3})(.*)/i;
+
+  let systolic: number | undefined;
+  let diastolic: number | undefined;
+  let rest = "";
+
+  let match = input.match(bpPattern);
+  if (match) {
+    systolic = parseInt(match[1]);
+    diastolic = parseInt(match[2]);
+    rest = match[3];
+  } else {
+    match = input.match(bpSpacePattern);
+    if (match) {
+      systolic = parseInt(match[1]);
+      diastolic = parseInt(match[2]);
+      rest = match[3];
+    }
+  }
+
+  if (!systolic || !diastolic) return null;
+  if (systolic < 60 || systolic > 260 || diastolic < 30 || diastolic > 180) return null;
+
+  const note = rest.trim() || null;
+  return { systolic, diastolic, note };
+}
+
 export let bot: Bot | null = null;
 const pendingRegistration = new Map<string, { timestamp: number }>();
 const pendingLink = new Map<string, { timestamp: number }>();
@@ -650,7 +681,7 @@ export async function startTelegramBot() {
 
   bot.callbackQuery("hint_bp", async (ctx) => {
     try { await ctx.answerCallbackQuery(); } catch {}
-    await ctx.reply("Чтобы записать давление, напишите:\n/bp 120 80\n\nГде 120 — верхнее, 80 — нижнее.\nМожно добавить заметку: /bp 130 85 после прогулки");
+    await ctx.reply("Чтобы записать давление, напишите в любом формате:\n/bp 120/80\n/bp 120 80\n/давление 130 на 85\n/bp 135-85 после прогулки\n\nГде первое число — верхнее, второе — нижнее.");
   });
 
   bot.callbackQuery("hint_meter", async (ctx) => {
@@ -789,7 +820,7 @@ export async function startTelegramBot() {
       `Отлично, ${parent.name}! Я теперь ваш Внучок в Telegram.\n\n` +
       `Просто напишите мне — поболтаем, помогу с чем нужно.\n\n` +
       `/pills — мои лекарства\n` +
-      `/bp 120 80 — записать давление\n` +
+      `/bp 120/80 — записать давление\n` +
       `Фото счётчика — передать показания`
     );
   });
@@ -887,7 +918,7 @@ export async function startTelegramBot() {
     }
   });
 
-  bot.command("bp", async (ctx) => {
+  async function handleBpCommand(ctx: any) {
     try {
       const chatId = ctx.chat.id.toString();
       const user = await storage.getUserByTelegramChatId(chatId);
@@ -896,19 +927,22 @@ export async function startTelegramBot() {
         return;
       }
 
-      const args = ctx.match?.trim().split(/\s+/) || [];
-      const systolic = parseInt(args[0]);
-      const diastolic = parseInt(args[1]);
-      const note = args.slice(2).join(" ") || null;
+      const input = ctx.match?.trim() || "";
+      const parsed = parseBpInput(input);
 
-      if (!systolic || !diastolic || systolic < 60 || systolic > 260 || diastolic < 30 || diastolic > 180) {
+      if (!parsed) {
         await ctx.reply(
           `Укажите давление после команды.\n` +
-          `Например: /bp 120 80\n` +
-          `Или с заметкой: /bp 135 85 после прогулки`
+          `Можно в любом формате:\n` +
+          `/bp 120/80\n` +
+          `/bp 120 80\n` +
+          `/давление 130 на 85\n` +
+          `/bp 135-85 после прогулки`
         );
         return;
       }
+
+      const { systolic, diastolic, note } = parsed;
 
       await storage.createHealthLog({ parentId: user.id, systolic, diastolic, note });
       await storage.createEvent({
@@ -934,6 +968,12 @@ export async function startTelegramBot() {
       console.error("[telegram] /bp error:", err);
       await ctx.reply("Произошла ошибка. Попробуйте позже.");
     }
+  }
+
+  bot.command("bp", handleBpCommand);
+  bot.hears(/^\/давление\b(.*)$/i, async (ctx) => {
+    ctx.match = ctx.match[1]?.trim() || "";
+    await handleBpCommand(ctx);
   });
 
   function getSettingsMenuKeyboard() {
@@ -1614,7 +1654,7 @@ export async function startTelegramBot() {
           `Отлично, ${parent.name}! Я теперь ваш Внучок в Telegram.\n\n` +
           `Просто напишите мне — поболтаем, помогу с чем нужно.\n\n` +
           `/pills — мои лекарства\n` +
-          `/bp 120 80 — записать давление\n` +
+          `/bp 120/80 — записать давление\n` +
           `Фото счётчика — передать показания`
         );
       } catch (err: any) {
@@ -1953,7 +1993,7 @@ export async function startTelegramBot() {
       { command: "settings", description: "Настройки бота" },
       { command: "topics", description: "Темы и экспертиза" },
       { command: "pills", description: "Напоминания о лекарствах" },
-      { command: "bp", description: "Записать давление" },
+      { command: "bp", description: "Записать давление (120/80)" },
       { command: "meter", description: "Показания счётчиков" },
       { command: "link", description: "Привязать родственника" },
     ]);

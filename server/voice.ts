@@ -78,7 +78,7 @@ export async function textToSpeech(text: string): Promise<TtsResult> {
   try {
     const response = await openai.audio.speech.create({
       model: "tts-1",
-      voice: "nova",
+      voice: "ash",
       input: trimmedText,
       response_format: "opus",
     });
@@ -94,7 +94,7 @@ export async function textToSpeech(text: string): Promise<TtsResult> {
       tokensOut: 0,
     });
 
-    console.log(`[voice] TTS: ${buffer.length} bytes for ${trimmedText.length} chars (nova/opus)`);
+    console.log(`[voice] TTS: ${buffer.length} bytes for ${trimmedText.length} chars (ash/opus)`);
     return { buffer, format: "opus" };
   } catch (err: any) {
     console.error("[voice] TTS error:", err.message);
