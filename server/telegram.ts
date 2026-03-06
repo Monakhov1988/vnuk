@@ -47,10 +47,10 @@ function isEmergencyMessage(text: string): boolean {
 }
 
 const DAILY_MESSAGE_LIMITS: Record<string, number> = {
-  none: 10,
-  basic: 30,
-  standard: 100,
-  premium: 500,
+  none: Infinity,
+  basic: Infinity,
+  standard: Infinity,
+  premium: Infinity,
 };
 
 const RATE_LIMIT_MESSAGE = "Мы сегодня хорошо поговорили! 😊 Завтра утром я снова буду рядом. А если что-то срочное — звоните 112.";

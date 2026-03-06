@@ -423,10 +423,10 @@ export async function registerRoutes(
 
   // ========== AI ENDPOINTS ==========
   const DAILY_MESSAGE_LIMITS: Record<string, number> = {
-    none: 10,
-    basic: 30,
-    standard: 100,
-    premium: 500,
+    none: Infinity,
+    basic: Infinity,
+    standard: Infinity,
+    premium: Infinity,
   };
 
   const RATE_LIMIT_MESSAGE = "На сегодня наши разговоры закончились, но завтра я снова буду рядом! Если нужна срочная помощь — звони 112.";
