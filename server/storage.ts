@@ -1,4 +1,4 @@
-import { eq, desc, and, count, gte, sql } from "drizzle-orm";
+import { eq, desc, and, or, count, gte, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import {
@@ -25,6 +25,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserLinkCode(userId: number, code: string, expiresAt?: Date): Promise<User>;
+  invalidateLinkCode(userId: number): Promise<void>;
+  consumeLinkCode(code: string): Promise<User | undefined>;
   linkParent(childId: number, parentId: number): Promise<void>;
   getLinkedParent(childId: number): Promise<User | undefined>;
   getUserByLinkCode(code: string): Promise<User | undefined>;
@@ -117,9 +119,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserLinkCode(userId: number, code: string, expiresAt?: Date): Promise<User> {
-    const expires = expiresAt || new Date(Date.now() + 72 * 60 * 60 * 1000);
+    const expires = expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000);
     const [user] = await db.update(users).set({ linkCode: code, linkCodeExpiresAt: expires }).where(eq(users.id, userId)).returning();
     return user;
+  }
+
+  async invalidateLinkCode(userId: number): Promise<void> {
+    await db.update(users).set({ linkCode: null, linkCodeExpiresAt: null }).where(eq(users.id, userId));
   }
 
   async linkParent(childId: number, parentId: number): Promise<void> {
@@ -134,6 +140,23 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByLinkCode(code: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.linkCode, code));
+    return user;
+  }
+
+  async consumeLinkCode(code: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ linkCode: null, linkCodeExpiresAt: null })
+      .where(
+        and(
+          eq(users.linkCode, code),
+          or(
+            isNull(users.linkCodeExpiresAt),
+            gte(users.linkCodeExpiresAt, new Date())
+          )
+        )
+      )
+      .returning();
     return user;
   }
 

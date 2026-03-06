@@ -1771,14 +1771,24 @@ ${memoryLines}
     iterations++;
 
     const needsLongResponse = forceToolUsed && (requiredTool === "search_recipe" || requiredTool === "search_web" || recipeToolResult !== null);
-    response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: apiMessages,
-      tools: TOOLS,
-      tool_choice: (!forceToolUsed && requiredTool) ? toolChoice : "auto",
-      max_tokens: needsLongResponse ? 1500 : 600,
-      temperature: 0.75,
-    });
+    try {
+      response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: apiMessages,
+        tools: TOOLS,
+        tool_choice: (!forceToolUsed && requiredTool) ? toolChoice : "auto",
+        max_tokens: needsLongResponse ? 1500 : 600,
+        temperature: 0.75,
+      });
+    } catch (openaiErr: any) {
+      const status = openaiErr?.status || openaiErr?.response?.status;
+      if (status === 429) {
+        console.error("[ai] OpenAI 429 rate limit hit");
+        return { reply: "Ой, я немного устал — слишком много разговоров сразу! Попробуй через пару минут, я отдохну и снова буду готов 😊", hasAlert: false, intent: "rate_limited", searchLogIds };
+      }
+      console.error("[ai] OpenAI API error:", openaiErr?.message || openaiErr);
+      return { reply: "Прости, что-то пошло не так... Попробуй написать ещё раз через минутку!", hasAlert: false, intent: "error", searchLogIds };
+    }
     forceToolUsed = true;
 
     totalTokensIn += response.usage?.prompt_tokens || 0;

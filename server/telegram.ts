@@ -47,10 +47,10 @@ function isEmergencyMessage(text: string): boolean {
 }
 
 const DAILY_MESSAGE_LIMITS: Record<string, number> = {
-  none: Infinity,
-  basic: Infinity,
-  standard: Infinity,
-  premium: Infinity,
+  none: 10,
+  basic: 30,
+  standard: 100,
+  premium: 500,
 };
 
 const RATE_LIMIT_MESSAGE = "Мы сегодня хорошо поговорили! 😊 Завтра утром я снова буду рядом. А если что-то срочное — звоните 112.";
@@ -94,6 +94,33 @@ async function checkTelegramDailyLimit(userId: number): Promise<boolean> {
 }
 
 const paywallNotifiedToday = new Map<string, string>();
+
+const linkAttempts = new Map<string, { count: number; blockedUntil: number }>();
+const LINK_MAX_ATTEMPTS = 5;
+const LINK_BLOCK_MS = 5 * 60 * 1000;
+
+function checkLinkRateLimit(chatId: string): boolean {
+  const now = Date.now();
+  const entry = linkAttempts.get(chatId);
+  if (entry && entry.blockedUntil > now) return false;
+  if (entry && entry.blockedUntil <= now && entry.count >= LINK_MAX_ATTEMPTS) {
+    linkAttempts.delete(chatId);
+  }
+  return true;
+}
+
+function recordLinkFailure(chatId: string): void {
+  const entry = linkAttempts.get(chatId) || { count: 0, blockedUntil: 0 };
+  entry.count += 1;
+  if (entry.count >= LINK_MAX_ATTEMPTS) {
+    entry.blockedUntil = Date.now() + LINK_BLOCK_MS;
+  }
+  linkAttempts.set(chatId, entry);
+}
+
+function clearLinkAttempts(chatId: string): void {
+  linkAttempts.delete(chatId);
+}
 
 const BURST_LIMIT = 3;
 const BURST_WINDOW_MS = 15_000;
@@ -820,28 +847,31 @@ export async function startTelegramBot() {
       return;
     }
 
+    if (!checkLinkRateLimit(chatId)) {
+      await ctx.reply(`Слишком много попыток. Подождите 5 минут и попробуйте снова.`);
+      return;
+    }
+
     const code = ctx.match?.trim().toUpperCase();
     if (!code || code.length < 4) {
       await ctx.reply(`Введите код привязки после команды.\nНапример: /link A1B2C3`);
       return;
     }
 
-    const parent = await storage.getUserByLinkCode(code);
+    const parent = await storage.consumeLinkCode(code);
     if (!parent) {
-      await ctx.reply(`Код не найден. Проверьте и попробуйте снова.\nКод можно посмотреть в личном кабинете на сайте.`);
-      return;
-    }
-
-    if (parent.linkCodeExpiresAt && new Date(parent.linkCodeExpiresAt) < new Date()) {
-      await ctx.reply(`Код истёк. Попросите родственника сгенерировать новый код в личном кабинете.`);
+      recordLinkFailure(chatId);
+      await ctx.reply(`Код не найден или истёк. Проверьте и попробуйте снова.\nКод можно посмотреть в личном кабинете на сайте.`);
       return;
     }
 
     if (parent.telegramChatId) {
+      recordLinkFailure(chatId);
       await ctx.reply(`Этот аккаунт уже привязан к другому Telegram.`);
       return;
     }
 
+    clearLinkAttempts(chatId);
     await storage.updateUserTelegramChatId(parent.id, chatId);
     await ctx.reply(
       `Отлично, ${parent.name}! Я теперь ваш Внучок в Telegram.\n\n` +
@@ -1658,25 +1688,28 @@ export async function startTelegramBot() {
 
     if (isPendingLink(chatId)) {
       pendingLink.delete(chatId);
+      if (!checkLinkRateLimit(chatId)) {
+        await ctx.reply(`Слишком много попыток. Подождите 5 минут и попробуйте снова.`);
+        return;
+      }
       const code = userText.trim().toUpperCase();
       if (!code || code.length < 4) {
         await ctx.reply(`Код слишком короткий. Попробуйте ещё раз — нажмите /start`);
         return;
       }
       try {
-        const parent = await storage.getUserByLinkCode(code);
+        const parent = await storage.consumeLinkCode(code);
         if (!parent) {
-          await ctx.reply(`Код не найден. Проверьте и попробуйте снова — нажмите /start`);
-          return;
-        }
-        if (parent.linkCodeExpiresAt && new Date(parent.linkCodeExpiresAt) < new Date()) {
-          await ctx.reply(`Код истёк. Попросите родственника сгенерировать новый код в личном кабинете.`);
+          recordLinkFailure(chatId);
+          await ctx.reply(`Код не найден или истёк. Проверьте и попробуйте снова — нажмите /start`);
           return;
         }
         if (parent.telegramChatId) {
+          recordLinkFailure(chatId);
           await ctx.reply(`Этот аккаунт уже привязан к другому Telegram.`);
           return;
         }
+        clearLinkAttempts(chatId);
         await storage.updateUserTelegramChatId(parent.id, chatId);
         await ctx.reply(
           `Отлично, ${parent.name}! Я теперь ваш Внучок в Telegram.\n\n` +

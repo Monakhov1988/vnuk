@@ -35,7 +35,7 @@ The system is built on a React (TypeScript, Tailwind v4) frontend, an Express (T
 -   **Voice Messaging**: Utilizes Whisper STT for speech-to-text and OpenAI TTS for text-to-speech, with quality gates for STT confidence.
 -   **Alerts**: Critical alerts from AI are forwarded to linked children via Telegram.
 -   **Bot Personality**: Configurable through natural language or settings for formality, humor, softness, verbosity, emoji use, and encouragement.
--   **Rate-limiting**: Daily message limits are enforced per tariff, with emergency messages bypassing the limit.
+-   **Rate-limiting**: Daily message limits enforced per tariff (free: 10, basic: 30, standard: 100, premium: 500), with emergency messages bypassing the limit. Graceful fallback on OpenAI 429 errors.
 
 **Backend (Express + TypeScript):**
 -   Provides a REST API (`/api/*`) with server-side sessions (express-session + connect-pg-simple) and bcrypt for password hashing.
@@ -61,6 +61,7 @@ The system is built on a React (TypeScript, Tailwind v4) frontend, an Express (T
 -   **Clarifying questions**: System prompt instructs GPT to ask 1 clarifying question before searching for: recipes (what kind?), medicine (symptoms, current meds?), products (budget, preferences?), travel (dates, budget, type?), gov services (age, status, region?), legal (details, documents?), garden (region, conditions?). Specific requests skip clarification.
 -   **Greeting card pipeline**: `find_greeting_card` with 3-level fallback (DDG → Perplexity → DALL-E), `add_text_to_card` for text overlay via sharp (SVG composite, DejaVu Serif font, Cyrillic support). `lastCardBufferByUser` cache per userId.
 -   **Telegram bot resilience**: No `drop_pending_updates` — messages sent during restart are processed. Dedup middleware prevents double-processing via `update_id` Set. Onboarding state loss shows friendly "try /start again" instead of silent ignore.
+-   **Link-code security**: One-time use (invalidated after successful link), 24h TTL, rate-limited (5 attempts per 5 min block in Telegram).
 
 **Database (PostgreSQL + Drizzle ORM):**
 -   Key tables: `users`, `subscriptions`, `reminders`, `events`, `chat_messages`, `user_memory`, `utility_metrics`, `memoirs`, `health_logs`, `waitlist`, `ai_usage_logs`, `topic_settings`, `personality_settings`.

@@ -3,7 +3,7 @@ import { type Server } from "http";
 import rateLimit from "express-rate-limit";
 import crypto from "crypto";
 import { storage } from "./storage";
-import { chatWithGrandchild, recognizeMeter, analyzeIntent } from "./ai";
+import { chatWithGrandchild, recognizeMeter, analyzeIntent, detectIntentLocal } from "./ai";
 import { extractDishFromText, RECIPE_CLARIFICATIONS } from "./recipeUtils";
 import {
   insertReminderSchema,
@@ -217,12 +217,9 @@ export async function registerRoutes(
       const data = validateBody(linkSchema, req, res);
       if (!data) return;
       const childId = req.session.userId!;
-      const parent = await storage.getUserByLinkCode(data.linkCode.trim().toUpperCase());
+      const parent = await storage.consumeLinkCode(data.linkCode.trim().toUpperCase());
       if (!parent) {
-        return res.status(404).json({ message: "Код не найден. Проверьте и попробуйте снова." });
-      }
-      if (parent.linkCodeExpiresAt && new Date(parent.linkCodeExpiresAt) < new Date()) {
-        return res.status(400).json({ message: "Код истёк. Попросите родителя сгенерировать новый код." });
+        return res.status(404).json({ message: "Код не найден или истёк. Проверьте и попробуйте снова." });
       }
       await storage.linkParent(childId, parent.id);
       return res.json({ parentId: parent.id, parentName: parent.name });
@@ -426,10 +423,10 @@ export async function registerRoutes(
 
   // ========== AI ENDPOINTS ==========
   const DAILY_MESSAGE_LIMITS: Record<string, number> = {
-    none: Infinity,
-    basic: Infinity,
-    standard: Infinity,
-    premium: Infinity,
+    none: 10,
+    basic: 30,
+    standard: 100,
+    premium: 500,
   };
 
   const RATE_LIMIT_MESSAGE = "На сегодня наши разговоры закончились, но завтра я снова буду рядом! Если нужна срочная помощь — звони 112.";
@@ -484,17 +481,22 @@ export async function registerRoutes(
       const parent = user?.linkedParentId ? await storage.getUser(user.linkedParentId) : null;
 
       const parentId = user?.role === "parent" ? userId : (user?.linkedParentId ?? userId);
-      const rateLimitCheck = await checkDailyMessageLimit(parentId);
-      if (!rateLimitCheck.allowed) {
-        return res.json({
-          reply: RATE_LIMIT_MESSAGE,
-          hasAlert: false,
-          intent: "rate_limited",
-          imageUrl: null,
-        });
+      const lastUserMsg = messages[messages.length - 1]?.content || "";
+      const emergencyIntents = ["emergency", "scam", "home_danger", "lost", "financial_risk"];
+      const isEmergency = emergencyIntents.includes(detectIntentLocal(lastUserMsg, false));
+
+      if (!isEmergency) {
+        const rateLimitCheck = await checkDailyMessageLimit(parentId);
+        if (!rateLimitCheck.allowed) {
+          return res.json({
+            reply: RATE_LIMIT_MESSAGE,
+            hasAlert: false,
+            intent: "rate_limited",
+            imageUrl: null,
+          });
+        }
       }
 
-      const lastUserMsg = messages[messages.length - 1]?.content || "";
       const extractedDish = extractDishFromText(lastUserMsg);
       const clarification = extractedDish ? RECIPE_CLARIFICATIONS[extractedDish] : null;
       if (clarification) {
