@@ -1654,7 +1654,8 @@ ${memoryLines}
   const DANGER_INTENTS = ["emergency", "scam", "home_danger", "lost", "financial_risk"];
   const serverDetectedIntent = detectIntentLocal(lastUserMsg, false);
 
-  if (userId && lastUserMsg && !DANGER_INTENTS.includes(serverDetectedIntent)) {
+  const skipRepeatDetection = /открытк|поздравлен|нарисуй|картинк|сгенерир|генерир|изображен/.test(lastUserMsg.toLowerCase());
+  if (userId && lastUserMsg && !DANGER_INTENTS.includes(serverDetectedIntent) && !skipRepeatDetection) {
     const repeatResult = await detectRepeatedQuestion(lastUserMsg, userId);
     if (repeatResult.isRepeat && repeatResult.cachedReply) {
       let repeatFormality: "ты" | "вы" = "ты";
