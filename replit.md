@@ -57,7 +57,10 @@ The system is built on a React (TypeScript, Tailwind v4) frontend, an Express (T
 -   **`extractMemoryFacts`**: Automatically extracts and deduplicates facts from user messages into categories (family, health, hobbies) for long-term memory, which are then injected into the system prompt.
 -   **Telegram typing indicator**: Provides real-time status updates during AI processing.
 -   **Search Result Verification**: `verifySearchResult()` re-checks critical search data (dates, times, events) to add a warning if not confirmed.
--   **`detectRequiredTool`**: Intelligently routes user requests to appropriate tools based on context.
+-   **`detectRequiredTool`**: Intelligently routes user requests to appropriate tools based on context. For vague queries (no specific details), returns `null` to allow GPT to ask clarifying questions before searching. For specific queries, forces the appropriate tool.
+-   **Clarifying questions**: System prompt instructs GPT to ask 1 clarifying question before searching for: recipes (what kind?), medicine (symptoms, current meds?), products (budget, preferences?), travel (dates, budget, type?), gov services (age, status, region?), legal (details, documents?), garden (region, conditions?). Specific requests skip clarification.
+-   **Greeting card pipeline**: `find_greeting_card` with 3-level fallback (DDG → Perplexity → DALL-E), `add_text_to_card` for text overlay via sharp (SVG composite, DejaVu Serif font, Cyrillic support). `lastCardBufferByUser` cache per userId.
+-   **Telegram bot resilience**: No `drop_pending_updates` — messages sent during restart are processed. Dedup middleware prevents double-processing via `update_id` Set. Onboarding state loss shows friendly "try /start again" instead of silent ignore.
 
 **Database (PostgreSQL + Drizzle ORM):**
 -   Key tables: `users`, `subscriptions`, `reminders`, `events`, `chat_messages`, `user_memory`, `utility_metrics`, `memoirs`, `health_logs`, `waitlist`, `ai_usage_logs`, `topic_settings`, `personality_settings`.

@@ -618,7 +618,10 @@ export async function startTelegramBot() {
       try { await ctx.answerCallbackQuery(); } catch {}
 
       const state = onboardingState.get(chatId);
-      if (!state || state.step !== "age") return;
+      if (!state || state.step !== "age") {
+        await ctx.reply("Извините, потеряли контекст. Нажмите /start чтобы начать заново.");
+        return;
+      }
 
       if (ageCallback !== "onb_age_skip") {
         const ageLabel = ageCallback === "onb_age_55" ? "55–60" : ageCallback === "onb_age_60" ? "60–70" : "старше 70";
