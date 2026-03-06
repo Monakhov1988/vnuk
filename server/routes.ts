@@ -572,11 +572,16 @@ export async function registerRoutes(
         hasAlert: result.hasAlert,
       });
 
+      let imageUrl = result.imageUrl || null;
+      if (!imageUrl && result.imageBuffer) {
+        imageUrl = `data:image/jpeg;base64,${result.imageBuffer.toString("base64")}`;
+      }
+
       return res.json({
         reply: result.reply,
         hasAlert: result.hasAlert,
         intent: result.intent,
-        imageUrl: result.imageUrl || null,
+        imageUrl,
       });
     } catch (e: any) {
       return res.status(500).json({ message: "Ошибка AI: " + e.message });

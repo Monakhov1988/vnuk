@@ -7,6 +7,12 @@ import { extractDishFromText, RECIPE_CLARIFICATIONS } from "./recipeUtils";
 import { TOPIC_CATEGORIES, TOPIC_CATALOG } from "./topicCatalog";
 import bcrypt from "bcrypt";
 
+function getPhotoSource(result: { imageUrl?: string; imageBuffer?: Buffer }): string | InputFile | null {
+  if (result.imageBuffer) return new InputFile(result.imageBuffer, "card.jpg");
+  if (result.imageUrl) return result.imageUrl;
+  return null;
+}
+
 function detectPersonalitySettingsIntent(text: string): { changes: Record<string, any>; confirmation: string } | null {
   const lower = text.toLowerCase().trim();
   if (lower.length > 40) return null;
@@ -754,9 +760,10 @@ export async function startTelegramBot() {
             .text("👎 Неточно", `sqfb:negative:${logId}`);
         }
 
-        if (result.imageUrl) {
+        const photoSrc = getPhotoSource(result);
+        if (photoSrc) {
           try {
-            await ctx.replyWithPhoto(result.imageUrl, { caption: result.reply.slice(0, 1024) });
+            await ctx.replyWithPhoto(photoSrc, { caption: result.reply.slice(0, 1024) });
           } catch {
             await ctx.reply(result.reply);
           }
@@ -1516,13 +1523,14 @@ export async function startTelegramBot() {
         }
       }
 
-      if (result.imageUrl) {
+      const voicePhotoSrc = getPhotoSource(result);
+      if (voicePhotoSrc) {
         try {
           if (result.reply.length > 1024) {
             await ctx.reply(result.reply);
-            await ctx.replyWithPhoto(result.imageUrl);
+            await ctx.replyWithPhoto(voicePhotoSrc);
           } else {
-            await ctx.replyWithPhoto(result.imageUrl, {
+            await ctx.replyWithPhoto(voicePhotoSrc, {
               caption: result.reply,
             });
           }
@@ -1537,7 +1545,7 @@ export async function startTelegramBot() {
         await ctx.replyWithVoice(new InputFile(ttsResult.buffer, `response.ogg`));
       } catch (ttsErr) {
         console.error("[telegram] TTS failed, sending text:", ttsErr);
-        if (!result.imageUrl) {
+        if (!voicePhotoSrc) {
           await ctx.reply(result.reply);
         }
       }
@@ -1763,9 +1771,10 @@ export async function startTelegramBot() {
           }
         }
 
-        if (result.imageUrl) {
+        const photoSrc3 = getPhotoSource(result);
+        if (photoSrc3) {
           try {
-            await ctx.replyWithPhoto(result.imageUrl, { caption: result.reply.slice(0, 1024) });
+            await ctx.replyWithPhoto(photoSrc3, { caption: result.reply.slice(0, 1024) });
           } catch {
             await ctx.reply(result.reply);
           }
@@ -1940,13 +1949,14 @@ export async function startTelegramBot() {
         }
       }
 
-      if (result.imageUrl) {
+      const photoSrc4 = getPhotoSource(result);
+      if (photoSrc4) {
         try {
           if (result.reply.length > 1024) {
             await ctx.reply(result.reply);
-            await ctx.replyWithPhoto(result.imageUrl);
+            await ctx.replyWithPhoto(photoSrc4);
           } else {
-            await ctx.replyWithPhoto(result.imageUrl, {
+            await ctx.replyWithPhoto(photoSrc4, {
               caption: result.reply,
             });
           }

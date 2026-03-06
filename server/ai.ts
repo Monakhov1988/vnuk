@@ -768,7 +768,7 @@ async function executeToolCall(
   toolName: string,
   args: Record<string, string>,
   userId?: number
-): Promise<{ text: string; imageUrl?: string }> {
+): Promise<{ text: string; imageUrl?: string; imageBuffer?: Buffer }> {
   switch (toolName) {
     case "get_weather": {
       if (!args.city) {
@@ -787,9 +787,8 @@ async function executeToolCall(
     }
     case "find_greeting_card": {
       const cardResult = await searchGreetingCard(args.query || "", userId);
-      if (cardResult.urls.length > 0) {
-        const firstUrl = cardResult.urls[0];
-        return { text: `Нашёл красивую открытку!`, imageUrl: firstUrl };
+      if (cardResult.buffer) {
+        return { text: `Нашёл красивую открытку!`, imageBuffer: cardResult.buffer };
       }
       const fallback = await generateImage(args.query || "", userId);
       if (fallback.error) {
@@ -946,7 +945,7 @@ async function executeToolCallWithRetry(
   toolName: string,
   args: Record<string, string>,
   userId?: number
-): Promise<{ text: string; imageUrl?: string }> {
+): Promise<{ text: string; imageUrl?: string; imageBuffer?: Buffer }> {
   try {
     return await executeToolCall(toolName, args, userId);
   } catch (err: any) {
@@ -1415,7 +1414,7 @@ export async function chatWithGrandchild(
   userId?: number,
   onToolCall?: (toolName: string) => void,
   onResearchStatus?: (status: string) => void
-): Promise<{ reply: string; hasAlert: boolean; intent: string; imageUrl?: string; searchLogIds?: number[] }> {
+): Promise<{ reply: string; hasAlert: boolean; intent: string; imageUrl?: string; imageBuffer?: Buffer; searchLogIds?: number[] }> {
   const { hours, minutes, timeOfDay, day, month, year } = getMoscowTime();
   const timeStr = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 
@@ -1600,6 +1599,7 @@ ${memoryLines}
   ];
 
   let imageUrl: string | undefined;
+  let imageBuffer: Buffer | undefined;
   const searchLogIds: number[] = [];
   let totalTokensIn = 0;
   let totalTokensOut = 0;
@@ -1725,6 +1725,9 @@ ${memoryLines}
       if (toolResult.imageUrl) {
         imageUrl = toolResult.imageUrl;
       }
+      if (toolResult.imageBuffer) {
+        imageBuffer = toolResult.imageBuffer;
+      }
 
       if (fnName === "search_recipe") {
         recipeToolResult = toolResult.text;
@@ -1792,6 +1795,7 @@ ${memoryLines}
     hasAlert,
     intent,
     imageUrl,
+    imageBuffer,
     searchLogIds: searchLogIds.length > 0 ? searchLogIds : undefined,
   };
   });
