@@ -507,6 +507,23 @@ export async function startTelegramBot() {
 
   bot = new Bot(token);
 
+  const processedUpdateIds = new Set<number>();
+  const MAX_PROCESSED_IDS = 500;
+
+  bot.use(async (ctx, next) => {
+    const updateId = ctx.update.update_id;
+    if (processedUpdateIds.has(updateId)) {
+      console.log(`[telegram] Duplicate update ${updateId} skipped`);
+      return;
+    }
+    processedUpdateIds.add(updateId);
+    if (processedUpdateIds.size > MAX_PROCESSED_IDS) {
+      const oldest = processedUpdateIds.values().next().value;
+      if (oldest !== undefined) processedUpdateIds.delete(oldest);
+    }
+    await next();
+  });
+
   bot.command("start", async (ctx) => {
     const chatId = ctx.chat.id.toString();
     console.log("[telegram] /start command received from chat:", chatId);
@@ -2019,11 +2036,10 @@ export async function startTelegramBot() {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         await bot.start({
-          drop_pending_updates: true,
           onStart: () => {
             botReady = true;
             (bot as any).__ready = true;
-            console.log("[telegram] Bot started successfully (pending updates dropped)");
+            console.log("[telegram] Bot started successfully");
           },
         });
         return;
@@ -2044,7 +2060,6 @@ export async function startTelegramBot() {
       console.log("[telegram] Attempting bot recovery...");
       try {
         await bot.start({
-          drop_pending_updates: true,
           onStart: () => {
             botReady = true;
             (bot as any).__ready = true;
