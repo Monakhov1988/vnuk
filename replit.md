@@ -49,7 +49,8 @@ The system is built on a React (TypeScript, Tailwind v4) frontend, an Express (T
 -   **Six-level safety system**: Anti-injection, health, alarm ([ALERT]), fraud, home danger (gas/flood/fire + [ALERT]), lost ([ALERT]). Emergency situations recommend 112. Alerts are dynamically adapted based on whether a child is linked.
 -   **Server-side danger detection**: `detectIntentLocal()` uses regex patterns to identify emergencies *before* LLM processing, ensuring critical alerts are always triggered.
 -   **Data Protection**: PII filter (`stripPII`) removes sensitive information (card numbers, phones, etc.) from search queries. AI explicitly avoids repeating personal data from memory.
--   **Anti-hallucination**: Strict prompts prevent AI from diagnosing illnesses or interpreting analyses.
+-   **Anti-hallucination**: Strict prompts prevent AI from diagnosing illnesses or interpreting analyses. Recipe tool MUST show only search results, NEVER invent.
+-   **Recipe pipeline**: Searches step-by-step recipes with photos from trusted Russian cooking sites (povar.ru, povarenok.ru, eda.ru, gastronom.ru). Returns direct links to specific recipe pages (from Perplexity citations), not generic search results. Fallback to generic search URLs when no citations available.
 -   **Search Pipeline**: A multi-source pipeline (Perplexity sonar, DuckDuckGo) for web, movie, TV searches, with GPT-4o-mini for merging and cross-validation for critical information (gov/legal/medicine/transport).
 -   **Search Quality Logging**: Tracks search queries, sources, merge strategies, validation results, and user feedback.
 -   **Tool-calling**: Extensive set of function-calling tools including `get_weather`, `search_web`, `search_recipe`, `find_greeting_card`, `generate_image`, `search_cinema`, `search_movie`, `search_place`, `search_transport`, `search_clinic`, `search_medicine`, `search_tv`, `search_gov_services`, `search_garden`, `search_product`, `search_legal`, `search_travel`.

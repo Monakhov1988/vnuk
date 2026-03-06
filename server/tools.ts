@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import sharp from "sharp";
 import { storage } from "./storage";
-import { searchPipeline, searchPipelineText, todayDateRu, currentMonthRu, fullDateRu } from "./searchPipeline";
+import { searchPipeline, searchPipelineText, searchPipelineWithCitations, todayDateRu, currentMonthRu, fullDateRu } from "./searchPipeline";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -596,7 +596,9 @@ export async function searchRecipe(dish: string, userId?: number): Promise<strin
 5. Калорийность (если есть на сайте-источнике)
 6. Источник рецепта (название сайта)`;
 
-  let result = await searchPipelineText({
+  const RECIPE_DOMAINS = ["povar.ru", "povarenok.ru", "russianfood.com", "eda.ru", "gastronom.ru", "1000.menu", "recepty.allwomens.ru", "gotovim-doma.ru"];
+
+  const pipelineResult = await searchPipelineWithCitations({
     toolName: "recipe",
     cacheKey: `pipeline:recipe:${safeDish.toLowerCase()}`,
     cacheTtl: RECIPE_TTL,
@@ -604,24 +606,40 @@ export async function searchRecipe(dish: string, userId?: number): Promise<strin
     queries: [
       {
         label: "folk",
-        systemPrompt: `Ты помогаешь найти проверенный народный рецепт блюда. Ищи на кулинарных сайтах: povar.ru, russianfood.com — народные проверенные рецепты. ${recipeFields}\n\n${commonRules}\n\n${safetyRules}\n\nДата сегодня: ${todayDateRu()}`,
-        userMessage: `Рецепт: ${safeDish}`,
+        systemPrompt: `Ты помогаешь найти проверенный пошаговый рецепт блюда с фотографиями. Ищи на кулинарных сайтах: povar.ru, povarenok.ru, russianfood.com — народные проверенные рецепты с пошаговыми фото. Предпочитай рецепты с высоким рейтингом и большим количеством отзывов. ${recipeFields}\n\n${commonRules}\n\n${safetyRules}\n\nДата сегодня: ${todayDateRu()}`,
+        userMessage: `Пошаговый рецепт с фото: ${safeDish}`,
         maxTokens: 800,
         temperature: 0.3,
       },
       {
         label: "pro",
-        systemPrompt: `Ты помогаешь найти профессиональный рецепт блюда. Ищи на кулинарных сайтах: eda.ru, gastronom.ru — профессиональные рецепты. ${recipeFields}\n\n${commonRules}\n\n${safetyRules}\n\nДата сегодня: ${todayDateRu()}`,
-        userMessage: `Рецепт: ${safeDish}`,
+        systemPrompt: `Ты помогаешь найти профессиональный пошаговый рецепт блюда с фотографиями. Ищи на кулинарных сайтах: eda.ru, gastronom.ru — профессиональные рецепты с пошаговыми фото. Предпочитай рецепты с высоким рейтингом. ${recipeFields}\n\n${commonRules}\n\n${safetyRules}\n\nДата сегодня: ${todayDateRu()}`,
+        userMessage: `Пошаговый рецепт с фото: ${safeDish}`,
         maxTokens: 800,
         temperature: 0.3,
       },
     ],
     mergeStrategy: "best",
     mergePrompt: "Выбери лучший рецепт из двух источников. Критерии: точные пропорции, полный список ингредиентов, понятные пошаговые инструкции. Выведи ОДИН лучший рецепт. Если оба хороши — объедини лучшее из каждого. Пиши простым текстом без маркдауна.",
-    suffix: `\n\nЕщё рецепты с фотографиями:\nhttps://www.povarenok.ru/search/name/${encodeURIComponent(safeDish)}/\nhttps://eda.ru/search?q=${encodeURIComponent(safeDish)}`,
     errorMessage: "Не удалось найти рецепт. Попробуйте позже.",
   });
+
+  let result = pipelineResult.text;
+
+  const recipeCitations = pipelineResult.citations
+    .filter(url => {
+      try {
+        const hostname = new URL(url).hostname.replace(/^www\./, "");
+        return RECIPE_DOMAINS.some(d => hostname === d || hostname.endsWith("." + d));
+      } catch { return false; }
+    })
+    .slice(0, 3);
+
+  if (recipeCitations.length > 0) {
+    result += `\n\nРецепт с пошаговыми фото:\n${recipeCitations.map(url => url).join("\n")}`;
+  } else {
+    result += `\n\nЕщё рецепты с фотографиями:\nhttps://www.povarenok.ru/search/name/${encodeURIComponent(safeDish)}/\nhttps://eda.ru/search?q=${encodeURIComponent(safeDish)}`;
+  }
 
   result = addRecipeSafetyWarnings(result, safeDish);
   setCache(cacheKey, result, RECIPE_TTL);
@@ -884,59 +902,6 @@ export async function searchGreetingCard(query: string, userId?: number): Promis
   }
 }
 
-export async function overlayTextOnCard(imageBuffer: Buffer, text: string): Promise<Buffer> {
-  const metadata = await sharp(imageBuffer).metadata();
-  const imgWidth = metadata.width || 800;
-  const imgHeight = metadata.height || 600;
-
-  const cleanText = text.trim().slice(0, 200);
-
-  const maxCharsPerLine = Math.max(15, Math.floor(imgWidth / 28));
-  const words = cleanText.split(/\s+/);
-  const lines: string[] = [];
-  let currentLine = "";
-  for (const word of words) {
-    if (currentLine.length + word.length + 1 > maxCharsPerLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = currentLine ? currentLine + " " + word : word;
-    }
-  }
-  if (currentLine) lines.push(currentLine);
-
-  const lineCount = lines.length;
-  let fontSize = Math.max(18, Math.min(56, Math.floor(imgWidth / 16)));
-  if (lineCount > 3) fontSize = Math.max(16, Math.floor(fontSize * 0.8));
-  if (lineCount > 5) fontSize = Math.max(14, Math.floor(fontSize * 0.75));
-  const lineHeight = fontSize * 1.4;
-
-  const blockHeight = lineCount * lineHeight + fontSize;
-  const paddingY = fontSize * 0.5;
-  const bgHeight = blockHeight + paddingY * 2;
-  const bgY = imgHeight - bgHeight - fontSize * 0.3;
-
-  const escapedLines = lines.map(l =>
-    l.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-  );
-
-  const textElements = escapedLines.map((line, i) => {
-    const y = bgY + paddingY + fontSize + i * lineHeight;
-    return `<text x="${imgWidth / 2}" y="${y}" font-family="DejaVu Serif, serif" font-size="${fontSize}" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="auto" stroke="#333" stroke-width="1.5" paint-order="stroke">${line}</text>`;
-  }).join("\n    ");
-
-  const svgOverlay = `<svg width="${imgWidth}" height="${imgHeight}">
-    <rect x="0" y="${bgY}" width="${imgWidth}" height="${bgHeight}" rx="12" fill="rgba(0,0,0,0.45)"/>
-    ${textElements}
-  </svg>`;
-
-  const result = await sharp(imageBuffer)
-    .composite([{ input: Buffer.from(svgOverlay), top: 0, left: 0 }])
-    .jpeg({ quality: 90 })
-    .toBuffer();
-
-  return result;
-}
 
 export async function searchMovie(query: string, userId?: number): Promise<string> {
   const safeQuery = stripPII(query);

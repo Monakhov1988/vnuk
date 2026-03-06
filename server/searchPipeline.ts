@@ -100,6 +100,7 @@ export interface PipelineConfig {
 export interface PipelineResult {
   text: string;
   logId?: number;
+  citations?: string[];
 }
 
 interface PerplexityResult {
@@ -391,7 +392,16 @@ export async function searchPipeline(config: PipelineConfig): Promise<PipelineRe
       // non-critical
     }
 
-    const result: PipelineResult = { text: mergedResult, logId };
+    const allCitations: string[] = [];
+    for (const r of successResults) {
+      if (r.citations) {
+        for (const c of r.citations) {
+          if (!allCitations.includes(c)) allCitations.push(c);
+        }
+      }
+    }
+
+    const result: PipelineResult = { text: mergedResult, logId, citations: allCitations.length > 0 ? allCitations : undefined };
     setPipelineCache(cacheKey, result, cacheTtl);
     return result;
   } catch (err: any) {
@@ -411,6 +421,15 @@ export async function searchPipelineText(config: PipelineConfig): Promise<string
     if (store) store.push(result.logId);
   }
   return result.text;
+}
+
+export async function searchPipelineWithCitations(config: PipelineConfig): Promise<{ text: string; citations: string[] }> {
+  const result = await searchPipeline(config);
+  if (result.logId) {
+    const store = pipelineLogStorage.getStore();
+    if (store) store.push(result.logId);
+  }
+  return { text: result.text, citations: result.citations || [] };
 }
 
 export function todayDateRu(): string {
