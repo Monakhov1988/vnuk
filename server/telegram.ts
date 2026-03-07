@@ -799,14 +799,6 @@ export async function startTelegramBot() {
           hasAlert: result.hasAlert,
         });
 
-        let feedbackKeyboard: InlineKeyboard | undefined;
-        if (result.searchLogIds && result.searchLogIds.length > 0) {
-          const logId = result.searchLogIds[result.searchLogIds.length - 1];
-          feedbackKeyboard = new InlineKeyboard()
-            .text("👍 Полезно", `sqfb:positive:${logId}`)
-            .text("👎 Неточно", `sqfb:negative:${logId}`);
-        }
-
         const photoSrc = getPhotoSource(result);
         if (photoSrc) {
           try {
@@ -815,7 +807,7 @@ export async function startTelegramBot() {
             await ctx.reply(result.reply);
           }
         } else {
-          await ctx.reply(result.reply, feedbackKeyboard ? { reply_markup: feedbackKeyboard } : undefined);
+          await ctx.reply(result.reply);
         }
         return;
       }
@@ -1832,14 +1824,7 @@ export async function startTelegramBot() {
             await ctx.reply(result.reply);
           }
         } else {
-          let feedbackKb: InlineKeyboard | undefined;
-          if (result.searchLogIds && result.searchLogIds.length > 0) {
-            const logId = result.searchLogIds[result.searchLogIds.length - 1];
-            feedbackKb = new InlineKeyboard()
-              .text("👍 Полезно", `sqfb:positive:${logId}`)
-              .text("👎 Неточно", `sqfb:negative:${logId}`);
-          }
-          await ctx.reply(result.reply, feedbackKb ? { reply_markup: feedbackKb } : undefined);
+          await ctx.reply(result.reply);
         }
         await maybeSendPaywallHint(user.id, chatId, ctx);
         return;
@@ -2018,14 +2003,7 @@ export async function startTelegramBot() {
           await ctx.reply(result.reply);
         }
       } else {
-        let feedbackKb: InlineKeyboard | undefined;
-        if (result.searchLogIds && result.searchLogIds.length > 0) {
-          const logId = result.searchLogIds[result.searchLogIds.length - 1];
-          feedbackKb = new InlineKeyboard()
-            .text("👍 Полезно", `sqfb:positive:${logId}`)
-            .text("👎 Неточно", `sqfb:negative:${logId}`);
-        }
-        await ctx.reply(result.reply, feedbackKb ? { reply_markup: feedbackKb } : undefined);
+        await ctx.reply(result.reply);
       }
 
       const wantsVoice = /голос(ом|ом\s|овое)|поговори(ть|м)?\s*(голосом)?|хочу.*голос|скажи\s*голосом|аудио/i.test(userText);
