@@ -24,6 +24,10 @@ function getCached<T>(key: string): T | null {
 
 const MAX_CACHE_SIZE = 1000;
 
+export function deleteCache(key: string): void {
+  cache.delete(key);
+}
+
 function setCache<T>(key: string, data: T, ttlMs: number): void {
   if (cache.size >= MAX_CACHE_SIZE) {
     const firstKey = cache.keys().next().value;
@@ -641,8 +645,6 @@ export async function searchRecipe(dish: string, userId?: number): Promise<strin
   } else {
     result += `\n\nЕщё рецепты с фотографиями:\nhttps://www.povarenok.ru/search/name/${encodeURIComponent(safeDish)}/\nhttps://eda.ru/search?q=${encodeURIComponent(safeDish)}`;
   }
-
-  result += `\n\n[ИНСТРУКЦИЯ ДЛЯ АССИСТЕНТА: В конце ответа ОБЯЗАТЕЛЬНО спроси пользователя: «Хочешь, поищу другой вариант? Например, побыстрее, посытнее или на другом тесте?»]`;
 
   result = addRecipeSafetyWarnings(result, safeDish);
   setCache(cacheKey, result, RECIPE_TTL);

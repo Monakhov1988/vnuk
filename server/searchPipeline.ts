@@ -57,6 +57,10 @@ function getPipelineCached<T>(key: string): T | null {
 
 const MAX_PIPELINE_CACHE_SIZE = 500;
 
+export function deletePipelineCache(key: string): void {
+  pipelineCache.delete(key);
+}
+
 function setPipelineCache<T>(key: string, data: T, ttlMs: number): void {
   if (pipelineCache.size >= MAX_PIPELINE_CACHE_SIZE) {
     const firstKey = pipelineCache.keys().next().value;

@@ -3,6 +3,8 @@ import crypto from "crypto";
 import { storage } from "./storage";
 import { chatWithGrandchild, recognizeMeter, detectIntentLocal } from "./ai";
 import { speechToText, textToSpeech } from "./voice";
+import { searchRecipe, deleteCache } from "./tools";
+import { deletePipelineCache } from "./searchPipeline";
 import { extractDishFromText, RECIPE_CLARIFICATIONS } from "./recipeUtils";
 import { TOPIC_CATEGORIES, TOPIC_CATALOG } from "./topicCatalog";
 import bcrypt from "bcrypt";
@@ -11,6 +13,12 @@ function getPhotoSource(result: { imageUrl?: string; imageBuffer?: Buffer }): st
   if (result.imageBuffer) return new InputFile(result.imageBuffer, "card.jpg");
   if (result.imageUrl) return result.imageUrl;
   return null;
+}
+
+function buildRecipeKeyboard(dish?: string): InlineKeyboard | undefined {
+  if (!dish) return undefined;
+  const safeDish = dish.slice(0, 50);
+  return new InlineKeyboard().text("🔄 Другой рецепт", `recipe:alt:${safeDish}`);
 }
 
 function detectPersonalitySettingsIntent(text: string): { changes: Record<string, any>; confirmation: string } | null {
@@ -800,6 +808,7 @@ export async function startTelegramBot() {
         });
 
         const photoSrc = getPhotoSource(result);
+        const recipeKb = buildRecipeKeyboard(result.recipeDish);
         if (photoSrc) {
           try {
             await ctx.replyWithPhoto(photoSrc, { caption: result.reply.slice(0, 1024) });
@@ -807,7 +816,7 @@ export async function startTelegramBot() {
             await ctx.reply(result.reply);
           }
         } else {
-          await ctx.reply(result.reply);
+          await ctx.reply(result.reply, recipeKb ? { reply_markup: recipeKb } : undefined);
         }
         return;
       }
@@ -1197,6 +1206,42 @@ export async function startTelegramBot() {
     } catch (err) {
       console.error("[telegram] sqfb error:", err);
       try { await ctx.answerCallbackQuery({ text: "Не удалось сохранить" }); } catch {}
+    }
+  });
+
+  bot.callbackQuery(/^recipe:alt:(.+)$/, async (ctx) => {
+    const dish = ctx.match[1];
+    const chatId = ctx.chat?.id;
+    if (!chatId) return;
+    try {
+      await ctx.answerCallbackQuery({ text: "Ищу другой рецепт..." });
+      await ctx.api.sendChatAction(chatId, "typing");
+
+      const user = await storage.getUserByTelegramChatId(String(chatId));
+      deleteCache(`recipe:${dish.toLowerCase()}`);
+      deletePipelineCache(`pipeline:recipe:${dish.toLowerCase()}`);
+
+      const result = await searchRecipe(dish, user?.id);
+      const recipeKb = buildRecipeKeyboard(dish);
+
+      const urlMatches = result.match(/https?:\/\/[^\s\]]+/g);
+      let replyText = result;
+      if (replyText.includes("[ИНСТРУКЦИЯ")) {
+        replyText = replyText.replace(/\[ИНСТРУКЦИЯ ДЛЯ АССИСТЕНТА:[^\]]*\]/g, "").trim();
+      }
+
+      await ctx.reply(replyText.slice(0, 4000), recipeKb ? { reply_markup: recipeKb } : undefined);
+
+      if (user) {
+        await storage.createChatMessage({
+          parentId: user.id,
+          role: "assistant",
+          content: replyText.slice(0, 2000),
+        });
+      }
+    } catch (err) {
+      console.error("[telegram] recipe:alt error:", err);
+      await ctx.reply("Не удалось найти другой рецепт, попробуй позже.");
     }
   });
 
@@ -1817,6 +1862,7 @@ export async function startTelegramBot() {
         }
 
         const photoSrc3 = getPhotoSource(result);
+        const recipeKb3 = buildRecipeKeyboard(result.recipeDish);
         if (photoSrc3) {
           try {
             await ctx.replyWithPhoto(photoSrc3, { caption: result.reply.slice(0, 1024) });
@@ -1824,7 +1870,7 @@ export async function startTelegramBot() {
             await ctx.reply(result.reply);
           }
         } else {
-          await ctx.reply(result.reply);
+          await ctx.reply(result.reply, recipeKb3 ? { reply_markup: recipeKb3 } : undefined);
         }
         await maybeSendPaywallHint(user.id, chatId, ctx);
         return;
@@ -2003,7 +2049,8 @@ export async function startTelegramBot() {
           await ctx.reply(result.reply);
         }
       } else {
-        await ctx.reply(result.reply);
+        const recipeKb4 = buildRecipeKeyboard(result.recipeDish);
+        await ctx.reply(result.reply, recipeKb4 ? { reply_markup: recipeKb4 } : undefined);
       }
 
       const wantsVoice = /голос(ом|ом\s|овое)|поговори(ть|м)?\s*(голосом)?|хочу.*голос|скажи\s*голосом|аудио/i.test(userText);
