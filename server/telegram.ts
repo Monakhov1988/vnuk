@@ -559,6 +559,25 @@ export async function startTelegramBot() {
     await next();
   });
 
+  const groupNotified = new Set<string>();
+  bot.use(async (ctx, next) => {
+    const chatType = ctx.chat?.type;
+    if (chatType === "group" || chatType === "supergroup") {
+      const groupId = ctx.chat!.id.toString();
+      if (!groupNotified.has(groupId)) {
+        groupNotified.add(groupId);
+        const botUsername = ctx.me.username ? `@${ctx.me.username}` : "мне в личные сообщения";
+        try {
+          await ctx.reply(
+            `Привет! Я Внучок — личный помощник. Я работаю только в личных сообщениях. Напишите мне напрямую: ${botUsername}`
+          );
+        } catch {}
+      }
+      return;
+    }
+    await next();
+  });
+
   bot.command("start", async (ctx) => {
     const chatId = ctx.chat.id.toString();
     console.log("[telegram] /start command received from chat:", chatId);
@@ -1644,6 +1663,51 @@ export async function startTelegramBot() {
     }
   });
 
+  bot.on(["message:sticker", "message:animation"], async (ctx) => {
+    try {
+      await ctx.reply("Ой, красивый стикер! 😊 Но я пока умею работать только с текстом, голосом и фото. Напиши мне текстом — помогу!");
+    } catch (err) {
+      console.error("[telegram] Sticker/animation handler error:", err);
+    }
+  });
+
+  bot.on("message:document", async (ctx) => {
+    try {
+      await ctx.reply("Я пока не умею читать файлы и документы. Если нужна помощь — перескажи мне текстом, что там написано?");
+    } catch (err) {
+      console.error("[telegram] Document handler error:", err);
+    }
+  });
+
+  bot.on("message:location", async (ctx) => {
+    try {
+      const chatId = ctx.chat.id.toString();
+      const user = await storage.getUserByTelegramChatId(chatId);
+
+      if (user && ctx.message.location) {
+        const { latitude, longitude } = ctx.message.location;
+        await storage.createUserMemory({
+          parentId: user.id,
+          category: "home",
+          fact: `Геолокация: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+          source: "telegram_location",
+        });
+      }
+
+      await ctx.reply("Спасибо! Запомнил, где ты находишься — буду искать всё рядом с тобой.");
+    } catch (err) {
+      console.error("[telegram] Location handler error:", err);
+    }
+  });
+
+  bot.on("message:contact", async (ctx) => {
+    try {
+      await ctx.reply("Спасибо за контакт! Но я не умею звонить — я могу помочь найти информацию. Напиши, что тебе нужно?");
+    } catch (err) {
+      console.error("[telegram] Contact handler error:", err);
+    }
+  });
+
   bot.on("message:text", async (ctx) => {
     let userText = ctx.message.text;
 
@@ -1926,13 +1990,21 @@ export async function startTelegramBot() {
     }
 
     try {
+      const msg = ctx.message as any;
+      const isForwarded = !!(msg.forward_origin || msg.forward_from || msg.forward_date);
+      let messageForAI = userText;
+      if (isForwarded) {
+        const forwardPrefix = "[Пользователь переслал чужое сообщение (не писал это сам). Возможно, хочет узнать твоё мнение или проверить информацию. Если сообщение похоже на мошенничество — обязательно предупреди!]\n\n";
+        messageForAI = forwardPrefix + userText;
+      }
+
       const chatHistory = await storage.getChatMessages(user.id, 20);
       const messages: Array<{ role: "user" | "assistant"; content: string }> = chatHistory
         .reverse()
         .filter(m => m.intent !== "voice_confirm")
         .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
 
-      messages.push({ role: "user", content: userText });
+      messages.push({ role: "user", content: messageForAI });
 
       await storage.createChatMessage({
         parentId: user.id,

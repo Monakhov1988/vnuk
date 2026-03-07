@@ -1849,7 +1849,7 @@ export async function verifySearchResult(
   if (cached) return cached;
 
   const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) return { verified: true };
+  if (!apiKey) return { verified: false, warning: "Перепроверка недоступна (нет API ключа). Предупреди что информацию лучше проверить самостоятельно." };
 
   try {
     console.log(`[tools] Verification: checking "${keyFact.slice(0, 60)}..." for ${toolName}`);
@@ -1880,7 +1880,7 @@ export async function verifySearchResult(
 
     if (!response.ok) {
       console.error(`[tools] Verification HTTP ${response.status}`);
-      return { verified: true };
+      return { verified: false, warning: "Не удалось выполнить перепроверку (сервис недоступен). Предупреди что информацию лучше проверить самостоятельно." };
     }
 
     const data = await response.json() as any;
@@ -1927,6 +1927,6 @@ export async function verifySearchResult(
     return result;
   } catch (err: any) {
     console.error("[tools] Verification error:", err.message);
-    return { verified: true };
+    return { verified: false, warning: "Не удалось выполнить перепроверку (ошибка сети). Предупреди что информацию лучше проверить самостоятельно." };
   }
 }
