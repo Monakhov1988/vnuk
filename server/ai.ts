@@ -976,7 +976,7 @@ async function executeToolCallWithRetry(
   toolName: string,
   args: Record<string, string>,
   userId?: number
-): Promise<{ text: string; imageUrl?: string; imageBuffer?: Buffer }> {
+): Promise<{ text: string; imageUrl?: string; imageBuffer?: Buffer; toolError?: boolean }> {
   try {
     return await executeToolCall(toolName, args, userId);
   } catch (err: any) {
@@ -989,11 +989,11 @@ async function executeToolCallWithRetry(
         return await executeToolCall(toolName, args, userId);
       } catch (retryErr: any) {
         console.error(`[ai] Retry failed for ${toolName}: ${retryErr.message}`);
-        return { text: getToolErrorMessage(toolName, retryErr) };
+        return { text: getToolErrorMessage(toolName, retryErr), toolError: true };
       }
     }
 
-    return { text: getToolErrorMessage(toolName, err) };
+    return { text: getToolErrorMessage(toolName, err), toolError: true };
   }
 }
 
@@ -1470,8 +1470,8 @@ function detectRequiredTool(message: string): string | null {
 }
 
 function detectAdditionalIntents(message: string, primaryTool: string | null): { tool: string; subQuery: string }[] {
-  const splitters = /(?:\s+и\s+(?:ещё\s+|еще\s+)?|\s*,\s*а\s+(?:ещё\s+|еще\s+)?|\s*,\s*(?:также|плюс|заодно)\s+|\s*\.\s+(?:А\s+)?(?:ещё|еще|также|и\s+)?\s*)/;
-  const parts = message.split(splitters).filter(p => p.trim().length > 5);
+  const splitters = /(?:\s*[,.]\s*а\s+(?:ещё\s+|еще\s+)|\s*[,.]\s*(?:также|плюс|заодно)\s+|\s*\.\s+(?:А\s+)?(?:ещё\s+|еще\s+|также\s+))/;
+  const parts = message.split(splitters).filter(p => p.trim().length > 8);
   if (parts.length <= 1) return [];
 
   const intents: { tool: string; subQuery: string }[] = [];
@@ -1520,11 +1520,15 @@ const FUZZY_KEYWORDS: { word: string; tool: string }[] = [
 ];
 
 function fuzzyDetectTool(message: string): string | null {
-  const words = message.toLowerCase().replace(/[^а-яёa-z0-9\s]/gi, "").split(/\s+/).filter(w => w.length >= 4);
+  const words = message.toLowerCase().replace(/[^а-яёa-z0-9\s]/gi, "").split(/\s+/).filter(w => w.length >= 5);
   for (const userWord of words) {
     for (const kw of FUZZY_KEYWORDS) {
-      if (stringSimilarity(userWord, kw.word) >= 0.75 && userWord !== kw.word) {
-        console.log(`[ai] FUZZY-MATCH: "${userWord}" ≈ "${kw.word}" → ${kw.tool}`);
+      if (kw.word.length < 5) continue;
+      const lenDiff = Math.abs(userWord.length - kw.word.length);
+      if (lenDiff > 2) continue;
+      const sim = stringSimilarity(userWord, kw.word);
+      if (sim >= 0.8 && userWord !== kw.word) {
+        console.log(`[ai] FUZZY-MATCH: "${userWord}" ≈ "${kw.word}" (${sim.toFixed(2)}) → ${kw.tool}`);
         return kw.tool;
       }
     }
@@ -1553,7 +1557,7 @@ function isFactualQuestion(message: string): boolean {
   ];
   if (factualPatterns.some(p => p.test(lower))) return true;
 
-  const healthComplaints = /(?:болит |ноет |тянет |колет |давит |жжёт |жжет |немеет |отекает |опухл|кружится голова|тошнит|рвота|понос|запор|температура \d|давление \d|не могу спать|бессонниц|задыхаюсь|одышка|сыпь |зуд |чешется)/;
+  const healthComplaints = /(?:болит\b|ноет\b|тянет\b|колет\b|давит\b|жжёт\b|жжет\b|немеет\b|отекает\b|опухл|кружится голова|тошнит|рвота|понос|запор|поднялась температур|температура 3[789]|температура 4\d|давление \d{2,3}\/|давление скач|не могу спать|бессонниц|задыхаюсь|одышка|сыпь\b|зуд\b|чешется)/;
   if (healthComplaints.test(lower)) return true;
 
   const householdQuestions = /(?:как (?:отстирать|отмыть|почистить|вывести пятно|убрать запах|починить|заклеить|отбелить|погладить|засолить|замариновать|заморозить|разморозить|хранить))/;
@@ -1562,8 +1566,11 @@ function isFactualQuestion(message: string): boolean {
   const techHelp = /(?:не работает |не включается|не подключается|как (?:включить|выключить|настроить|обновить|скачать|установить|удалить|перезагрузить)|вайфай|wifi|wi-fi|интернет не |экран не |телефон не |компьютер не |принтер не |пульт не )/;
   if (techHelp.test(lower)) return true;
 
+  const smallTalkExclusions = /^(как дела|как ты|как жизнь|как настроение|как поживаешь|как самочувстви|привет|здравствуй|добр|спасибо|пока |до свидани|спокойной ночи|хорошего дня)/;
+  if (smallTalkExclusions.test(lower)) return false;
+
   if (lower.includes("?")) {
-    const informationalQ = /(?:кто|что|где|когда|сколько|почему|как|какой|какая|какие|куда|откуда|зачем|чем|можно|нужно|есть|бывает|правда)/;
+    const informationalQ = /(?:кто .{2,}|что .{3,}(?:такое|значит|означает|стоит|делать|будет)|где .{2,}|когда .{2,}|сколько .{2,}|почему .{2,}|какой .{2,}|какая .{2,}|какие .{2,}|куда .{2,}|откуда .{2,}|зачем .{2,}|чем .{3,}(?:отличается|лучше|полезн)|можно ли .{3,}|нужно ли .{3,}|правда (?:ли |что ))/;
     if (informationalQ.test(lower)) return true;
   }
 
@@ -1634,8 +1641,8 @@ async function detectRepeatedQuestion(
     }
 
     if (matchCount >= 2 && lastMatchedReply) {
-      const timeSensitiveWords = /(?:сегодня|сейчас|завтра|вечером|утром|ночью|расписание|афиша|новости|прогноз|цена|стоимость|курс|котировк|наличи|свободн|билет|очередь)/;
-      if (timeSensitiveWords.test(normalizedCurrent)) {
+      const timeSensitiveSearch = /(?:расписание|афиша|новости|прогноз|цена|стоимость|курс валют|котировк|наличи|свободн|билет|очередь|что (?:сегодня|сейчас|завтра|вечером))/;
+      if (timeSensitiveSearch.test(normalizedCurrent)) {
         console.log(`[ai] REPEAT-DETECT: repeated but TIME-SENSITIVE, skipping cache`);
         return { isRepeat: false };
       }
@@ -1771,10 +1778,11 @@ export async function chatWithGrandchild(
       if (memories.length > 0) {
         const sanitizeMemoryFact = (fact: string): string => {
           let safe = fact.slice(0, 200);
-          safe = safe.replace(/\b(system|user|assistant|role|SYSTEM|INSTRUCTION|IGNORE|OVERRIDE)\s*[:=]/gi, "[filtered]");
-          safe = safe.replace(/\[.*?(инструкция|instruction|system|override|ignore|забудь|новая роль).*?\]/gi, "[filtered]");
-          safe = safe.replace(/[{}\[\]]/g, "");
-          safe = safe.replace(/\n/g, " ").trim();
+          safe = safe.replace(/\b(system|user|assistant|role|SYSTEM|INSTRUCTION|IGNORE|OVERRIDE)\s*[:=]?/gi, "");
+          safe = safe.replace(/\b(ignore|override|forget|забудь|забей|отмени|новая роль|new role|follow these|выполни|execute|eval)\b/gi, "");
+          safe = safe.replace(/\[.*?(инструкция|instruction|system|override|ignore|забудь|новая роль|prompt|role).*?\]/gi, "");
+          safe = safe.replace(/[{}\[\]`]/g, "");
+          safe = safe.replace(/\n/g, " ").replace(/\s{2,}/g, " ").trim();
           return safe;
         };
         const memoryLines = memories.map(m => `- ${sanitizeMemoryFact(m.fact)}`).join("\n");
@@ -1927,15 +1935,15 @@ ${memoryLines}
   if (!requiredTool) {
     const lastAssistantMsg = [...recentMessages].reverse().find(m => m.role === "assistant");
     if (lastAssistantMsg && typeof lastAssistantMsg.content === "string") {
-      const isRecipeClarification = RECIPE_CLARIFICATIONS.some(marker => lastAssistantMsg.content.includes(marker)) ||
-        lastAssistantMsg.content.includes("Какой вариант?") ||
-        lastAssistantMsg.content.includes("На сколько человек готовим?");
+      const clarificationValues = Object.values(RECIPE_CLARIFICATIONS);
+      const isRecipeClarification = clarificationValues.some(marker => (lastAssistantMsg.content as string).includes(marker)) ||
+        (lastAssistantMsg.content as string).includes("Какой вариант?") ||
+        (lastAssistantMsg.content as string).includes("На сколько человек готовим?");
       if (isRecipeClarification) {
-        const dishMatch = lastAssistantMsg.content.match(/^([А-ЯЁа-яё\s-]+)\s*—/);
-        if (dishMatch) {
-          requiredTool = "search_recipe";
-          console.log(`[ai] RECIPE-FOLLOWUP: detected answer to recipe clarification, dish="${dishMatch[1].trim()}"`);
-        }
+        requiredTool = "search_recipe";
+        const dishMatch = (lastAssistantMsg.content as string).match(/^(?:[^\p{L}]*)?([А-ЯЁа-яё\s-]+?)\s*[—\-!?]/u);
+        const dishName = dishMatch ? dishMatch[1].trim() : "блюдо";
+        console.log(`[ai] RECIPE-FOLLOWUP: detected answer to recipe clarification, dish="${dishName}"`);
       }
     }
   }
@@ -1987,6 +1995,11 @@ ${memoryLines}
     try {
       const prefetchResult = await executeToolCallWithRetry(requiredTool, args, userId);
       searchCallsThisResponse++;
+
+      if (prefetchResult.toolError) {
+        console.log(`[ai] PERPLEXITY-FIRST: ${requiredTool} returned error, using safe fallback`);
+        throw new Error("Tool returned error response");
+      }
 
       if (prefetchResult.imageUrl) imageUrl = prefetchResult.imageUrl;
       if (prefetchResult.imageBuffer) imageBuffer = prefetchResult.imageBuffer;
@@ -2170,15 +2183,17 @@ ${memoryLines}
       }
       const toolResult = await executeToolCallWithRetry(fnName, fnArgs, userId);
 
-      if (toolResult.imageUrl) {
-        imageUrl = toolResult.imageUrl;
-      }
-      if (toolResult.imageBuffer) {
-        imageBuffer = toolResult.imageBuffer;
-      }
+      if (!toolResult.toolError) {
+        if (toolResult.imageUrl) {
+          imageUrl = toolResult.imageUrl;
+        }
+        if (toolResult.imageBuffer) {
+          imageBuffer = toolResult.imageBuffer;
+        }
 
-      if (fnName === "search_recipe") {
-        recipeToolResult = toolResult.text;
+        if (fnName === "search_recipe") {
+          recipeToolResult = toolResult.text;
+        }
       }
 
       let verificationWarning = "";

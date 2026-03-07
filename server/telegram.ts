@@ -559,13 +559,20 @@ export async function startTelegramBot() {
     await next();
   });
 
-  const groupNotified = new Set<string>();
+  const groupNotified = new Map<string, number>();
   bot.use(async (ctx, next) => {
     const chatType = ctx.chat?.type;
     if (chatType === "group" || chatType === "supergroup") {
       const groupId = ctx.chat!.id.toString();
-      if (!groupNotified.has(groupId)) {
-        groupNotified.add(groupId);
+      const now = Date.now();
+      const lastNotified = groupNotified.get(groupId);
+      const GROUP_NOTIFY_TTL = 24 * 60 * 60 * 1000;
+      if (!lastNotified || (now - lastNotified) > GROUP_NOTIFY_TTL) {
+        if (groupNotified.size > 10000) {
+          const oldest = [...groupNotified.entries()].sort((a, b) => a[1] - b[1]).slice(0, 5000);
+          oldest.forEach(([k]) => groupNotified.delete(k));
+        }
+        groupNotified.set(groupId, now);
         const botUsername = ctx.me.username ? `@${ctx.me.username}` : "мне в личные сообщения";
         try {
           await ctx.reply(
