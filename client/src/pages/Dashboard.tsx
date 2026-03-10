@@ -132,7 +132,7 @@ function ParentDashboard({ user, dashboard, status }: { user: any; dashboard: an
       {user.linkCode && <LinkCodeDisplay code={user.linkCode} />}
 
       <Tabs defaultValue="chat" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6 h-auto">
+        <TabsList className="grid w-full grid-cols-5 mb-6 h-auto">
           <TabsTrigger value="chat" className="flex flex-col gap-1 py-3" data-testid="tab-chat">
             <MessageCircle className="w-4 h-4" />
             <span className="text-xs">Чат</span>
@@ -144,6 +144,10 @@ function ParentDashboard({ user, dashboard, status }: { user: any; dashboard: an
           <TabsTrigger value="utility" className="flex flex-col gap-1 py-3" data-testid="tab-utility">
             <FileText className="w-4 h-4" />
             <span className="text-xs">ЖКХ</span>
+          </TabsTrigger>
+          <TabsTrigger value="memoirs" className="flex flex-col gap-1 py-3" data-testid="tab-memoirs-parent">
+            <BookHeart className="w-4 h-4" />
+            <span className="text-xs">Истории</span>
           </TabsTrigger>
           <TabsTrigger value="events" className="flex flex-col gap-1 py-3" data-testid="tab-events">
             <Bell className="w-4 h-4" />
@@ -159,6 +163,9 @@ function ParentDashboard({ user, dashboard, status }: { user: any; dashboard: an
         </TabsContent>
         <TabsContent value="utility">
           <UtilityTab metrics={dashboard?.utilityMetrics || []} />
+        </TabsContent>
+        <TabsContent value="memoirs">
+          <MemoirsTab memoirs={dashboard?.memoirs || []} />
         </TabsContent>
         <TabsContent value="events">
           <EventsFeed events={dashboard?.recentEvents || []} />

@@ -984,6 +984,42 @@ export async function startTelegramBot() {
     }
   });
 
+  bot.command("memoirs", async (ctx) => {
+    try {
+      const chatId = ctx.chat.id.toString();
+      const user = await storage.getUserByTelegramChatId(chatId);
+      if (!user) {
+        await ctx.reply("Сначала зарегистрируйтесь — нажмите /start");
+        return;
+      }
+
+      const memoirsList = await storage.getMemoirs(user.id);
+      if (memoirsList.length === 0) {
+        await ctx.reply("📖 Книга жизни пока пуста.\n\nРасскажите мне историю из вашей жизни — я бережно запишу её! Начните, например, с «Помню, как мы в детстве...»");
+        return;
+      }
+
+      const latest = memoirsList.slice(0, 5);
+      let text = `📖 Ваша Книга жизни (${memoirsList.length} ${memoirsList.length === 1 ? "запись" : memoirsList.length < 5 ? "записи" : "записей"}):\n`;
+
+      for (const m of latest) {
+        const date = m.createdAt ? new Date(m.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long" }) : "";
+        const preview = m.content.length > 150 ? m.content.slice(0, 150) + "..." : m.content;
+        text += `\n———————————\n📌 «${m.title}» ${date ? `(${date})` : ""}\n${preview}\n`;
+      }
+
+      if (memoirsList.length > 5) {
+        text += `\n———————————\nЕщё ${memoirsList.length - 5} ${memoirsList.length - 5 === 1 ? "запись" : "записей"} в вашей Книге жизни.`;
+      }
+
+      text += "\n\nРасскажите ещё историю — я с радостью запишу!";
+      await ctx.reply(text);
+    } catch (err) {
+      console.error("[telegram] /memoirs error:", err);
+      await ctx.reply("Произошла ошибка. Попробуйте позже.");
+    }
+  });
+
   bot.callbackQuery(/^confirm_med_(\d+)$/, async (ctx) => {
     try {
       const chatId = ctx.chat?.id.toString();
@@ -2303,6 +2339,7 @@ export async function startTelegramBot() {
       { command: "pills", description: "Напоминания о лекарствах" },
       { command: "bp", description: "Записать давление (120/80)" },
       { command: "meter", description: "Показания счётчиков" },
+      { command: "memoirs", description: "Книга жизни — ваши истории" },
       { command: "link", description: "Привязать родственника" },
     ]);
     console.log("[telegram] Bot commands registered via setMyCommands");
