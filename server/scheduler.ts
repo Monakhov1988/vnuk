@@ -248,6 +248,111 @@ async function resetDailyStatuses() {
   }
 }
 
+async function generateWeeklySafetyReport() {
+  if (!isBotReady()) return;
+
+  try {
+    const parents = await storage.getAllActiveParents();
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    for (const parent of parents) {
+      try {
+        const children = await storage.getChildrenByParentId(parent.id);
+        if (children.length === 0) continue;
+
+        const weekEvents = await storage.getEventsForPeriod(parent.id, weekAgo, now);
+        const alertsBySeverity = { info: 0, warning: 0, critical: 0 };
+        for (const evt of weekEvents) {
+          if (evt.severity in alertsBySeverity) {
+            alertsBySeverity[evt.severity as keyof typeof alertsBySeverity]++;
+          }
+        }
+
+        const medStats = await storage.getRemindersConfirmedCount(parent.id, weekAgo, now);
+
+        const chatDays = await storage.getChatActivityDays(parent.id, weekAgo);
+
+        const bpLogs = await storage.getHealthLogsForPeriod(parent.id, weekAgo, now);
+
+        const weekMemoirs = await storage.getMemoirsForPeriod(parent.id, weekAgo, now);
+
+        const lines: string[] = [];
+        lines.push(`📋 Еженедельный отчёт о ${parent.name}`);
+        lines.push(`Период: ${weekAgo.toLocaleDateString("ru-RU")} — ${now.toLocaleDateString("ru-RU")}`);
+        lines.push("");
+
+        lines.push(`💬 Активность в чате: ${chatDays} из 7 дней`);
+
+        if (medStats.total > 0) {
+          lines.push(`💊 Лекарства: ${medStats.confirmed} принято, ${medStats.missed} пропущено (из ${medStats.total})`);
+        } else {
+          lines.push(`💊 Лекарства: напоминания не настроены`);
+        }
+
+        if (bpLogs.length > 0) {
+          lines.push(`🩺 Давление: ${bpLogs.length} измерений за неделю`);
+        } else {
+          lines.push(`🩺 Давление: записей нет`);
+        }
+
+        if (weekMemoirs.length > 0) {
+          lines.push(`📖 Книга жизни: ${weekMemoirs.length} новых историй`);
+        }
+
+        if (alertsBySeverity.critical > 0) {
+          lines.push(`🔴 Критических событий: ${alertsBySeverity.critical}`);
+        }
+        if (alertsBySeverity.warning > 0) {
+          lines.push(`🟡 Предупреждений: ${alertsBySeverity.warning}`);
+        }
+
+        lines.push("");
+        if (chatDays >= 5) {
+          lines.push("✅ Отличная активность! Родитель регулярно общается с ботом.");
+        } else if (chatDays >= 3) {
+          lines.push("👍 Хорошая активность. Родитель пользуется ботом несколько раз в неделю.");
+        } else if (chatDays >= 1) {
+          lines.push("⚠️ Низкая активность. Возможно, стоит позвонить и узнать, всё ли в порядке.");
+        } else {
+          lines.push("❗ Родитель не общался с ботом на этой неделе. Рекомендуем связаться.");
+        }
+
+        const reportText = lines.join("\n");
+
+        for (const child of children) {
+          try {
+            await storage.createEvent({
+              userId: child.id,
+              parentId: parent.id,
+              type: "checkin",
+              severity: "info",
+              title: "Еженедельный отчёт",
+              description: reportText,
+            });
+
+            if (child.telegramChatId) {
+              try {
+                await bot.api.sendMessage(child.telegramChatId, reportText);
+              } catch (tgErr) {
+                console.error(`[scheduler] Failed to send weekly report to child ${child.id} via Telegram:`, tgErr);
+              }
+            }
+          } catch (childErr) {
+            console.error(`[scheduler] Failed to create weekly report event for child ${child.id}:`, childErr);
+          }
+        }
+
+        console.log(`[scheduler] Weekly safety report generated for parent ${parent.id}, sent to ${children.length} children`);
+      } catch (parentErr) {
+        console.error(`[scheduler] Error generating weekly report for parent ${parent.id}:`, parentErr);
+      }
+    }
+  } catch (err) {
+    console.error("[scheduler] Error in generateWeeklySafetyReport:", err);
+  }
+}
+
 let schedulerStarted = false;
 
 export function startScheduler() {
@@ -287,5 +392,13 @@ export function startScheduler() {
     }, jitterMs);
   }, { timezone: "Europe/Moscow" });
 
-  console.log("[scheduler] Medication reminder + proactive message scheduler started (MSK timezone)");
+  cron.schedule("0 20 * * 0", async () => {
+    try {
+      await generateWeeklySafetyReport();
+    } catch (err) {
+      console.error("[scheduler] generateWeeklySafetyReport error:", err);
+    }
+  }, { timezone: "Europe/Moscow" });
+
+  console.log("[scheduler] Medication reminder + proactive message + weekly report scheduler started (MSK timezone)");
 }

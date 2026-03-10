@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import {
   ShieldCheck, HeartPulse, Bell, FileText, BookHeart, LogOut, Plus, Trash2, CheckCircle2,
-  AlertTriangle, XCircle, Activity, Droplets, Zap, Link2, Clock, Send, MessageCircle, Camera, Loader2, Copy, Check, Settings
+  AlertTriangle, XCircle, Activity, Droplets, Zap, Link2, Clock, Send, MessageCircle, Camera, Loader2, Copy, Check, Settings, Share2, ExternalLink
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -130,6 +130,9 @@ function ParentDashboard({ user, dashboard, status }: { user: any; dashboard: an
       </div>
 
       {user.linkCode && <LinkCodeDisplay code={user.linkCode} />}
+      {user.linkCode && dashboard?.botUsername && (
+        <ShareDeepLinkCard linkCode={user.linkCode} botUsername={dashboard.botUsername} isParentView />
+      )}
 
       <Tabs defaultValue="chat" className="w-full">
         <TabsList className="grid w-full grid-cols-5 mb-6 h-auto">
@@ -175,6 +178,58 @@ function ParentDashboard({ user, dashboard, status }: { user: any; dashboard: an
   );
 }
 
+function humanizeDate(dateStr: string | null): string {
+  if (!dateStr) return "нет данных";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "сегодня";
+  if (diffDays === 1) return "вчера";
+  if (diffDays < 5) return `${diffDays} дня назад`;
+  if (diffDays < 21) return `${diffDays} дней назад`;
+  const lastDigit = diffDays % 10;
+  if (lastDigit === 1) return `${diffDays} день назад`;
+  if (lastDigit >= 2 && lastDigit <= 4) return `${diffDays} дня назад`;
+  return `${diffDays} дней назад`;
+}
+
+function EngagementCard({ stats }: { stats: { daysActive30: number; totalMessages: number; memoirsCount: number; lastActiveDate: string | null } }) {
+  const progressPercent = Math.min(100, Math.round((stats.daysActive30 / 30) * 100));
+
+  return (
+    <Card className="mb-8 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50" data-testid="card-engagement">
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Activity className="w-5 h-5 text-orange-600" />
+          <h3 className="font-semibold text-orange-900">Активность родителя</h3>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white/70 rounded-xl p-4" data-testid="stat-days-active">
+            <p className="text-2xl font-bold text-orange-700">{stats.daysActive30}<span className="text-sm font-normal text-orange-400">/30</span></p>
+            <p className="text-xs text-muted-foreground mt-1">Активных дней</p>
+            <div className="w-full h-1.5 bg-orange-100 rounded-full mt-2">
+              <div className="h-1.5 bg-orange-500 rounded-full transition-all" style={{ width: `${progressPercent}%` }} data-testid="progress-days-active" />
+            </div>
+          </div>
+          <div className="bg-white/70 rounded-xl p-4" data-testid="stat-total-messages">
+            <p className="text-2xl font-bold text-amber-700">{stats.totalMessages}</p>
+            <p className="text-xs text-muted-foreground mt-1">Сообщений</p>
+          </div>
+          <div className="bg-white/70 rounded-xl p-4" data-testid="stat-memoirs-count">
+            <p className="text-2xl font-bold text-yellow-700">{stats.memoirsCount}</p>
+            <p className="text-xs text-muted-foreground mt-1">Историй в Книге жизни</p>
+          </div>
+          <div className="bg-white/70 rounded-xl p-4" data-testid="stat-last-active">
+            <p className="text-lg font-bold text-orange-700">{humanizeDate(stats.lastActiveDate)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Последняя активность</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ChildDashboard({ user, dashboard, status }: { user: any; dashboard: any; status: any }) {
   return (
     <>
@@ -189,6 +244,8 @@ function ChildDashboard({ user, dashboard, status }: { user: any; dashboard: any
       </div>
 
       {!dashboard?.parent && <LinkParentCard />}
+
+      {dashboard?.engagementStats && <EngagementCard stats={dashboard.engagementStats} />}
 
       <Tabs defaultValue="chat" className="w-full">
         <TabsList className="grid w-full grid-cols-5 mb-6 h-auto">
@@ -576,6 +633,64 @@ function LinkParentCard() {
           <Input placeholder="Код, например: A1B2C3" value={code} onChange={(e) => setCode(e.target.value)} data-testid="input-link-code" className="uppercase" />
           <Button onClick={() => linkMutation.mutate()} disabled={linkMutation.isPending || code.length < 4} data-testid="button-link-parent">
             {linkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Привязать"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ShareDeepLinkCard({ linkCode, botUsername, isParentView }: { linkCode: string; botUsername: string | null; isParentView?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
+  if (!botUsername || !linkCode) return null;
+
+  const deepLink = `https://t.me/${botUsername}?start=${linkCode}`;
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(deepLink);
+      setCopied(true);
+      toast({ title: "Ссылка скопирована!" });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Не удалось скопировать", variant: "destructive" });
+    }
+  };
+
+  const title = isParentView ? "Подключите Telegram" : "Отправьте ссылку родителю";
+  const description = isParentView
+    ? "Нажмите на ссылку ниже, чтобы начать общение с Внучком в Telegram. Или скопируйте и откройте на телефоне."
+    : "Отправьте эту ссылку вашему родителю. Он нажмёт на неё, и бот сам начнёт знакомство — ничего настраивать не нужно.";
+
+  return (
+    <Card className="mb-8 border-2 border-emerald-200 bg-emerald-50/50" data-testid="card-share-deeplink">
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-3 mb-3">
+          <Share2 className="w-5 h-5 text-emerald-600" />
+          <h3 className="font-semibold text-emerald-900">{title}</h3>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          {description}
+        </p>
+        <div className="flex items-center gap-2 p-3 bg-white rounded-lg border mb-4">
+          <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+          <span className="text-sm font-mono truncate flex-1" data-testid="text-deeplink">{deepLink}</span>
+          <Button variant="outline" size="sm" onClick={copyLink} data-testid="button-copy-deeplink">
+            {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild data-testid="button-share-telegram">
+            <a href={`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent("Привет! Нажми на ссылку — познакомишься с Внучком, он будет помогать тебе 💛")}`} target="_blank" rel="noopener noreferrer">
+              <Send className="w-4 h-4 mr-1" /> Telegram
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild data-testid="button-share-whatsapp">
+            <a href={`https://wa.me/?text=${encodeURIComponent("Привет! Нажми на ссылку — познакомишься с Внучком, он будет помогать тебе 💛 " + deepLink)}`} target="_blank" rel="noopener noreferrer">
+              <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
+            </a>
           </Button>
         </div>
       </CardContent>

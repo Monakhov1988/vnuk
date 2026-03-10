@@ -221,17 +221,19 @@ function parseBpInput(input: string): { systolic: number; diastolic: number; not
 }
 
 export let bot: Bot | null = null;
+export let botUsername: string | null = null;
 const pendingRegistration = new Map<string, { timestamp: number }>();
 const pendingLink = new Map<string, { timestamp: number }>();
 const pendingVoiceConfirm = new Map<string, { transcript: string; timestamp: number }>();
 const pendingMemoir = new Map<string, { title: string; content: string; parentId: number; timestamp: number; draftId: string }>();
 
 interface OnboardingState {
-  step: "city" | "age" | "interests";
+  step: "name" | "city" | "age" | "interests";
   userId: number;
   name: string;
   city?: string;
   timestamp: number;
+  isDeepLink?: boolean;
 }
 const onboardingState = new Map<string, OnboardingState>();
 
@@ -411,6 +413,29 @@ async function registerUserFromTelegram(chatId: string, name: string): Promise<{
 async function handleOnboardingStep(chatId: string, userText: string, ctx: any): Promise<boolean> {
   const state = onboardingState.get(chatId);
   if (!state) return false;
+
+  if (state.step === "name") {
+    const name = userText.trim();
+    if (name.length < 2) {
+      await ctx.reply("Имя слишком короткое. Напишите ещё раз, например: Мария Ивановна");
+      return true;
+    }
+
+    await storage.updateUserName(state.userId, name);
+
+    onboardingState.set(chatId, {
+      ...state,
+      step: "city",
+      name,
+      timestamp: Date.now(),
+    });
+
+    await ctx.reply(
+      `Очень приятно, ${name}! 😊\n\n` +
+      `🏙 В каком городе вы живёте?`
+    );
+    return true;
+  }
 
   if (state.step === "city") {
     const city = userText.trim();
@@ -603,9 +628,66 @@ export async function startTelegramBot() {
 
   bot.command("start", async (ctx) => {
     const chatId = ctx.chat.id.toString();
-    console.log("[telegram] /start command received from chat:", chatId);
+    const deepLinkCode = ctx.match?.trim().toUpperCase() || "";
+    console.log("[telegram] /start command received from chat:", chatId, deepLinkCode ? `with deep-link code: ${deepLinkCode}` : "");
     const existing = await storage.getUserByTelegramChatId(chatId);
     console.log("[telegram] /start lookup result:", existing ? `found user id=${existing.id} name=${existing.name}` : "NOT FOUND");
+
+    if (deepLinkCode) {
+      if (existing) {
+        await ctx.reply(
+          `Вы уже зарегистрированы как ${existing.name}! Чем помочь сегодня?\n\n` +
+          `Нажмите кнопку внизу или просто напишите мне:`,
+          { reply_markup: persistentKeyboard }
+        );
+        return;
+      }
+
+      if (!checkLinkRateLimit(chatId)) {
+        await ctx.reply(`Слишком много попыток. Подождите 5 минут и попробуйте снова.`);
+        return;
+      }
+
+      const parent = await storage.consumeLinkCode(deepLinkCode);
+      if (!parent) {
+        recordLinkFailure(chatId);
+        await ctx.reply(`Код не найден или истёк. Попробуйте зарегистрироваться самостоятельно — нажмите /start`);
+        return;
+      }
+
+      if (parent.telegramChatId) {
+        await ctx.reply(`Этот код уже был использован. Если вы уже зарегистрированы — просто напишите мне! Или нажмите /start`);
+        return;
+      }
+
+      clearLinkAttempts(chatId);
+      await storage.updateUserTelegramChatId(parent.id, chatId);
+
+      try {
+        const { getAllTopicIds } = await import("./topicCatalog");
+        const existingTopics = await storage.getTopicSettings(parent.id);
+        if (existingTopics.length === 0) {
+          await storage.bulkInitTopicSettings(parent.id, getAllTopicIds(), "detailed");
+        }
+      } catch (err: any) {
+        console.error("[telegram] Failed to initialize default topics for deep-link user:", err?.message);
+      }
+
+      onboardingState.set(chatId, {
+        step: "name",
+        userId: parent.id,
+        name: parent.name || "",
+        timestamp: Date.now(),
+        isDeepLink: true,
+      });
+
+      await ctx.reply(
+        `Привет! Ваш сын/дочь попросил(а) меня познакомиться с вами 😊\n\n` +
+        `Меня зовут Внучок — я ваш помощник на каждый день.\n\n` +
+        `Давайте познакомимся! Как вас зовут? (Например: Мария Ивановна)`
+      );
+      return;
+    }
 
     if (existing) {
       await ctx.reply(
@@ -2345,6 +2427,14 @@ export async function startTelegramBot() {
     console.log("[telegram] Bot commands registered via setMyCommands");
   } catch (err) {
     console.error("[telegram] Failed to register bot commands:", err);
+  }
+
+  try {
+    const me = await bot.api.getMe();
+    botUsername = me.username || null;
+    console.log(`[telegram] Bot username: @${botUsername}`);
+  } catch (err: any) {
+    console.error("[telegram] Failed to fetch bot username:", err?.message);
   }
 
   let botReady = false;

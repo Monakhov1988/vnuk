@@ -1,9 +1,7 @@
 # Внучок — Цифровой AI-помощник для пожилых родителей
 
 ## Overview
-Внучок is a subscription-based AI assistant service designed to support elderly parents in Russia. The service aims to provide peace of mind for adult children (the payers, typically 35-50 years old) and offer companionship and assistance to their parents (the users, 65+ years old). The core value proposition lies in fostering closer family ties, offering adaptive technological assistance, and creating an emotional bond through personalized interaction and long-term memory features like the "Book of Life."
-
-The project prioritizes features that enhance value for both parents and children, are cost-effective, scalable, and create a strong market moat against competitors like Yandex Alice and specialized telemedicine services. Key ambitions include achieving high user engagement, positive word-ofmouth growth, and exploring B2B opportunities. The project's mission extends beyond mere profitability, focusing on genuinely helping families connect and adapt to new technologies.
+Внучок is a subscription-based AI assistant service designed to support elderly parents in Russia. It aims to provide peace of mind for adult children (payers) and offer companionship and assistance to their parents (users) through adaptive technological assistance. The service fosters closer family ties, creates an emotional bond through personalized interaction, and features a "Book of Life" for long-term memory. The project prioritizes cost-effective, scalable features that offer high value to both generations, with ambitions for high user engagement, positive word-of-mouth growth, and exploring B2B opportunities.
 
 ## User Preferences
 As an AI Product Manager, I operate with critical thinking, specializing in AI solutions and staying updated on 2026+ trends for Russia. I filter every decision through five lenses: Value (for parent and child), Cost-effectiveness (tokens, infrastructure, time), Revenue potential, Scalability (100 to 100,000 users), and Vulnerability (ease of copying, potential failure points).
@@ -17,97 +15,77 @@ I highlight:
 
 ## System Architecture
 
-The system is built on a React (TypeScript, Tailwind v4) frontend, an Express (TypeScript) backend, and a PostgreSQL database with Drizzle ORM. Communication with elderly users primarily occurs via a Telegram bot, supporting both text and voice interactions.
+The system uses a React (TypeScript, Tailwind v4) frontend, an Express (TypeScript) backend, and a PostgreSQL database with Drizzle ORM. User interaction primarily occurs via a Telegram bot supporting text and voice.
 
 **Frontend:**
--   **Landing Page (`/`)**: Sales-oriented page with hero section, feature cards, chat scenarios, pricing, testimonials, and FAQ. Targets adult children with messaging focused on gifting a helpful companion.
--   **Auth Page (`/auth`)**: Login/registration for parent and child roles.
--   **Dashboard (`/dashboard`)**: Role-dependent interface. Parents see a linking code, AI chat, medication confirmation, blood pressure logging, and utility meter readings. Children view parent status, event feed, manage reminders, blood pressure charts, and memoirs.
--   **Pricing Page (`/pricing`)**: Displays four subscription tiers: Free, Basic, Standard, and Premium, detailing message limits and features.
+-   **Landing Page**: Sales-oriented, targeting adult children.
+-   **Auth Page**: Login/registration for parent and child roles.
+-   **Dashboard**: Role-dependent interface. Parents see linking codes, AI chat, health logging, memoirs, and utility meter readings. Children view parent status, engagement metrics, event feed, and manage reminders.
+-   **Pricing Page**: Displays four subscription tiers with feature details.
 
-**Telegram Bot (`server/telegram.ts`):**
--   Developed with `grammy` library, using long-polling for continuous operation.
--   Features include `/start`, `/help`, `/link`, `/register` (with onboarding for name, city, age, interests), and persistent reply keyboards for common actions (Health, Home, Leisure, More).
--   Supports inline keyboards for sub-menus and personalized settings.
--   **Age segmentation**: Tailors AI tone and proactive messages based on user's age group (55-60, 60-70, 70+).
--   **Proactive messages**: Personalized suggestions based on age and feature discovery.
--   **Paywall CTA**: Gentle notifications for free/basic users nearing their daily message limit.
--   **Voice Messaging**: Utilizes Whisper STT for speech-to-text and OpenAI TTS for text-to-speech, with quality gates for STT confidence.
--   **Alerts**: Critical alerts from AI are forwarded to linked children via Telegram.
--   **Bot Personality**: Configurable through natural language or settings for formality, humor, softness, verbosity, emoji use, and encouragement.
--   **Rate-limiting**: Daily message limits enforced per tariff (free: 10, basic: 30, standard: 100, premium: 500), with emergency messages bypassing the limit. Graceful fallback on OpenAI 429 errors.
+**Telegram Bot:**
+-   Developed with `grammy` library.
+-   Supports key commands, onboarding, and persistent/inline keyboards for actions.
+-   **Personalization**: Tailors AI tone and proactive messages based on user age.
+-   **Proactive Messages**: Personalized suggestions and gentle paywall CTAs.
+-   **Voice Messaging**: Uses Whisper for STT and OpenAI TTS for ASR (Text-to-Speech).
+-   **Alerts**: Critical AI alerts are forwarded to linked children.
+-   **Bot Personality**: Configurable for various interaction styles.
+-   **Rate-limiting**: Enforces daily message limits per tariff.
 
 **Backend (Express + TypeScript):**
--   Provides a REST API (`/api/*`) with server-side sessions (express-session + connect-pg-simple) and bcrypt for password hashing.
--   `requireAuth` middleware secures routes, and IDOR protection prevents unauthorized access to user data.
--   Centralized `resolveParentId(userId)` helper for parent identification.
--   Robust security measures include secure cookies in production, and no response body logging to prevent data leakage.
+-   REST API with server-side sessions and bcrypt for password hashing.
+-   `requireAuth` middleware and IDOR protection secure routes.
+-   Centralized parent identification logic.
+-   Robust security includes secure cookies and no response body logging.
 
-**AI Module (`server/ai.ts`) & Tools (`server/tools.ts`):**
--   Integrates OpenAI API (GPT-4o-mini with function calling) and Perplexity API (sonar) for web search.
--   **`chatWithGrandchild`**: Implements a highly personalized "Vnuchok" persona (25-year-old medical student) with contextual awareness of time and date.
--   **Six-level safety system**: Anti-injection, health, alarm ([ALERT]), fraud, home danger (gas/flood/fire + [ALERT]), lost ([ALERT]). Emergency situations recommend 112. Alerts are dynamically adapted based on whether a child is linked.
--   **Server-side danger detection**: `detectIntentLocal()` uses regex patterns to identify emergencies *before* LLM processing, ensuring critical alerts are always triggered.
--   **Data Protection**: PII filter (`stripPII`) removes sensitive information (card numbers, phones, etc.) from search queries. AI explicitly avoids repeating personal data from memory.
--   **Anti-hallucination**: Strict prompts prevent AI from diagnosing illnesses or interpreting analyses. Recipe tool MUST show only search results, NEVER invent.
--   **Perplexity-First Architecture**: For all factual queries, `detectRequiredTool()` identifies the tool, and the search is called BEFORE GPT via code (not relying on GPT's tool_choice). GPT only rephrases the search result. This prevents GPT from hallucinating answers instead of searching.
--   **Recipe pipeline**: Programmatic clarification questions (variant, portions, restrictions) before search. `searchRecipe` uses `searchPipelineWithCitations()` with Perplexity sonar for two parallel queries (folk + pro sites). Results include ratings, portions, links. "Другой рецепт" inline button in Telegram triggers cache-cleared re-search.
--   **Greeting card pipeline**: `searchGreetingCard` with image scoring/prioritization (`extractImageUrls` scores by URL/alt relevance), validation via `sharp` (min 400x400, aspect ratio check), and 3-level fallback (DDG → Perplexity → DALL-E).
--   **Search Pipeline**: A multi-source pipeline (Perplexity sonar, DuckDuckGo) for web, movie, TV searches, with GPT-4o-mini for merging. Cross-validation via `verifySearchResult()` for critical tools (medicine, gov_services, legal, transport, web, movie, tv).
--   **Tool-calling**: Extensive set of function-calling tools including `get_weather`, `search_web`, `search_recipe`, `find_greeting_card`, `generate_image`, `search_cinema`, `search_movie`, `search_place`, `search_transport`, `search_clinic`, `search_medicine`, `search_tv`, `search_gov_services`, `search_garden`, `search_product`, `search_legal`, `search_travel`.
--   **`recognizeMeter`**: Vision API for recognizing utility meter readings, with user-friendly hints for unsuccessful attempts.
--   **`extractMemoryFacts`**: Automatically extracts and deduplicates facts from user messages into categories (family, health, hobbies) for long-term memory, which are then injected into the system prompt.
--   **Telegram typing indicator**: Provides real-time status updates during AI processing.
--   **Search Result Verification**: `verifySearchResult()` re-checks critical search data (dates, times, events) to add a warning if not confirmed.
--   **`detectRequiredTool`**: Intelligently routes user requests to appropriate tools based on context. For vague queries (no specific details), returns `null` to allow GPT to ask clarifying questions before searching. For specific queries, forces the appropriate tool.
--   **Clarifying questions**: System prompt instructs GPT to ask 1 clarifying question before searching for: recipes (what kind?), medicine (symptoms, current meds?), products (budget, preferences?), travel (dates, budget, type?), gov services (age, status, region?), legal (details, documents?), garden (region, conditions?). Specific requests skip clarification.
--   **Greeting card pipeline**: `find_greeting_card` with 3-level fallback (DDG → Perplexity → DALL-E). No text overlay — cards are sent as-is with a text greeting in the message.
--   **Telegram bot resilience**: No `drop_pending_updates` — messages sent during restart are processed. Dedup middleware prevents double-processing via `update_id` Set. Onboarding state loss shows friendly "try /start again" instead of silent ignore.
--   **Dual bot tokens**: Dev uses `TELEGRAM_BOT_TOKEN_DEV` (env: development), prod uses `TELEGRAM_BOT_TOKEN`. Prevents 409 Conflict between dev and prod instances.
--   **Memoir pipeline (Книга жизни)**: Parent tells a story via voice/text → `detectIntentLocal` detects `memoir` intent (requires 30+ chars) → `adaptMemoir()` (GPT-4o-mini) cleans up transcript (removes filler words, fixes grammar, preserves voice) → parent confirms via inline keyboard (draft ID prevents overwrite) → saved to `memoirs` table → child notified via event + Telegram push.
--   **Link-code security**: One-time use (invalidated after successful link), 24h TTL, rate-limited (5 attempts per 5 min block in Telegram).
+**AI Module & Tools:**
+-   Integrates OpenAI API (GPT-4o-mini, DALL-E 3) and Perplexity API (sonar) for web search.
+-   **`chatWithGrandchild`**: Personalized "Vnuchok" persona (25-year-old medical student).
+-   **Safety System**: Six-level safety for anti-injection, health, alarms, fraud, and danger detection. Critical alerts detected server-side.
+-   **Data Protection**: PII filter, explicit avoidance of repeating personal data.
+-   **Anti-hallucination**: Strict prompts, Perplexity-First Architecture for factual queries (search before GPT rephrases).
+-   **Pipelines**:
+    -   **Recipe**: Programmatic clarification, parallel search with citations, re-search option.
+    -   **Greeting Card**: Image scoring, validation, 3-level fallback (DDG → Perplexity → DALL-E).
+    -   **Search**: Multi-source web, movie, TV searches, with GPT-4o-mini for merging and verification.
+-   **Tool-calling**: Extensive function-calling tools for weather, web search, recipes, images, cinema, transport, health, government services, etc.
+-   **`recognizeMeter`**: Vision API for utility meter readings.
+-   **`extractMemoryFacts`**: Extracts and deduplicates facts for long-term memory, injected into system prompts.
+-   **Search Result Verification**: Re-checks critical data and adds warnings if unconfirmed.
+-   **`detectRequiredTool`**: Routes requests to tools; asks clarifying questions for vague queries.
+-   **Memoir pipeline (Книга жизни)**: Parent story → `detectIntentLocal` → `adaptMemoir()` (GPT-4o-mini) cleans transcript → parent confirms → saved → child notified.
+-   **Link-code security**: One-time use, 24h TTL, rate-limited.
+-   **Remote onboarding**: Deep-link for child-initiated parent onboarding.
+-   **Engagement metrics**: Tracks active days, messages, memoirs for dashboard display.
+-   **Weekly safety report**: Scheduled reports for children on parent activity.
 
 **Database (PostgreSQL + Drizzle ORM):**
--   Key tables: `users`, `subscriptions`, `reminders`, `events`, `chat_messages`, `user_memory`, `utility_metrics`, `memoirs`, `health_logs`, `waitlist`, `ai_usage_logs`, `topic_settings`, `personality_settings`.
+-   Stores user data, subscriptions, reminders, events, chat history, user memory, utility metrics, memoirs, health logs, and AI usage logs.
 
-**Proactive Messages (`server/scheduler.ts` + `server/proactiveContext.ts`):**
--   Node-cron schedules hourly checks for medication reminders.
--   Sends Telegram pushes with "Confirmed" buttons.
--   Follow-up reminders and child notifications for unconfirmed medications.
--   **7 proactive message categories** with weighted random selection:
-    1. `follow_up` — continue recent conversation topic (highest priority if substantive chat exists)
-    2. `health_check` — BP gap (3+ days), medication streak congratulations, general wellness
-    3. `weather` — morning weather-based messages using Open-Meteo (city from memory)
-    4. `seasonal` — Russian holidays (13 holidays tracked, 5-day lookahead) + season-appropriate messages
-    5. `memoir_prompt` — 30 themed prompts (childhood, school, family, travel, cooking, etc.) with season filters; tracked via `user_memory` (category: `memoir_prompt_used`) to avoid repeats
-    6. `feature_discovery` — 15 features tracked progressively via `user_memory` (category: `feature_discovery`); never re-suggests
-    7. `gratitude` — warm "miss you" messages after 2+ days silence
--   **Category picker** (`pickCategory`): uses priority rules (silence → gratitude; health gap → health_check; holiday → seasonal) then weighted random fallback
--   **Timing**: Checks at 09:00, 11:00, 14:00, 17:00, 20:00 MSK with ±30min random jitter for natural feel
--   **Frequency**: 1 message/day (silence threshold: 3h); intent stored as `proactive:category` (e.g., `proactive:health_check`)
--   **Context gathering** (`gatherProactiveContext`): parallel fetch of weather, health logs, medication streaks, feature history, memoir history
+**Proactive Messages:**
+-   Node-cron schedules hourly checks.
+-   Sends Telegram pushes with "Confirmed" buttons for reminders.
+-   7 categories (follow-up, health check, weather, seasonal, memoir prompt, feature discovery, gratitude) with weighted random selection and priority rules.
+-   Timed delivery with random jitter for natural feel.
 
 **Design System:**
 -   Fonts: Lora (headings), Inter (body).
--   Color palette: Blue (#3b82f6) with warm orange accents.
--   `glass-panel` utility class for UI elements.
+-   Color palette: Blue with warm orange accents.
+-   `glass-panel` utility class for UI.
 
 **API Security:**
--   Rate limiting on authentication, registration, and linking endpoints.
--   Zod validation for all API endpoints.
--   ID parsing for secure parameter handling.
+-   Rate limiting, Zod validation, ID parsing.
 
 ## External Dependencies
--   **OpenAI API**: Used for `chatWithGrandchild` (GPT-4o-mini), `textToSpeech`, `extractMemoryFacts`, and `generate_image` (DALL-E 3).
--   **Perplexity API (sonar)**: Powers `search_web`, `search_recipe`, `search_movie`, `search_place`, `search_transport`, `search_clinic`, `search_medicine`, `search_tv`, `search_gov_services`, `search_garden`, `search_product`, `search_legal`, `search_travel`.
--   **Whisper API**: Used for `speechToText` in voice messaging.
--   **Open-Meteo API**: Provides real-time weather data for `get_weather`.
--   **bcrypt**: For password hashing.
--   **express-session**, **connect-pg-simple**: For managing server-side user sessions.
--   **node-cron**: For scheduling proactive reminders and messages.
--   **Yandex SpeechKit TTS**: Planned integration for natural Russian voice synthesis (awaiting API key).
--   **DALL-E 3**: For generating unique images (not greeting cards).
--   **Telegram Bot API**: Core platform for user interaction.
+-   **OpenAI API**: GPT-4o-mini, DALL-E 3, Text-to-Speech.
+-   **Perplexity API (sonar)**: Web search and specialized searches (recipes, movies, places, transport, clinics, medicine, etc.).
+-   **Whisper API**: Speech-to-Text.
+-   **Open-Meteo API**: Weather data.
+-   **bcrypt**: Password hashing.
+-   **express-session**, **connect-pg-simple**: Session management.
+-   **node-cron**: Scheduling.
+-   **Telegram Bot API**: Core communication platform.
 -   **PostgreSQL**: Primary database.
--   **Drizzle ORM**: For database interaction.
--   **Various Russian content sources**: (e.g., Kinopoisk, povar.ru, eda.ru, rlsnet.ru, gosuslugi.ru, Yandex.Maps, Yandex.Market, Ozon, Wildberries, ProDoktorov, Tutu.ru) integrated via web scraping or Perplexity search for specific data.
+-   **Drizzle ORM**: Database interaction.
+-   **Various Russian content sources**: Integrated for specific data via Perplexity search (e.g., Kinopoisk, povar.ru, eda.ru, rlsnet.ru, gosuslugi.ru, Yandex.Maps, Yandex.Market, Ozon, Wildberries, ProDoktorov, Tutu.ru).

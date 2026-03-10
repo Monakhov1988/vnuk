@@ -657,6 +657,17 @@ export async function registerRoutes(
         ? { id: user.id, name: user.name }
         : parentId ? { id: parentId, name: (await storage.getUser(parentId))?.name } : null;
 
+      let engagementStats = null;
+      if (parentId) {
+        engagementStats = await storage.getParentEngagementStats(parentId);
+      }
+
+      let botUsernameValue: string | null = null;
+      try {
+        const { botUsername } = await import("./telegram");
+        botUsernameValue = botUsername;
+      } catch {}
+
       return res.json({
         user: userResponse,
         parent,
@@ -667,6 +678,8 @@ export async function registerRoutes(
         healthLogs: healthLogsList,
         utilityMetrics: metricsList,
         memoirs: memoirsList,
+        engagementStats,
+        botUsername: botUsernameValue,
       });
     } catch (e: any) {
       return res.status(500).json({ message: e.message });

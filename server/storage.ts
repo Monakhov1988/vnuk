@@ -32,6 +32,7 @@ export interface IStorage {
   getUserByLinkCode(code: string): Promise<User | undefined>;
   getUserByTelegramChatId(chatId: string): Promise<User | undefined>;
   updateUserTelegramChatId(userId: number, chatId: string): Promise<User>;
+  updateUserName(userId: number, name: string): Promise<User>;
   getChildrenByParentId(parentId: number): Promise<User[]>;
 
   getReminder(id: number): Promise<Reminder | undefined>;
@@ -97,6 +98,19 @@ export interface IStorage {
 
   logSearchQuality(log: InsertSearchQualityLog): Promise<SearchQualityLog>;
   updateSearchQualityFeedback(id: number, feedback: string): Promise<void>;
+
+  getEventsForPeriod(parentId: number, since: Date, until: Date): Promise<Event[]>;
+  getChatActivityDays(parentId: number, since: Date): Promise<number>;
+  getHealthLogsForPeriod(parentId: number, since: Date, until: Date): Promise<HealthLog[]>;
+  getMemoirsForPeriod(parentId: number, since: Date, until: Date): Promise<Memoir[]>;
+  getRemindersConfirmedCount(parentId: number, since: Date, until: Date): Promise<{ confirmed: number; missed: number; total: number }>;
+
+  getParentEngagementStats(parentId: number): Promise<{
+    daysActive30: number;
+    totalMessages: number;
+    memoirsCount: number;
+    lastActiveDate: Date | null;
+  }>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -167,6 +181,11 @@ export class DatabaseStorage implements IStorage {
 
   async updateUserTelegramChatId(userId: number, chatId: string): Promise<User> {
     const [user] = await db.update(users).set({ telegramChatId: chatId }).where(eq(users.id, userId)).returning();
+    return user;
+  }
+
+  async updateUserName(userId: number, name: string): Promise<User> {
+    const [user] = await db.update(users).set({ name }).where(eq(users.id, userId)).returning();
     return user;
   }
 
@@ -478,6 +497,113 @@ export class DatabaseStorage implements IStorage {
     } catch (err) {
       console.error("[updateSearchQualityFeedback] Failed:", err);
     }
+  }
+
+  async getEventsForPeriod(parentId: number, since: Date, until: Date): Promise<Event[]> {
+    return db.select().from(events).where(
+      and(
+        eq(events.parentId, parentId),
+        gte(events.createdAt, since),
+        sql`${events.createdAt} < ${until}`
+      )
+    ).orderBy(desc(events.createdAt));
+  }
+
+  async getChatActivityDays(parentId: number, since: Date): Promise<number> {
+    const [result] = await db.select({
+      value: sql<number>`COUNT(DISTINCT DATE(${chatMessages.createdAt}))`,
+    }).from(chatMessages).where(
+      and(
+        eq(chatMessages.parentId, parentId),
+        eq(chatMessages.role, "user"),
+        gte(chatMessages.createdAt, since)
+      )
+    );
+    return Number(result?.value) || 0;
+  }
+
+  async getHealthLogsForPeriod(parentId: number, since: Date, until: Date): Promise<HealthLog[]> {
+    return db.select().from(healthLogs).where(
+      and(
+        eq(healthLogs.parentId, parentId),
+        gte(healthLogs.createdAt, since),
+        sql`${healthLogs.createdAt} < ${until}`
+      )
+    ).orderBy(desc(healthLogs.createdAt));
+  }
+
+  async getMemoirsForPeriod(parentId: number, since: Date, until: Date): Promise<Memoir[]> {
+    return db.select().from(memoirs).where(
+      and(
+        eq(memoirs.parentId, parentId),
+        gte(memoirs.createdAt, since),
+        sql`${memoirs.createdAt} < ${until}`
+      )
+    ).orderBy(desc(memoirs.createdAt));
+  }
+
+  async getRemindersConfirmedCount(parentId: number, since: Date, until: Date): Promise<{ confirmed: number; missed: number; total: number }> {
+    const parentEvents = await db.select().from(events).where(
+      and(
+        eq(events.parentId, parentId),
+        eq(events.type, "medication"),
+        gte(events.createdAt, since),
+        sql`${events.createdAt} < ${until}`
+      )
+    );
+    const confirmed = parentEvents.filter(e => e.title?.includes("принято")).length;
+    const missed = parentEvents.filter(e => e.severity === "warning" || e.severity === "critical").length;
+    const sent = parentEvents.filter(e => e.title?.includes("Напоминание отправлено")).length;
+    return { confirmed, missed, total: sent };
+  }
+
+  async getParentEngagementStats(parentId: number): Promise<{
+    daysActive30: number;
+    totalMessages: number;
+    memoirsCount: number;
+    lastActiveDate: Date | null;
+  }> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [daysActiveResult] = await db.select({
+      value: sql<number>`COUNT(DISTINCT DATE(${chatMessages.createdAt}))`,
+    }).from(chatMessages).where(
+      and(
+        eq(chatMessages.parentId, parentId),
+        eq(chatMessages.role, "user"),
+        gte(chatMessages.createdAt, thirtyDaysAgo)
+      )
+    );
+
+    const [totalMsgResult] = await db.select({
+      value: count(),
+    }).from(chatMessages).where(
+      and(
+        eq(chatMessages.parentId, parentId),
+        eq(chatMessages.role, "user")
+      )
+    );
+
+    const [memoirsResult] = await db.select({
+      value: count(),
+    }).from(memoirs).where(eq(memoirs.parentId, parentId));
+
+    const [lastActiveResult] = await db.select({
+      value: sql<Date | null>`MAX(${chatMessages.createdAt})`,
+    }).from(chatMessages).where(
+      and(
+        eq(chatMessages.parentId, parentId),
+        eq(chatMessages.role, "user")
+      )
+    );
+
+    return {
+      daysActive30: Number(daysActiveResult?.value) || 0,
+      totalMessages: Number(totalMsgResult?.value) || 0,
+      memoirsCount: Number(memoirsResult?.value) || 0,
+      lastActiveDate: lastActiveResult?.value ?? null,
+    };
   }
 }
 
