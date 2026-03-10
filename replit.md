@@ -63,6 +63,7 @@ The system is built on a React (TypeScript, Tailwind v4) frontend, an Express (T
 -   **Clarifying questions**: System prompt instructs GPT to ask 1 clarifying question before searching for: recipes (what kind?), medicine (symptoms, current meds?), products (budget, preferences?), travel (dates, budget, type?), gov services (age, status, region?), legal (details, documents?), garden (region, conditions?). Specific requests skip clarification.
 -   **Greeting card pipeline**: `find_greeting_card` with 3-level fallback (DDG → Perplexity → DALL-E). No text overlay — cards are sent as-is with a text greeting in the message.
 -   **Telegram bot resilience**: No `drop_pending_updates` — messages sent during restart are processed. Dedup middleware prevents double-processing via `update_id` Set. Onboarding state loss shows friendly "try /start again" instead of silent ignore.
+-   **Dual bot tokens**: Dev uses `TELEGRAM_BOT_TOKEN_DEV` (env: development), prod uses `TELEGRAM_BOT_TOKEN`. Prevents 409 Conflict between dev and prod instances.
 -   **Link-code security**: One-time use (invalidated after successful link), 24h TTL, rate-limited (5 attempts per 5 min block in Telegram).
 
 **Database (PostgreSQL + Drizzle ORM):**

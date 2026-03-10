@@ -534,11 +534,21 @@ async function handleOnboardingStep(chatId: string, userText: string, ctx: any):
 }
 
 export async function startTelegramBot() {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const isDev = process.env.NODE_ENV === "development";
+  let token: string | undefined;
+  let tokenSource: string;
+  if (isDev && process.env.TELEGRAM_BOT_TOKEN_DEV) {
+    token = process.env.TELEGRAM_BOT_TOKEN_DEV;
+    tokenSource = "TELEGRAM_BOT_TOKEN_DEV";
+  } else {
+    token = process.env.TELEGRAM_BOT_TOKEN;
+    tokenSource = "TELEGRAM_BOT_TOKEN";
+  }
   if (!token) {
-    console.log("[telegram] TELEGRAM_BOT_TOKEN not set, skipping bot startup");
+    console.log(`[telegram] ${isDev ? "TELEGRAM_BOT_TOKEN_DEV and TELEGRAM_BOT_TOKEN" : "TELEGRAM_BOT_TOKEN"} not set, skipping bot startup`);
     return;
   }
+  console.log(`[telegram] Using ${tokenSource} (${isDev ? "dev" : "prod"} mode)`);
 
   bot = new Bot(token);
 
