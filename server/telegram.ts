@@ -1,7 +1,7 @@
 import { Bot, InlineKeyboard, Keyboard, InputFile } from "grammy";
 import crypto from "crypto";
 import { storage } from "./storage";
-import { chatWithGrandchild, recognizeMeter, detectIntentLocal } from "./ai";
+import { chatWithGrandchild, recognizeMeter, detectIntentLocal, adaptMemoir } from "./ai";
 import { speechToText, textToSpeech } from "./voice";
 import { searchRecipe, deleteCache } from "./tools";
 import { deletePipelineCache } from "./searchPipeline";
@@ -224,6 +224,7 @@ export let bot: Bot | null = null;
 const pendingRegistration = new Map<string, { timestamp: number }>();
 const pendingLink = new Map<string, { timestamp: number }>();
 const pendingVoiceConfirm = new Map<string, { transcript: string; timestamp: number }>();
+const pendingMemoir = new Map<string, { title: string; content: string; parentId: number; timestamp: number; draftId: string }>();
 
 interface OnboardingState {
   step: "city" | "age" | "interests";
@@ -251,6 +252,11 @@ function cleanupPendingStates() {
   Array.from(onboardingState.entries()).forEach(([chatId, state]) => {
     if (now - state.timestamp > PENDING_STATE_TTL) {
       onboardingState.delete(chatId);
+    }
+  });
+  Array.from(pendingMemoir.entries()).forEach(([chatId, state]) => {
+    if (now - state.timestamp > 10 * 60 * 1000) {
+      pendingMemoir.delete(chatId);
     }
   });
   Array.from(pendingVoiceConfirm.entries()).forEach(([chatId, state]) => {
@@ -1012,6 +1018,119 @@ export async function startTelegramBot() {
     }
   });
 
+  bot.callbackQuery(/^memoir_save:(.+)$/, async (ctx) => {
+    try {
+      const chatId = ctx.chat?.id.toString();
+      if (!chatId) return;
+      try { await ctx.answerCallbackQuery(); } catch {}
+
+      const draftId = ctx.match[1];
+      const pending = pendingMemoir.get(chatId);
+      if (!pending || pending.draftId !== draftId || (Date.now() - pending.timestamp > 10 * 60 * 1000)) {
+        pendingMemoir.delete(chatId!);
+        await ctx.editMessageText("Время для сохранения истекло. Расскажите историю ещё раз — я запишу!");
+        return;
+      }
+
+      pendingMemoir.delete(chatId);
+
+      const memoir = await storage.createMemoir({
+        userId: pending.parentId,
+        parentId: pending.parentId,
+        title: pending.title,
+        content: pending.content,
+      });
+
+      await ctx.editMessageText(
+        `📖 «${pending.title}»\n\n${pending.content}\n\n✅ Сохранено в Книгу жизни!`
+      );
+
+      const children = await storage.getChildrenByParentId(pending.parentId);
+      const user = await storage.getUser(pending.parentId);
+      const parentName = user?.name || "Родитель";
+
+      for (const child of children) {
+        await storage.createEvent({
+          userId: child.id,
+          parentId: pending.parentId,
+          type: "memoir",
+          severity: "info",
+          title: `Новая запись в Книге жизни: «${pending.title}»`,
+          description: pending.content.slice(0, 200),
+        });
+
+        if (child.telegramChatId) {
+          try {
+            await bot!.api.sendMessage(
+              child.telegramChatId,
+              `📖 ${parentName} добавил(а) новую запись в Книгу жизни:\n\n«${pending.title}»\n\n${pending.content.slice(0, 300)}${pending.content.length > 300 ? "..." : ""}`
+            );
+          } catch (err) {
+            console.error("[telegram] Failed to notify child about memoir:", err);
+          }
+        }
+      }
+
+      console.log(`[telegram] Memoir saved: "${pending.title}" for parent ${pending.parentId}`);
+    } catch (err) {
+      console.error("[telegram] memoir_save error:", err);
+      try { await ctx.answerCallbackQuery({ text: "Ошибка, попробуйте снова" }); } catch {}
+    }
+  });
+
+  bot.callbackQuery(/^memoir_cancel:(.+)$/, async (ctx) => {
+    try {
+      const chatId = ctx.chat?.id.toString();
+      if (!chatId) return;
+      try { await ctx.answerCallbackQuery(); } catch {}
+      const draftId = ctx.match[1];
+      const pending = pendingMemoir.get(chatId);
+      if (pending && pending.draftId === draftId) {
+        pendingMemoir.delete(chatId);
+      }
+      await ctx.editMessageText("Хорошо, не буду записывать. Если захотите сохранить историю — просто расскажите ещё раз!");
+    } catch (err) {
+      console.error("[telegram] memoir_cancel error:", err);
+    }
+  });
+
+  async function handleMemoirFlow(chatId: string, userText: string, parentId: number, ctx: any): Promise<boolean> {
+    try {
+      const stopTyping = startTypingLoop(ctx);
+      let adapted;
+      try {
+        adapted = await adaptMemoir(userText);
+      } finally {
+        stopTyping();
+      }
+
+      const draftId = crypto.randomBytes(4).toString("hex");
+
+      pendingMemoir.set(chatId, {
+        title: adapted.title,
+        content: adapted.content,
+        parentId,
+        timestamp: Date.now(),
+        draftId,
+      });
+
+      const keyboard = new InlineKeyboard()
+        .text("Сохранить ✓", `memoir_save:${draftId}`)
+        .text("Не надо ✗", `memoir_cancel:${draftId}`);
+
+      await ctx.reply(
+        `📖 «${adapted.title}»\n\n${adapted.content}\n\n` +
+        `Сохранить в вашу Книгу жизни?`,
+        { reply_markup: keyboard }
+      );
+
+      return true;
+    } catch (err) {
+      console.error("[telegram] Memoir adaptation error:", err);
+      return false;
+    }
+  }
+
   async function handleBpCommand(ctx: any) {
     try {
       const chatId = ctx.chat.id.toString();
@@ -1673,6 +1792,12 @@ export async function startTelegramBot() {
         }
       }
 
+      if (result.intent === "memoir" && userText.length >= 30) {
+        handleMemoirFlow(chatId, userText, user.id, ctx).catch(err =>
+          console.error("[telegram] Memoir flow error (voice):", err)
+        );
+      }
+
       await maybeSendPaywallHint(user.id, chatId, ctx);
     } catch (err: any) {
       console.error("[telegram] Voice message error:", err);
@@ -2150,6 +2275,12 @@ export async function startTelegramBot() {
         } catch (ttsErr) {
           console.error("[telegram] TTS for text message failed:", ttsErr);
         }
+      }
+
+      if (result.intent === "memoir" && userText.length >= 30) {
+        handleMemoirFlow(chatId, userText, user.id, ctx).catch(err =>
+          console.error("[telegram] Memoir flow error (text):", err)
+        );
       }
 
       await maybeSendPaywallHint(user.id, chatId, ctx);

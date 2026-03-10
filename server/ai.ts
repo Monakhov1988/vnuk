@@ -2337,12 +2337,72 @@ export function detectIntentLocal(text: string, hasAlert: boolean): string {
   const utilityPatterns = /(?:сч[её]тчик|показани[яй]|квитанци|жкх)/;
   if (utilityPatterns.test(lower)) return "utility";
 
-  const memoirPatterns = /(?:расскажу историю|вспоминаю|в детстве|молодост|раньше было|помню как)/;
-  if (memoirPatterns.test(lower)) return "memoir";
+  const memoirPatterns = /(?:расскажу историю|расскажу случай|вспоминаю как|в детстве (?:мы|я|у нас)|в молодости (?:мы|я|у нас)|раньше было|помню как (?:мы|я)|помню случай|был такой случай|давно это было|история из жизни|когда я был[аи]? молод|в советское время|в войну (?:мы|я|у нас)|после войны (?:мы|я|у нас)|когда мы жили в|а вот помню|когда я служил)/;
+  if (memoirPatterns.test(lower) && lower.length >= 30) return "memoir";
 
   if (hasAlert) return "emergency";
 
   return "chat";
+}
+
+export async function adaptMemoir(rawText: string): Promise<{ title: string; content: string }> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `Ты — литературный редактор, бережно обрабатывающий устные воспоминания пожилых людей для семейной Книги жизни.
+
+ЗАДАЧА: Получив сырой текст (транскрипцию голосового сообщения или текст), создай:
+1. title — короткий заголовок истории (3-7 слов), отражающий суть
+2. content — адаптированный текст воспоминания
+
+ПРАВИЛА АДАПТАЦИИ:
+- Убери слова-паразиты: "эээ", "ну вот", "значит", "короче", "ну как бы", "это самое"
+- Исправь грамматику и пунктуацию
+- Разбей на абзацы для удобства чтения
+- СОХРАНИ авторский голос, интонацию и стиль рассказчика
+- НЕ переписывай историю — только причёсывай
+- НЕ добавляй факты, которых нет в оригинале
+- НЕ меняй эмоциональный тон
+- Если текст слишком короткий (1-2 предложения) — сохрани как есть, только исправь ошибки
+- Пиши от первого лица, как рассказывал автор
+
+Верни JSON: {"title": "...", "content": "..."}`
+        },
+        {
+          role: "user",
+          content: rawText
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.5,
+      response_format: { type: "json_object" },
+    });
+
+    const text = response.choices[0]?.message?.content || '{}';
+    const parsed = JSON.parse(text);
+
+    storage.logAiUsage({
+      userId: null,
+      endpoint: "adapt-memoir",
+      model: "gpt-4o-mini",
+      tokensIn: response.usage?.prompt_tokens || 0,
+      tokensOut: response.usage?.completion_tokens || 0,
+    });
+
+    return {
+      title: parsed.title || "Воспоминание",
+      content: parsed.content || rawText,
+    };
+  } catch (err: any) {
+    console.error("[ai] adaptMemoir error:", err.message);
+    return {
+      title: "Воспоминание",
+      content: rawText,
+    };
+  }
 }
 
 export async function recognizeMeter(imageBase64: string, userId?: number): Promise<{ value: string | null; raw: string; hint?: string }> {

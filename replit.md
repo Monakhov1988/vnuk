@@ -64,6 +64,7 @@ The system is built on a React (TypeScript, Tailwind v4) frontend, an Express (T
 -   **Greeting card pipeline**: `find_greeting_card` with 3-level fallback (DDG → Perplexity → DALL-E). No text overlay — cards are sent as-is with a text greeting in the message.
 -   **Telegram bot resilience**: No `drop_pending_updates` — messages sent during restart are processed. Dedup middleware prevents double-processing via `update_id` Set. Onboarding state loss shows friendly "try /start again" instead of silent ignore.
 -   **Dual bot tokens**: Dev uses `TELEGRAM_BOT_TOKEN_DEV` (env: development), prod uses `TELEGRAM_BOT_TOKEN`. Prevents 409 Conflict between dev and prod instances.
+-   **Memoir pipeline (Книга жизни)**: Parent tells a story via voice/text → `detectIntentLocal` detects `memoir` intent (requires 30+ chars) → `adaptMemoir()` (GPT-4o-mini) cleans up transcript (removes filler words, fixes grammar, preserves voice) → parent confirms via inline keyboard (draft ID prevents overwrite) → saved to `memoirs` table → child notified via event + Telegram push.
 -   **Link-code security**: One-time use (invalidated after successful link), 24h TTL, rate-limited (5 attempts per 5 min block in Telegram).
 
 **Database (PostgreSQL + Drizzle ORM):**
