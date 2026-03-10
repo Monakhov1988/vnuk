@@ -2494,8 +2494,15 @@ export async function analyzeIntent(text: string, userId?: number): Promise<{
   };
 }
 
-export async function generateProactiveMessage(parentId: number): Promise<string | null> {
+export async function generateProactiveMessage(
+  parentId: number,
+  category?: import("./proactiveContext").ProactiveCategory,
+  proactiveCtx?: import("./proactiveContext").ProactiveContext,
+): Promise<{ text: string; category: string; memoirPromptId?: string; featureId?: string } | null> {
   try {
+    const { gatherProactiveContext, pickCategory, pickMemoirPrompt, pickFeatureToSuggest } = await import("./proactiveContext");
+
+    const ctx = proactiveCtx || await gatherProactiveContext(parentId);
     const recentMessages = await storage.getChatMessages(parentId, 20);
     const memories = await storage.getUserMemory(parentId, 30);
     const personality = await storage.getPersonalitySettings(parentId);
@@ -2521,86 +2528,139 @@ export async function generateProactiveMessage(parentId: number): Promise<string
       .map(m => `${m.role === "user" ? "Собеседник" : "Внучок"}: ${m.content.slice(0, 300)}`)
       .join("\n") || "Нет недавних сообщений.";
 
-    const nonProactiveMessages = recentMessages.filter(m => m.intent !== "proactive");
-    const hasSubstantiveConversation = nonProactiveMessages.some(m =>
-      m.content.length > 15
-    );
+    const nonProactiveMessages = recentMessages.filter(m => !m.intent?.startsWith("proactive"));
+    const hasSubstantiveConversation = nonProactiveMessages.some(m => m.content.length > 15);
 
-    const DISCOVERABLE_FEATURES: Record<string, { keywords: RegExp; suggestion: string }> = {
-      transport: { keywords: /электричк|расписани|поезд|автобус|маршрут/i, suggestion: "расписание электричек и поездов (напиши «электричка до...» или «поезд...»)" },
-      benefits: { keywords: /льгот|пенси|субсиди|предпенсион|пособи/i, suggestion: "льготы и пенсия (напиши «какие льготы...» или «субсидия на ЖКХ»)" },
-      legal: { keywords: /юридическ|наследств|завещани|права\s+при|договор/i, suggestion: "юридические вопросы (наследство, права, документы)" },
-      travel: { keywords: /санатори|путешестви|экскурси|отдых|тур\b/i, suggestion: "путешествия и санатории (напиши «санатории...» или «отдых на...»)" },
-      exercise: { keywords: /зарядк|упражнени|разминк|гимнастик/i, suggestion: "зарядка и упражнения (напиши «зарядка для спины» или «утренняя зарядка»)" },
-      recipe: { keywords: /рецепт|ингредиент|приготов|пошагов/i, suggestion: "рецепты (напиши название блюда — найду пошаговый рецепт)" },
-      card: { keywords: /открытк|нарисова.*открытк/i, suggestion: "открытки (нарисую красивую открытку для подруги или на праздник)" },
-      medicine: { keywords: /побочн.*эффект|совместимость.*лекарств|противопоказани|действующ.*вещество/i, suggestion: "информация о лекарствах (напиши название — расскажу про побочные и совместимость)" },
-    };
+    const chosenCategory = category || pickCategory(ctx, hasSubstantiveConversation);
 
-    let featureHint = "";
-    if (!hasSubstantiveConversation) {
-      try {
-        const allContent = recentMessages.map(m => m.content).join(" ");
-        const unusedFeatures = Object.values(DISCOVERABLE_FEATURES)
-          .filter(f => !f.keywords.test(allContent))
-          .map(f => f.suggestion);
-        if (unusedFeatures.length > 0) {
-          const randomFeature = unusedFeatures[Math.floor(Math.random() * unusedFeatures.length)];
-          featureHint = `\n\nВ последних сообщениях нет конкретной темы. Можно ненавязчиво предложить: ${randomFeature}`;
+    let categoryInstruction = "";
+    let memoirPromptId: string | undefined;
+    let featureId: string | undefined;
+
+    switch (chosenCategory) {
+      case "follow_up":
+        categoryInstruction = `ЗАДАЧА: Продолжи тему из последних сообщений. Примеры:
+- Говорили о здоровье/давлении → спроси как самочувствие сегодня
+- Обсуждали рецепт/блюдо → спроси получилось ли, понравилось ли
+- Искали врача/клинику → спроси записался ли, как прошёл приём
+- Обсуждали поездку/путешествие → спроси как подготовка
+- Говорили о внуках/детях → спроси как у них дела
+- Решали бытовой вопрос → спроси решилось ли
+Если темы нет — спроси как день проходит.`;
+        break;
+
+      case "health_check": {
+        const parts: string[] = ["ЗАДАЧА: Тёплое сообщение о здоровье."];
+        if (ctx.healthGap !== null && ctx.healthGap >= 3) {
+          parts.push(`Пользователь не записывал давление уже ${ctx.healthGap} дней. Мягко спроси как самочувствие и давление — без давления, с заботой.`);
         }
-      } catch {}
+        if (ctx.medicationStreak >= 1) {
+          parts.push("Пользователь сегодня подтвердил приём лекарств — молодец! Можно похвалить.");
+        }
+        if (parts.length === 1) {
+          parts.push("Спроси как самочувствие, как спалось, как настроение.");
+        }
+        categoryInstruction = parts.join("\n");
+        break;
+      }
+
+      case "weather":
+        if (ctx.weather) {
+          categoryInstruction = `ЗАДАЧА: Начни с погоды и перейди к тёплому пожеланию.
+Погода в ${ctx.weather.city}: ${ctx.weather.summary.slice(0, 300)}
+Не повторяй данные дословно — перескажи своими словами, по-домашнему. Например: «У вас сегодня ${ctx.day.timeOfDay === "утро" ? "утром" : "днём"} обещают...» Дай совет (зонтик, шапка, прогулка).`;
+        } else {
+          categoryInstruction = "ЗАДАЧА: Спроси как день проходит, как погода за окном.";
+        }
+        break;
+
+      case "seasonal": {
+        const holidays = ctx.seasonal.upcomingHolidays;
+        if (holidays.length > 0) {
+          const h = holidays[0];
+          const dayWord = h.daysUntil === 0 ? "сегодня" : h.daysUntil === 1 ? "завтра" : `через ${h.daysUntil} дня`;
+          categoryInstruction = `ЗАДАЧА: Тёплое сообщение про праздник.
+${h.name} — ${dayWord}! Упомяни его тепло и естественно. Можно спросить как планируют отмечать, поздравить, поделиться тёплыми словами. НЕ будь формальным — как внук, а не открытка.`;
+        } else {
+          categoryInstruction = `ЗАДАЧА: Сейчас ${ctx.seasonal.season} ${ctx.seasonal.seasonEmoji}. Скажи что-то тёплое про время года — что цветёт, какая погода, чем хорошо заняться. Будь естественным.`;
+        }
+        break;
+      }
+
+      case "memoir_prompt": {
+        const prompt = pickMemoirPrompt(ctx.usedMemoirPrompts, ctx.seasonal.season);
+        if (prompt) {
+          memoirPromptId = prompt.id;
+          categoryInstruction = `ЗАДАЧА: Попроси рассказать историю из жизни.
+Используй ИМЕННО этот вопрос (можно чуть перефразировать, сохранив суть):
+«${prompt.text}»
+Добавь: ты можешь рассказать голосом или текстом — я бережно запишу в твою Книгу жизни.
+Будь тёплым, заинтересованным. Не давай понять, что это шаблон.`;
+        } else {
+          categoryInstruction = "ЗАДАЧА: Спроси как день проходит, расскажи что рад общению.";
+        }
+        break;
+      }
+
+      case "feature_discovery": {
+        const allContent = recentMessages.map(m => m.content).join(" ");
+        const feature = pickFeatureToSuggest(ctx.suggestedFeatures, allContent);
+        if (feature) {
+          featureId = feature.id;
+          categoryInstruction = `ЗАДАЧА: Ненавязчиво расскажи о функции, которую собеседник ещё не пробовал.
+Функция: ${feature.suggestion}
+Упомяни её МИМОХОДОМ, как бы вспомнив: «Кстати, я ведь ещё могу...» или «А знаешь, если понадобится — я умею...». НЕ будь рекламным, не перечисляй возможности. Одна функция, одно естественное предложение.`;
+        } else {
+          categoryInstruction = "ЗАДАЧА: Спроси как день проходит.";
+        }
+        break;
+      }
+
+      case "gratitude": {
+        if (ctx.daysSinceLastChat >= 2) {
+          categoryInstruction = `ЗАДАЧА: Тёплое сообщение — ты соскучился.
+Прошло ${ctx.daysSinceLastChat} дня без общения. Скажи что скучаешь, что рад будешь поговорить. БЕЗ укора, БЕЗ давления. Просто: «Привет! Давно не общались, как ты?» или «Соскучился! Как дела?». Будь искренним.`;
+        } else {
+          categoryInstruction = "ЗАДАЧА: Напиши что-то тёплое и благодарное. Например, что рад общению, что приятно было вчера поговорить, или просто пожелай хорошего дня. Коротко и от души.";
+        }
+        break;
+      }
     }
 
-    const now = new Date();
-    const mskHour = parseInt(now.toLocaleString("en-US", { timeZone: "Europe/Moscow", hour: "numeric", hour12: false }));
+    const dayInfo = `${ctx.day.dayOfWeek}, ${ctx.day.timeOfDay} (${ctx.day.mskHour}:00 МСК)${ctx.day.isWeekend ? ", выходной" : ""}`;
 
-    let timeContext = "день";
-    if (mskHour < 12) timeContext = "утро";
-    else if (mskHour >= 18) timeContext = "вечер";
-
-    const prompt = `Ты — Внучок, любящий внук. Сейчас ${timeContext} (${mskHour}:00 МСК).
+    const prompt = `Ты — Внучок, любящий внук. Сейчас ${dayInfo}.
 Обращение: на «${formality}».${ageTone}
 
 Что ты знаешь о собеседнике:
 ${memorySnippet}
 
-Последние сообщения (внимательно прочитай — это ГЛАВНЫЙ контекст):
+Последние сообщения:
 ${recentContext}
 
-Напиши ОДНО короткое тёплое сообщение-инициативу (1-3 предложения).
+${categoryInstruction}
 
-ПРИОРИТЕТ (строго в этом порядке):
-1. ПРОДОЛЖИ тему из последних сообщений. Примеры:
-   - Говорили о здоровье/давлении → спроси как самочувствие сегодня
-   - Обсуждали рецепт/блюдо → спроси получилось ли, понравилось ли
-   - Искали врача/клинику → спроси записался ли, как прошёл приём
-   - Обсуждали поездку/путешествие → спроси как подготовка
-   - Говорили о внуках/детях → спроси как у них дела
-   - Решали бытовой вопрос → спроси решилось ли
-2. Если в памяти есть важные факты (лекарства, давление, события) → спроси по ним
-3. ТОЛЬКО если в последних сообщениях нет конкретной темы → спроси как день проходит${featureHint}
+Напиши ОДНО короткое тёплое сообщение (1-3 предложения).
 
 СТРОГИЕ ЗАПРЕТЫ:
-- НЕ предлагай загадки, зарядку, рецепты или развлечения, если разговор был о другой теме
-- НЕ игнорируй контекст последних сообщений ради generic фразы
 - НЕ начинай с "Привет" если вечер
 - НЕ упоминай что ты бот или ИИ
 - НЕ ставь пометки типа [proactive]
-- НЕ ВЫДУМЫВАЙ факты, события, истории, «интересные факты дня»
+- НЕ ВЫДУМЫВАЙ факты, события, истории
 - Будь естественным, как будто вспомнил и решил написать
 - Используй обращение на «${formality}»`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 200,
-      temperature: 0.7,
+      max_tokens: 250,
+      temperature: 0.75,
     });
 
     const text = response.choices[0]?.message?.content?.trim();
     if (!text || text.length < 5) return null;
 
-    return text;
+    return { text, category: chosenCategory, memoirPromptId, featureId };
   } catch (err) {
     console.error("[ai] Error generating proactive message:", err);
     return null;

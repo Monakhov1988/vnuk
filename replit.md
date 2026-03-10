@@ -70,11 +70,22 @@ The system is built on a React (TypeScript, Tailwind v4) frontend, an Express (T
 **Database (PostgreSQL + Drizzle ORM):**
 -   Key tables: `users`, `subscriptions`, `reminders`, `events`, `chat_messages`, `user_memory`, `utility_metrics`, `memoirs`, `health_logs`, `waitlist`, `ai_usage_logs`, `topic_settings`, `personality_settings`.
 
-**Proactive Reminders (`server/scheduler.ts`):**
+**Proactive Messages (`server/scheduler.ts` + `server/proactiveContext.ts`):**
 -   Node-cron schedules hourly checks for medication reminders.
 -   Sends Telegram pushes with "Confirmed" buttons.
 -   Follow-up reminders and child notifications for unconfirmed medications.
--   Proactive messages from Vnuchok based on user activity, memory, and context.
+-   **7 proactive message categories** with weighted random selection:
+    1. `follow_up` — continue recent conversation topic (highest priority if substantive chat exists)
+    2. `health_check` — BP gap (3+ days), medication streak congratulations, general wellness
+    3. `weather` — morning weather-based messages using Open-Meteo (city from memory)
+    4. `seasonal` — Russian holidays (13 holidays tracked, 5-day lookahead) + season-appropriate messages
+    5. `memoir_prompt` — 30 themed prompts (childhood, school, family, travel, cooking, etc.) with season filters; tracked via `user_memory` (category: `memoir_prompt_used`) to avoid repeats
+    6. `feature_discovery` — 15 features tracked progressively via `user_memory` (category: `feature_discovery`); never re-suggests
+    7. `gratitude` — warm "miss you" messages after 2+ days silence
+-   **Category picker** (`pickCategory`): uses priority rules (silence → gratitude; health gap → health_check; holiday → seasonal) then weighted random fallback
+-   **Timing**: Checks at 09:00, 11:00, 14:00, 17:00, 20:00 MSK with ±30min random jitter for natural feel
+-   **Frequency**: 1 message/day (silence threshold: 3h); intent stored as `proactive:category` (e.g., `proactive:health_check`)
+-   **Context gathering** (`gatherProactiveContext`): parallel fetch of weather, health logs, medication streaks, feature history, memoir history
 
 **Design System:**
 -   Fonts: Lora (headings), Inter (body).

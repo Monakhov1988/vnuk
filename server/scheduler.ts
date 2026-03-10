@@ -3,6 +3,7 @@ import { InlineKeyboard } from "grammy";
 import { storage } from "./storage";
 import { bot } from "./telegram";
 import { generateProactiveMessage } from "./ai";
+import { gatherProactiveContext } from "./proactiveContext";
 
 function getMoscowTime(): { hour: number; minute: number; dateStr: string } {
   const now = new Date();
@@ -143,13 +144,17 @@ function isBotReady(): boolean {
 
 const proactiveLock = new Set<number>();
 
-function hasProactiveToday(messages: any[], dateStr: string): boolean {
-  return messages.some(m => {
-    if (m.intent !== "proactive") return false;
+function getProactiveCountToday(messages: any[], dateStr: string): number {
+  return messages.filter(m => {
+    if (!m.intent || !m.intent.startsWith("proactive")) return false;
     if (!m.createdAt) return false;
     const msgDate = new Date(m.createdAt.toLocaleString("en-US", { timeZone: "Europe/Moscow" })).toISOString().slice(0, 10);
     return msgDate === dateStr;
-  });
+  }).length;
+}
+
+function getMaxProactivePerDay(_parentId: number): number {
+  return 1;
 }
 
 async function checkProactiveMessages() {
@@ -168,34 +173,61 @@ async function checkProactiveMessages() {
 
       try {
         const recentMessages = await storage.getChatMessages(parent.id, 20);
-        if (hasProactiveToday(recentMessages, dateStr)) continue;
+        const todayCount = getProactiveCountToday(recentMessages, dateStr);
+        const maxPerDay = getMaxProactivePerDay(parent.id);
+        if (todayCount >= maxPerDay) continue;
 
         const lastMsgTime = await storage.getLastMessageTime(parent.id);
         if (!lastMsgTime) continue;
 
         const hoursSinceLastMsg = (Date.now() - lastMsgTime.getTime()) / (1000 * 60 * 60);
-        if (hoursSinceLastMsg < 4) continue;
+        if (hoursSinceLastMsg < 3) continue;
 
-        const message = await generateProactiveMessage(parent.id);
-        if (!message) continue;
+        const ctx = await gatherProactiveContext(parent.id);
+        const result = await generateProactiveMessage(parent.id, undefined, ctx);
+        if (!result) continue;
 
         const doubleCheck = await storage.getChatMessages(parent.id, 20);
-        if (hasProactiveToday(doubleCheck, dateStr)) {
-          console.log(`[scheduler] Proactive already sent to parent ${parent.id} (double-check), skipping`);
+        if (getProactiveCountToday(doubleCheck, dateStr) >= maxPerDay) {
+          console.log(`[scheduler] Proactive limit reached for parent ${parent.id} (double-check), skipping`);
           continue;
         }
 
         await storage.createChatMessage({
           parentId: parent.id,
           role: "assistant",
-          content: message,
-          intent: "proactive",
+          content: result.text,
+          intent: `proactive:${result.category}`,
           hasAlert: false,
         });
 
-        await bot.api.sendMessage(parent.telegramChatId!, message);
+        if (result.memoirPromptId) {
+          try {
+            await storage.createUserMemory({
+              parentId: parent.id,
+              category: "memoir_prompt_used",
+              fact: result.memoirPromptId,
+            });
+          } catch (e) {
+            console.error(`[scheduler] Failed to save memoir prompt tracking for parent ${parent.id}:`, e);
+          }
+        }
 
-        console.log(`[scheduler] Sent proactive message to parent ${parent.id}`);
+        if (result.featureId) {
+          try {
+            await storage.createUserMemory({
+              parentId: parent.id,
+              category: "feature_discovery",
+              fact: result.featureId,
+            });
+          } catch (e) {
+            console.error(`[scheduler] Failed to save feature discovery tracking for parent ${parent.id}:`, e);
+          }
+        }
+
+        await bot.api.sendMessage(parent.telegramChatId!, result.text);
+
+        console.log(`[scheduler] Sent proactive:${result.category} to parent ${parent.id}`);
       } catch (err) {
         console.error(`[scheduler] Error sending proactive message to parent ${parent.id}:`, err);
       } finally {
@@ -244,11 +276,15 @@ export function startScheduler() {
   cron.schedule("0 0 * * *", resetDailyStatuses, { timezone: "Europe/Moscow" });
 
   cron.schedule("0 9,11,14,17,20 * * *", async () => {
-    try {
-      await checkProactiveMessages();
-    } catch (err) {
-      console.error("[scheduler] checkProactiveMessages error:", err);
-    }
+    const jitterMs = Math.floor(Math.random() * 30 * 60 * 1000);
+    console.log(`[scheduler] Proactive check scheduled with ${Math.round(jitterMs / 60000)}min jitter`);
+    setTimeout(async () => {
+      try {
+        await checkProactiveMessages();
+      } catch (err) {
+        console.error("[scheduler] checkProactiveMessages error:", err);
+      }
+    }, jitterMs);
   }, { timezone: "Europe/Moscow" });
 
   console.log("[scheduler] Medication reminder + proactive message scheduler started (MSK timezone)");
