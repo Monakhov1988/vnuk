@@ -46,7 +46,7 @@ async function checkReminders() {
       const keyboard = new InlineKeyboard()
         .text(`Принял(а) ✅`, `confirm_med_${reminder.id}`);
 
-      const nameOrDear = parent.name ? parent.name.split(" ")[0] : "родненький";
+      const nameOrDear = parent.name ? parent.name.split(" ")[0] : (isVy ? "дорогой" : "родненький");
       const medText = isVy
         ? `${nameOrDear}, не забудьте про ${reminder.medicineName} 💊\n\nПриняли — нажмите кнопочку, я буду спокоен:`
         : `${nameOrDear}, не забудь про ${reminder.medicineName} 💊\n\nПринял(а) — нажми кнопочку, я буду спокоен:`;
@@ -115,7 +115,7 @@ async function checkMissedReminders() {
       const keyboard = new InlineKeyboard()
         .text(`Принял(а) ✅`, `confirm_med_${reminder.id}`);
 
-      const nameOrDear = parent.name ? parent.name.split(" ")[0] : "родненький";
+      const nameOrDear = parent.name ? parent.name.split(" ")[0] : (isVy ? "дорогой" : "родненький");
       const missedText = isVy
         ? `${nameOrDear}, а Вы ${reminder.medicineName} сегодня принимали? Я просто волнуюсь 💊`
         : `${nameOrDear}, а ${reminder.medicineName} сегодня принял(а)? Я просто волнуюсь 💊`;
