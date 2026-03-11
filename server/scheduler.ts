@@ -353,6 +353,123 @@ async function generateWeeklySafetyReport() {
   }
 }
 
+async function generateDailySummary() {
+  if (!isBotReady()) return;
+
+  try {
+    const parents = await storage.getAllActiveParents();
+    const { dateStr } = getMoscowTime();
+
+    for (const parent of parents) {
+      try {
+        const children = await storage.getChildrenByParentId(parent.id);
+        if (children.length === 0) continue;
+
+        const msgCount = await storage.getChatMessageCountForDate(parent.id, dateStr);
+        if (msgCount === 0) continue;
+
+        const now = new Date();
+        const mskNow = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Moscow" }));
+        const dayStart = new Date(mskNow);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayStartUTC = new Date(dayStart.getTime() - 3 * 60 * 60 * 1000);
+
+        const medStats = await storage.getRemindersConfirmedCount(parent.id, dayStartUTC, now);
+        const bpLogs = await storage.getHealthLogsForPeriod(parent.id, dayStartUTC, now);
+        const dayMemoirs = await storage.getMemoirsForPeriod(parent.id, dayStartUTC, now);
+
+        const lines: string[] = [];
+        lines.push(`🌙 Вечерняя сводка о ${parent.name}`);
+        lines.push("");
+        lines.push(`💬 Сегодня общался(ась) с Внучком — ${msgCount} сообщений`);
+
+        if (medStats.total > 0) {
+          if (medStats.missed > 0) {
+            lines.push(`💊 Лекарства: ${medStats.confirmed} принято, ${medStats.missed} не подтверждено ⚠️`);
+          } else {
+            lines.push(`💊 Лекарства: все приняты ✅`);
+          }
+        }
+
+        if (bpLogs.length > 0) {
+          const latest = bpLogs[0];
+          lines.push(`🩺 Давление: ${latest.systolic}/${latest.diastolic}`);
+        }
+
+        if (dayMemoirs.length > 0) {
+          lines.push(`📖 Новых историй: ${dayMemoirs.length}`);
+        }
+
+        lines.push("");
+        lines.push("Внучок был рядом весь день 💛");
+
+        const summaryText = lines.join("\n");
+
+        for (const child of children) {
+          if (!child.telegramChatId) continue;
+          try {
+            await bot.api.sendMessage(child.telegramChatId, summaryText);
+          } catch (err) {
+            console.error(`[scheduler] Failed to send daily summary to child ${child.id}:`, err);
+          }
+        }
+
+        console.log(`[scheduler] Daily summary sent for parent ${parent.id}`);
+      } catch (parentErr) {
+        console.error(`[scheduler] Error generating daily summary for parent ${parent.id}:`, parentErr);
+      }
+    }
+  } catch (err) {
+    console.error("[scheduler] Error in generateDailySummary:", err);
+  }
+}
+
+async function generateMonthlyMilestones() {
+  if (!isBotReady()) return;
+
+  try {
+    const parents = await storage.getAllActiveParents();
+
+    for (const parent of parents) {
+      try {
+        const children = await storage.getChildrenByParentId(parent.id);
+        if (children.length === 0) continue;
+
+        const regDate = await storage.getRegistrationDate(parent.id);
+        const totalDays = regDate ? Math.floor((Date.now() - regDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+        if (totalDays < 7) continue;
+
+        const stats = await storage.getParentEngagementStats(parent.id);
+
+        const lines: string[] = [];
+        lines.push(`🎯 ${parent.name} общается с Внучком уже ${totalDays} дней!`);
+        lines.push("");
+        lines.push(`📖 Записано историй в Книгу жизни: ${stats.memoirsCount}`);
+        lines.push(`📅 Активных дней за месяц: ${stats.daysActive30}`);
+        lines.push("");
+        lines.push("Спасибо что заботитесь о близких 💛");
+
+        const milestoneText = lines.join("\n");
+
+        for (const child of children) {
+          if (!child.telegramChatId) continue;
+          try {
+            await bot.api.sendMessage(child.telegramChatId, milestoneText);
+          } catch (err) {
+            console.error(`[scheduler] Failed to send milestone to child ${child.id}:`, err);
+          }
+        }
+
+        console.log(`[scheduler] Monthly milestone sent for parent ${parent.id}`);
+      } catch (parentErr) {
+        console.error(`[scheduler] Error generating milestone for parent ${parent.id}:`, parentErr);
+      }
+    }
+  } catch (err) {
+    console.error("[scheduler] Error in generateMonthlyMilestones:", err);
+  }
+}
+
 let schedulerStarted = false;
 
 export function startScheduler() {
@@ -400,5 +517,21 @@ export function startScheduler() {
     }
   }, { timezone: "Europe/Moscow" });
 
-  console.log("[scheduler] Medication reminder + proactive message + weekly report scheduler started (MSK timezone)");
+  cron.schedule("0 21 * * *", async () => {
+    try {
+      await generateDailySummary();
+    } catch (err) {
+      console.error("[scheduler] generateDailySummary error:", err);
+    }
+  }, { timezone: "Europe/Moscow" });
+
+  cron.schedule("0 12 1 * *", async () => {
+    try {
+      await generateMonthlyMilestones();
+    } catch (err) {
+      console.error("[scheduler] generateMonthlyMilestones error:", err);
+    }
+  }, { timezone: "Europe/Moscow" });
+
+  console.log("[scheduler] Medication reminder + proactive message + weekly report + daily summary + monthly milestone scheduler started (MSK timezone)");
 }

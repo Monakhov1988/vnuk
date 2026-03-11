@@ -220,6 +220,37 @@ function parseBpInput(input: string): { systolic: number; diastolic: number; not
   return { systolic, diastolic, note };
 }
 
+export function formatAlertTitle(intent: string | null): string {
+  switch (intent) {
+    case "scam": return "Возможная попытка мошенничества!";
+    case "financial_risk": return "Подозрительное финансовое решение!";
+    case "home_danger": return "Опасная ситуация дома!";
+    case "lost": return "Родитель потерялся на улице!";
+    default: return "Родитель сообщил о проблеме со здоровьем!";
+  }
+}
+
+function escapeMarkdown(text: string): string {
+  return text.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, "\\$1");
+}
+
+export function formatAlertPush(intent: string | null, parentName: string, message: string): string {
+  const truncMsg = escapeMarkdown(message.length > 200 ? message.slice(0, 200) + "..." : message);
+  parentName = escapeMarkdown(parentName);
+  switch (intent) {
+    case "scam":
+      return `🚨 *ВНИМАНИЕ! Возможная попытка мошенничества!*\n\n${parentName} написал(а): «${truncMsg}»\n\n⚡ Позвоните ${parentName} прямо сейчас!`;
+    case "financial_risk":
+      return `🚨 *Подозрительное финансовое решение!*\n\n${parentName} написал(а): «${truncMsg}»\n\n⚡ Позвоните и уточните ситуацию!`;
+    case "home_danger":
+      return `🚨 *Опасная ситуация дома!*\n\n${parentName} написал(а): «${truncMsg}»\n\n⚡ Проверьте ситуацию дома! При необходимости звоните 112`;
+    case "lost":
+      return `🚨 *Родитель потерялся на улице!*\n\n${parentName} написал(а): «${truncMsg}»\n\n⚡ Помогите определить местоположение! Позвоните прямо сейчас!`;
+    default:
+      return `🚨 *Проблема со здоровьем!*\n\n${parentName} написал(а): «${truncMsg}»\n\n⚡ Вызовите скорую если нужно! 112`;
+  }
+}
+
 export let bot: Bot | null = null;
 export let botUsername: string | null = null;
 const pendingRegistration = new Map<string, { timestamp: number }>();
@@ -1181,7 +1212,7 @@ export async function startTelegramBot() {
           try {
             await bot!.api.sendMessage(
               child.telegramChatId,
-              `📖 ${parentName} добавил(а) новую запись в Книгу жизни:\n\n«${pending.title}»\n\n${pending.content.slice(0, 300)}${pending.content.length > 300 ? "..." : ""}`
+              `📖 ${parentName} записал(а) новую историю в Книгу жизни:\n\n«${pending.title}»\n\n${pending.content.slice(0, 300)}${pending.content.length > 300 ? "..." : ""}\n\nЗагляните в Книгу жизни — это бесценно 💛`
             );
           } catch (err) {
             console.error("[telegram] Failed to notify child about memoir:", err);
@@ -1295,6 +1326,32 @@ export async function startTelegramBot() {
       }
 
       await ctx.reply(response);
+
+      if (systolic >= 160 || diastolic >= 100 || systolic <= 90) {
+        const children = await storage.getChildrenByParentId(user.id);
+        const anomalyType = systolic <= 90 ? "ниже" : "выше";
+        for (const child of children) {
+          await storage.createEvent({
+            userId: child.id,
+            parentId: user.id,
+            type: "checkin",
+            severity: "warning",
+            title: `Давление ${anomalyType} нормы: ${systolic}/${diastolic}`,
+            description: `${user.name}: ${systolic}/${diastolic}${note ? ` — ${note}` : ""} (Telegram)`,
+          });
+
+          if (child.telegramChatId) {
+            try {
+              await bot!.api.sendMessage(
+                child.telegramChatId,
+                `❤️‍🩹 Давление ${user.name} сегодня: ${systolic}/${diastolic} — ${anomalyType} обычного.\n\nВозможно, стоит позвонить.`
+              );
+            } catch (err) {
+              console.error("[telegram] Failed to notify child about BP anomaly:", err);
+            }
+          }
+        }
+      }
     } catch (err) {
       console.error("[telegram] /bp error:", err);
       await ctx.reply("Произошла ошибка. Попробуйте позже.");
@@ -1838,15 +1895,7 @@ export async function startTelegramBot() {
       });
 
       if (result.hasAlert) {
-        const alertTitle = result.intent === "scam"
-          ? "Возможная попытка мошенничества!"
-          : result.intent === "financial_risk"
-          ? "Подозрительное финансовое решение!"
-          : result.intent === "home_danger"
-          ? "Опасная ситуация дома!"
-          : result.intent === "lost"
-          ? "Родитель потерялся на улице!"
-          : "Родитель сообщил о проблеме со здоровьем!";
+        const alertTitle = formatAlertTitle(result.intent);
 
         const children = await storage.getChildrenByParentId(user.id);
         for (const child of children) {
@@ -1863,7 +1912,8 @@ export async function startTelegramBot() {
             try {
               await bot!.api.sendMessage(
                 child.telegramChatId,
-                `⚠️ ${alertTitle}\n\n${user.name} сказал(а): "${userText}"\n\nПроверьте ситуацию!`
+                formatAlertPush(result.intent, user.name, userText),
+                { parse_mode: "Markdown" }
               );
             } catch (err) {
               console.error("[telegram] Failed to notify child:", err);
@@ -2154,15 +2204,7 @@ export async function startTelegramBot() {
         });
 
         if (result.hasAlert) {
-          const alertTitle = result.intent === "scam"
-            ? "Возможная попытка мошенничества!"
-            : result.intent === "financial_risk"
-            ? "Подозрительное финансовое решение!"
-            : result.intent === "home_danger"
-            ? "Опасная ситуация дома!"
-            : result.intent === "lost"
-            ? "Родитель потерялся на улице!"
-            : "Родитель сообщил о проблеме со здоровьем!";
+          const alertTitle = formatAlertTitle(result.intent);
 
           const children = await storage.getChildrenByParentId(user.id);
           for (const child of children) {
@@ -2178,7 +2220,8 @@ export async function startTelegramBot() {
               try {
                 await bot!.api.sendMessage(
                   child.telegramChatId,
-                  `⚠️ ${alertTitle}\n\n${user.name} сказал(а): "${confirmedText}"\n\nПроверьте ситуацию!`
+                  formatAlertPush(result.intent, user.name, confirmedText),
+                  { parse_mode: "Markdown" }
                 );
               } catch {}
             }
@@ -2320,15 +2363,7 @@ export async function startTelegramBot() {
       });
 
       if (result.hasAlert) {
-        const alertTitle = result.intent === "scam"
-          ? "Возможная попытка мошенничества!"
-          : result.intent === "financial_risk"
-          ? "Подозрительное финансовое решение!"
-          : result.intent === "home_danger"
-          ? "Опасная ситуация дома!"
-          : result.intent === "lost"
-          ? "Родитель потерялся на улице!"
-          : "Родитель сообщил о проблеме со здоровьем!";
+        const alertTitle = formatAlertTitle(result.intent);
 
         const children = await storage.getChildrenByParentId(user.id);
         for (const child of children) {
@@ -2345,7 +2380,8 @@ export async function startTelegramBot() {
             try {
               await bot!.api.sendMessage(
                 child.telegramChatId,
-                `⚠️ ${alertTitle}\n\n${user.name} написал(а): "${userText}"\n\nПроверьте ситуацию!`
+                formatAlertPush(result.intent, user.name, userText),
+                { parse_mode: "Markdown" }
               );
             } catch (err) {
               console.error("[telegram] Failed to notify child:", err);

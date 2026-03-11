@@ -111,6 +111,9 @@ export interface IStorage {
     memoirsCount: number;
     lastActiveDate: Date | null;
   }>;
+
+  getChatMessageCountForDate(parentId: number, dateStr: string): Promise<number>;
+  getRegistrationDate(parentId: number): Promise<Date | null>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -604,6 +607,24 @@ export class DatabaseStorage implements IStorage {
       memoirsCount: Number(memoirsResult?.value) || 0,
       lastActiveDate: lastActiveResult?.value ?? null,
     };
+  }
+
+  async getChatMessageCountForDate(parentId: number, dateStr: string): Promise<number> {
+    const [result] = await db.select({
+      value: count(),
+    }).from(chatMessages).where(
+      and(
+        eq(chatMessages.parentId, parentId),
+        eq(chatMessages.role, "user"),
+        sql`DATE(${chatMessages.createdAt} AT TIME ZONE 'Europe/Moscow') = ${dateStr}`
+      )
+    );
+    return Number(result?.value) || 0;
+  }
+
+  async getRegistrationDate(parentId: number): Promise<Date | null> {
+    const user = await db.select({ createdAt: users.createdAt }).from(users).where(eq(users.id, parentId)).limit(1);
+    return user[0]?.createdAt ?? null;
   }
 }
 

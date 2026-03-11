@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { storage } from "./storage";
 import { chatWithGrandchild, recognizeMeter, analyzeIntent, detectIntentLocal } from "./ai";
 import { extractDishFromText, RECIPE_CLARIFICATIONS } from "./recipeUtils";
+import { bot, formatAlertPush } from "./telegram";
 import {
   insertReminderSchema,
   insertEventSchema,
@@ -415,6 +416,32 @@ export async function registerRoutes(
         title: "Давление записано",
         description: `${log.systolic}/${log.diastolic}${log.note ? ` — ${log.note}` : ""}`,
       });
+
+      if (log.systolic >= 160 || log.diastolic >= 100 || log.systolic <= 90) {
+        const parent = await storage.getUser(parentId);
+        const parentName = parent?.name || "Родитель";
+        const anomalyType = log.systolic <= 90 ? "ниже" : "выше";
+        const children = await storage.getChildrenByParentId(parentId);
+        for (const child of children) {
+          await storage.createEvent({
+            userId: child.id,
+            parentId,
+            type: "checkin",
+            severity: "warning",
+            title: `Давление ${anomalyType} нормы: ${log.systolic}/${log.diastolic}`,
+            description: `${parentName}: ${log.systolic}/${log.diastolic}${log.note ? ` — ${log.note}` : ""}`,
+          });
+          if (child.telegramChatId && bot) {
+            try {
+              await bot.api.sendMessage(
+                child.telegramChatId,
+                `❤️‍🩹 Давление ${parentName} сегодня: ${log.systolic}/${log.diastolic} — ${anomalyType} обычного.\n\nВозможно, стоит позвонить.`
+              );
+            } catch {}
+          }
+        }
+      }
+
       return res.json(log);
     } catch (e: any) {
       return res.status(400).json({ message: e.message });
@@ -542,6 +569,17 @@ export async function registerRoutes(
               title: alertTitle,
               description: alertDescription,
             });
+            if (child.telegramChatId && bot) {
+              try {
+                await bot.api.sendMessage(
+                  child.telegramChatId,
+                  formatAlertPush(result.intent, user.name || "Родитель", alertDescription),
+                  { parse_mode: "Markdown" }
+                );
+              } catch (pushErr) {
+                console.error("[routes] Failed to send alert push to child:", pushErr);
+              }
+            }
           }
           if (children.length === 0) {
             await storage.createEvent({

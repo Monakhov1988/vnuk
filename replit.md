@@ -59,6 +59,12 @@ The system uses a React (TypeScript, Tailwind v4) frontend, an Express (TypeScri
 -   **Remote onboarding**: Deep-link for child-initiated parent onboarding.
 -   **Engagement metrics**: Tracks active days, messages, memoirs for dashboard display.
 -   **Weekly safety report**: Scheduled reports for children on parent activity.
+-   **Child Telegram notifications**: Multi-level push system for children:
+    -   **Critical alerts** (instant): Scam, home danger, lost, emergency, financial risk — with Markdown formatting and specific action items (both Telegram bot and web chat trigger pushes).
+    -   **Daily evening summary** (21:00 MSK): Message count, medication status, BP readings, new memoirs — only sent if parent was active.
+    -   **BP anomaly alerts** (instant): Systolic ≥160 or ≤90, diastolic ≥100 — warning events + Telegram push (from both bot and web).
+    -   **Memoir notifications** (on save): Push with story title and excerpt when parent saves a memoir.
+    -   **Monthly milestones** (1st of month, 12:00 MSK): Total days active, memoirs count, messages count — retention-focused.
 
 **Database (PostgreSQL + Drizzle ORM):**
 -   Stores user data, subscriptions, reminders, events, chat history, user memory, utility metrics, memoirs, health logs, and AI usage logs.
