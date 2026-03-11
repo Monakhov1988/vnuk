@@ -243,7 +243,13 @@ function ChildDashboard({ user, dashboard, status }: { user: any; dashboard: any
         </div>
       </div>
 
-      {!dashboard?.parent && <LinkParentCard />}
+      {!dashboard?.parent && (
+        <InviteParentCard linkCode={user.linkCode} botUsername={dashboard?.botUsername} />
+      )}
+
+      {dashboard?.parent && !dashboard?.user?.hasTelegram && dashboard?.botUsername && (
+        <ConnectChildTelegramCard botUsername={dashboard.botUsername} />
+      )}
 
       {dashboard?.engagementStats && <EngagementCard stats={dashboard.engagementStats} />}
 
@@ -594,17 +600,33 @@ function AIChatTab({ parentName, isParent }: { parentName?: string; isParent?: b
   );
 }
 
-function LinkParentCard() {
-  const [code, setCode] = useState("");
+function InviteParentCard({ linkCode, botUsername }: { linkCode?: string; botUsername?: string | null }) {
+  const [copied, setCopied] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+  const [manualCode, setManualCode] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const deepLink = linkCode && botUsername ? `https://t.me/${botUsername}?start=${linkCode}` : null;
+
+  const copyLink = async () => {
+    if (!deepLink) return;
+    try {
+      await navigator.clipboard.writeText(deepLink);
+      setCopied(true);
+      toast({ title: "Ссылка скопирована!" });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Не удалось скопировать", variant: "destructive" });
+    }
+  };
 
   const linkMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/link-parent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ linkCode: code.toUpperCase() }),
+        body: JSON.stringify({ linkCode: manualCode.toUpperCase() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
@@ -620,21 +642,108 @@ function LinkParentCard() {
   });
 
   return (
-    <Card className="mb-8 border-dashed border-2 border-primary/30 bg-primary/5">
+    <Card className="mb-8 border-2 border-emerald-200 bg-emerald-50/50" data-testid="card-invite-parent">
       <CardContent className="pt-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Link2 className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold">Привяжите родителя</h3>
+        <div className="flex items-center gap-3 mb-3">
+          <Share2 className="w-5 h-5 text-emerald-600" />
+          <h3 className="font-semibold text-emerald-900">Пригласите родителя</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Попросите родителя зарегистрироваться — он получит код привязки. Введите этот код здесь.
+          Отправьте эту ссылку вашему родителю. Он нажмёт — и бот сам начнёт знакомство. Ничего настраивать не нужно.
         </p>
-        <div className="flex gap-2">
-          <Input placeholder="Код, например: A1B2C3" value={code} onChange={(e) => setCode(e.target.value)} data-testid="input-link-code" className="uppercase" />
-          <Button onClick={() => linkMutation.mutate()} disabled={linkMutation.isPending || code.length < 4} data-testid="button-link-parent">
-            {linkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Привязать"}
-          </Button>
+
+        {deepLink && (
+          <>
+            <div className="flex items-center gap-2 p-3 bg-white rounded-lg border mb-4">
+              <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-sm font-mono truncate flex-1" data-testid="text-invite-deeplink">{deepLink}</span>
+              <Button variant="outline" size="sm" onClick={copyLink} data-testid="button-copy-invite">
+                {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+              </Button>
+            </div>
+            <div className="flex gap-2 mb-4">
+              <Button variant="outline" size="sm" asChild data-testid="button-invite-telegram">
+                <a href={`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent("Привет! Нажми на ссылку — познакомишься с Внучком, он будет помогать тебе каждый день")}`} target="_blank" rel="noopener noreferrer">
+                  <Send className="w-4 h-4 mr-1" /> Telegram
+                </a>
+              </Button>
+              <Button variant="outline" size="sm" asChild data-testid="button-invite-whatsapp">
+                <a href={`https://wa.me/?text=${encodeURIComponent("Привет! Нажми на ссылку — познакомишься с Внучком, он будет помогать тебе каждый день " + deepLink)}`} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
+                </a>
+              </Button>
+            </div>
+          </>
+        )}
+
+        <button
+          onClick={() => setShowManual(!showManual)}
+          className="text-xs text-muted-foreground underline cursor-pointer"
+          data-testid="toggle-manual-code"
+        >
+          {showManual ? "Скрыть" : "У меня есть код родителя"}
+        </button>
+
+        {showManual && (
+          <div className="flex gap-2 mt-3">
+            <Input placeholder="Код, например: A1B2C3" value={manualCode} onChange={(e) => setManualCode(e.target.value)} data-testid="input-link-code" className="uppercase" />
+            <Button onClick={() => linkMutation.mutate()} disabled={linkMutation.isPending || manualCode.length < 4} data-testid="button-link-parent">
+              {linkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Привязать"}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ConnectChildTelegramCard({ botUsername }: { botUsername: string }) {
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  const generateToken = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/child-telegram-token", { method: "POST" });
+      const data = await res.json();
+      if (data.alreadyLinked) {
+        toast({ title: "Telegram уже подключён!" });
+        return;
+      }
+      if (!res.ok) throw new Error(data.message);
+      setToken(data.token);
+    } catch (err: any) {
+      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deepLink = token ? `https://t.me/${botUsername}?start=${token}` : null;
+
+  return (
+    <Card className="mb-8 border-2 border-blue-200 bg-blue-50/50" data-testid="card-connect-telegram">
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-3 mb-3">
+          <Bell className="w-5 h-5 text-blue-600" />
+          <h3 className="font-semibold text-blue-900">Подключите Telegram</h3>
         </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Получайте уведомления о родителе прямо в Telegram: вечернюю сводку, оповещения о давлении и важные алерты.
+        </p>
+        {!deepLink ? (
+          <Button onClick={generateToken} disabled={loading} data-testid="button-generate-tg-link">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+            Получить ссылку
+          </Button>
+        ) : (
+          <Button asChild data-testid="button-open-tg-link">
+            <a href={deepLink} target="_blank" rel="noopener noreferrer">
+              <Send className="w-4 h-4 mr-2" /> Открыть Telegram
+            </a>
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

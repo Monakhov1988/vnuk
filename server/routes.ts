@@ -153,7 +153,7 @@ export async function registerRoutes(
       const hashedPassword = await bcrypt.hash(data.password, 10);
       const user = await storage.createUser({ ...data, password: hashedPassword });
       let linkCode: string | undefined;
-      if (user.role === "parent") {
+      if (user.role === "parent" || user.role === "child") {
         linkCode = generateLinkCode();
         await storage.updateUserLinkCode(user.id, linkCode);
       }
@@ -196,7 +196,7 @@ export async function registerRoutes(
       return res.status(401).json({ message: "Пользователь не найден" });
     }
     const response: any = { id: user.id, name: user.name, email: user.email, role: user.role, linkedParentId: user.linkedParentId };
-    if (user.role === "parent" && user.linkCode) {
+    if (user.linkCode) {
       response.linkCode = user.linkCode;
     }
     return res.json({ user: response });
@@ -208,6 +208,29 @@ export async function registerRoutes(
     });
   });
 
+  // ========== CHILD TELEGRAM LINKING ==========
+  const childTelegramTokens = new Map<string, { childId: number; expiresAt: number }>();
+
+  app.post("/api/child-telegram-token", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== "child") {
+        return res.status(400).json({ message: "Только для аккаунтов детей" });
+      }
+      if (user.telegramChatId) {
+        return res.json({ alreadyLinked: true });
+      }
+      const token = "CHILDTG_" + crypto.randomBytes(4).toString("hex").toUpperCase();
+      childTelegramTokens.set(token, { childId: userId, expiresAt: Date.now() + 30 * 60 * 1000 });
+      return res.json({ token });
+    } catch (e: any) {
+      return res.status(400).json({ message: e.message });
+    }
+  });
+
+  (globalThis as any).__childTelegramTokens = childTelegramTokens;
+
   // ========== LINK PARENT ==========
   const linkSchema = z.object({
     linkCode: z.string().min(4).max(8),
@@ -218,9 +241,16 @@ export async function registerRoutes(
       const data = validateBody(linkSchema, req, res);
       if (!data) return;
       const childId = req.session.userId!;
+      const caller = await storage.getUser(childId);
+      if (!caller || caller.role !== "child") {
+        return res.status(400).json({ message: "Только аккаунт ребёнка может привязать родителя" });
+      }
       const parent = await storage.consumeLinkCode(data.linkCode.trim().toUpperCase());
       if (!parent) {
         return res.status(404).json({ message: "Код не найден или истёк. Проверьте и попробуйте снова." });
+      }
+      if (parent.role !== "parent") {
+        return res.status(400).json({ message: "Этот код принадлежит не родителю. Проверьте код." });
       }
       await storage.linkParent(childId, parent.id);
       return res.json({ parentId: parent.id, parentName: parent.name });
@@ -687,8 +717,11 @@ export async function registerRoutes(
       const overallStatus = hasCritical ? "critical" : hasWarning ? "warning" : "ok";
 
       const userResponse: any = { id: user.id, name: user.name, email: user.email, role: user.role };
-      if (isParent && user.linkCode) {
+      if (user.linkCode) {
         userResponse.linkCode = user.linkCode;
+      }
+      if (!isParent) {
+        userResponse.hasTelegram = !!user.telegramChatId;
       }
 
       const parent = isParent

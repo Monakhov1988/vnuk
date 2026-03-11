@@ -56,6 +56,8 @@ The system uses a React (TypeScript, Tailwind v4) frontend, an Express (TypeScri
 -   **`detectRequiredTool`**: Routes requests to tools; asks clarifying questions for vague queries.
 -   **Memoir pipeline (Книга жизни)**: Parent story → `detectIntentLocal` → `adaptMemoir()` (GPT-4o-mini) cleans transcript → parent confirms → saved → child notified.
 -   **Link-code security**: One-time use, 24h TTL, rate-limited.
+-   **Child-first onboarding**: Child registers → gets invite link on dashboard → sends to parent via Telegram/WhatsApp → parent clicks → bot creates parent account, links to child, starts onboarding. Old flow (parent code → child enters) kept as fallback.
+-   **Child Telegram linking**: Token-based (`CHILDTG_` prefix) — child clicks "Подключить Telegram" on dashboard → opens bot → telegramChatId saved → pushes start arriving.
 -   **Remote onboarding**: Deep-link for child-initiated parent onboarding.
 -   **Engagement metrics**: Tracks active days, messages, memoirs for dashboard display.
 -   **Weekly safety report**: Scheduled reports for children on parent activity.

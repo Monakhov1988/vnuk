@@ -9,6 +9,10 @@ import { extractDishFromText, RECIPE_CLARIFICATIONS } from "./recipeUtils";
 import { TOPIC_CATEGORIES, TOPIC_CATALOG } from "./topicCatalog";
 import bcrypt from "bcrypt";
 
+function generateLinkCode(): string {
+  return crypto.randomBytes(3).toString("hex").toUpperCase();
+}
+
 function getPhotoSource(result: { imageUrl?: string; imageBuffer?: Buffer }): string | InputFile | null {
   if (result.imageBuffer) return new InputFile(result.imageBuffer, "card.jpg");
   if (result.imageUrl) return result.imageUrl;
@@ -664,6 +668,24 @@ export async function startTelegramBot() {
     const existing = await storage.getUserByTelegramChatId(chatId);
     console.log("[telegram] /start lookup result:", existing ? `found user id=${existing.id} name=${existing.name}` : "NOT FOUND");
 
+    if (deepLinkCode && deepLinkCode.startsWith("CHILDTG_")) {
+      const childTokens = (globalThis as any).__childTelegramTokens as Map<string, { childId: number; expiresAt: number }> | undefined;
+      const tokenData = childTokens?.get(deepLinkCode);
+      if (!tokenData || tokenData.expiresAt < Date.now()) {
+        childTokens?.delete(deepLinkCode);
+        await ctx.reply("Ссылка истекла. Сгенерируйте новую в личном кабинете.");
+        return;
+      }
+      childTokens?.delete(deepLinkCode);
+      await storage.updateUserTelegramChatId(tokenData.childId, chatId);
+      const childUser = await storage.getUser(tokenData.childId);
+      await ctx.reply(
+        `Telegram подключён, ${childUser?.name || ""}! Теперь вы будете получать уведомления о родителе: вечернюю сводку, оповещения о давлении и важные алерты.`
+      );
+      console.log(`[telegram] Child ${tokenData.childId} linked Telegram chat ${chatId}`);
+      return;
+    }
+
     if (deepLinkCode) {
       if (existing) {
         await ctx.reply(
@@ -679,26 +701,71 @@ export async function startTelegramBot() {
         return;
       }
 
-      const parent = await storage.consumeLinkCode(deepLinkCode);
-      if (!parent) {
+      const codeOwner = await storage.consumeLinkCode(deepLinkCode);
+      if (!codeOwner) {
         recordLinkFailure(chatId);
         await ctx.reply(`Код не найден или истёк. Попробуйте зарегистрироваться самостоятельно — нажмите /start`);
         return;
       }
 
-      if (parent.telegramChatId) {
+      clearLinkAttempts(chatId);
+
+      if (codeOwner.role === "child") {
+        if (codeOwner.linkedParentId) {
+          await ctx.reply("Вы уже привязаны к родителю. Если нужна помощь — напишите /start");
+          return;
+        }
+
+        const hashedPw = await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 10);
+        const newParent = await storage.createUser({
+          name: "",
+          email: `tg_${chatId}_${Date.now()}@vnuchok.bot`,
+          password: hashedPw,
+          role: "parent",
+        });
+        await storage.updateUserTelegramChatId(newParent.id, chatId);
+        await storage.linkParent(codeOwner.id, newParent.id);
+
+        const newCode = generateLinkCode();
+        await storage.updateUserLinkCode(codeOwner.id, newCode);
+
+        try {
+          const { getAllTopicIds } = await import("./topicCatalog");
+          await storage.bulkInitTopicSettings(newParent.id, getAllTopicIds(), "detailed");
+        } catch (err: any) {
+          console.error("[telegram] Failed to initialize default topics for child-invite parent:", err?.message);
+        }
+
+        onboardingState.set(chatId, {
+          step: "name",
+          userId: newParent.id,
+          name: "",
+          timestamp: Date.now(),
+          isDeepLink: true,
+        });
+
+        const childName = codeOwner.name || "Ваш близкий";
+        await ctx.reply(
+          `Привет! ${childName} попросил(а) меня познакомиться с вами 😊\n\n` +
+          `Меня зовут Внучок — я ваш помощник на каждый день.\n\n` +
+          `Давайте познакомимся! Как вас зовут? (Например: Мария Ивановна)`
+        );
+        console.log(`[telegram] Child-invite flow: created parent ${newParent.id} linked to child ${codeOwner.id}`);
+        return;
+      }
+
+      if (codeOwner.telegramChatId) {
         await ctx.reply(`Этот код уже был использован. Если вы уже зарегистрированы — просто напишите мне! Или нажмите /start`);
         return;
       }
 
-      clearLinkAttempts(chatId);
-      await storage.updateUserTelegramChatId(parent.id, chatId);
+      await storage.updateUserTelegramChatId(codeOwner.id, chatId);
 
       try {
         const { getAllTopicIds } = await import("./topicCatalog");
-        const existingTopics = await storage.getTopicSettings(parent.id);
+        const existingTopics = await storage.getTopicSettings(codeOwner.id);
         if (existingTopics.length === 0) {
-          await storage.bulkInitTopicSettings(parent.id, getAllTopicIds(), "detailed");
+          await storage.bulkInitTopicSettings(codeOwner.id, getAllTopicIds(), "detailed");
         }
       } catch (err: any) {
         console.error("[telegram] Failed to initialize default topics for deep-link user:", err?.message);
@@ -706,8 +773,8 @@ export async function startTelegramBot() {
 
       onboardingState.set(chatId, {
         step: "name",
-        userId: parent.id,
-        name: parent.name || "",
+        userId: codeOwner.id,
+        name: codeOwner.name || "",
         timestamp: Date.now(),
         isDeepLink: true,
       });
