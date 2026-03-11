@@ -325,7 +325,7 @@ export function pickCategory(ctx: ProactiveContext, hasSubstantiveConversation: 
     { cat: "weather", weight: ctx.weather ? 15 : 0 },
     { cat: "seasonal", weight: ctx.seasonal.upcomingHolidays.length > 0 ? 10 : 5 },
     { cat: "memoir_prompt", weight: canPromptMemoir ? 15 : 0 },
-    { cat: "feature_discovery", weight: canSuggestFeature ? 10 : 0 },
+    { cat: "feature_discovery", weight: canSuggestFeature ? 5 : 0 },
     { cat: "gratitude", weight: 10 },
     { cat: "health_check", weight: ctx.healthGap !== null ? 10 : 5 },
   ];

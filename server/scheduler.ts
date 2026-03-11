@@ -40,12 +40,20 @@ async function checkReminders() {
       const parent = await storage.getUser(reminder.parentId);
       if (!parent?.telegramChatId) continue;
 
+      const personality = await storage.getPersonalitySettings(reminder.parentId);
+      const isVy = (personality?.formality || "ты") === "вы";
+
       const keyboard = new InlineKeyboard()
         .text(`Принял(а) ✅`, `confirm_med_${reminder.id}`);
 
+      const nameOrDear = parent.name ? parent.name.split(" ")[0] : "родненький";
+      const medText = isVy
+        ? `${nameOrDear}, не забудьте про ${reminder.medicineName} 💊\n\nПриняли — нажмите кнопочку, я буду спокоен:`
+        : `${nameOrDear}, не забудь про ${reminder.medicineName} 💊\n\nПринял(а) — нажми кнопочку, я буду спокоен:`;
+
       await bot.api.sendMessage(
         parent.telegramChatId,
-        `Время принять ${reminder.medicineName}! 💊\n\nНажмите кнопку, когда примете:`,
+        medText,
         { reply_markup: keyboard }
       );
 
@@ -101,12 +109,20 @@ async function checkMissedReminders() {
       const parent = await storage.getUser(reminder.parentId);
       if (!parent?.telegramChatId) continue;
 
+      const personality = await storage.getPersonalitySettings(reminder.parentId);
+      const isVy = (personality?.formality || "ты") === "вы";
+
       const keyboard = new InlineKeyboard()
         .text(`Принял(а) ✅`, `confirm_med_${reminder.id}`);
 
+      const nameOrDear = parent.name ? parent.name.split(" ")[0] : "родненький";
+      const missedText = isVy
+        ? `${nameOrDear}, а Вы ${reminder.medicineName} сегодня принимали? Я просто волнуюсь 💊`
+        : `${nameOrDear}, а ${reminder.medicineName} сегодня принял(а)? Я просто волнуюсь 💊`;
+
       await bot.api.sendMessage(
         parent.telegramChatId,
-        `Напоминаю: пора принять ${reminder.medicineName}! 💊\nВы ещё не подтвердили приём.`,
+        missedText,
         { reply_markup: keyboard }
       );
 
