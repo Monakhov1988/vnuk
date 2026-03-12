@@ -92,6 +92,11 @@ export interface IStorage {
   getLastMessageTime(parentId: number): Promise<Date | null>;
   getAllActiveParents(): Promise<User[]>;
   getUsedIntentsLastDays(parentId: number, days: number): Promise<string[]>;
+  setProactiveOptOut(parentId: number, value: boolean): Promise<void>;
+  getRecentProactiveTexts(parentId: number, limit: number): Promise<string[]>;
+  getLastProactiveTime(parentId: number): Promise<Date | null>;
+  getProactiveCategoriesToday(parentId: number, dateStr: string): Promise<string[]>;
+  getRecentProactiveResponses(parentId: number, limit: number): Promise<{ content: string; role: string }[]>;
 
   createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent>;
   getAnalyticsStats(variant?: string): Promise<{ variant: string; eventType: string; count: number }[]>;
@@ -464,6 +469,82 @@ export class DatabaseStorage implements IStorage {
         gte(chatMessages.createdAt, since)
       ));
     return rows.map(r => r.intent).filter((i): i is string => !!i);
+  }
+
+  async setProactiveOptOut(parentId: number, value: boolean): Promise<void> {
+    await db.update(users).set({ proactiveOptOut: value }).where(eq(users.id, parentId));
+  }
+
+  async getRecentProactiveTexts(parentId: number, limit: number): Promise<string[]> {
+    const rows = await db.select({ content: chatMessages.content })
+      .from(chatMessages)
+      .where(and(
+        eq(chatMessages.parentId, parentId),
+        eq(chatMessages.role, "assistant"),
+        sql`${chatMessages.intent} LIKE 'proactive:%'`
+      ))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(limit);
+    return rows.map(r => r.content);
+  }
+
+  async getLastProactiveTime(parentId: number): Promise<Date | null> {
+    const rows = await db.select({ createdAt: chatMessages.createdAt })
+      .from(chatMessages)
+      .where(and(
+        eq(chatMessages.parentId, parentId),
+        eq(chatMessages.role, "assistant"),
+        sql`${chatMessages.intent} LIKE 'proactive:%'`
+      ))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(1);
+    return rows[0]?.createdAt ?? null;
+  }
+
+  async getProactiveCategoriesToday(parentId: number, dateStr: string): Promise<string[]> {
+    const rows = await db.select({ intent: chatMessages.intent })
+      .from(chatMessages)
+      .where(and(
+        eq(chatMessages.parentId, parentId),
+        eq(chatMessages.role, "assistant"),
+        sql`${chatMessages.intent} LIKE 'proactive:%'`,
+        sql`TO_CHAR(${chatMessages.createdAt} AT TIME ZONE 'Europe/Moscow', 'YYYY-MM-DD') = ${dateStr}`
+      ))
+      .orderBy(desc(chatMessages.createdAt));
+    return rows.map(r => r.intent?.replace("proactive:", "") || "").filter(Boolean);
+  }
+
+  async getRecentProactiveResponses(parentId: number, limit: number): Promise<{ content: string; role: string }[]> {
+    const proactiveMessages = await db.select({
+      id: chatMessages.id,
+      createdAt: chatMessages.createdAt,
+    })
+      .from(chatMessages)
+      .where(and(
+        eq(chatMessages.parentId, parentId),
+        eq(chatMessages.role, "assistant"),
+        sql`${chatMessages.intent} LIKE 'proactive:%'`
+      ))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(limit);
+
+    if (proactiveMessages.length === 0) return [];
+
+    const responses: { content: string; role: string }[] = [];
+    for (const pm of proactiveMessages) {
+      const userReplies = await db.select({ content: chatMessages.content, role: chatMessages.role })
+        .from(chatMessages)
+        .where(and(
+          eq(chatMessages.parentId, parentId),
+          eq(chatMessages.role, "user"),
+          sql`${chatMessages.createdAt} > ${pm.createdAt}`,
+          sql`${chatMessages.createdAt} < ${pm.createdAt} + INTERVAL '4 hours'`
+        ))
+        .orderBy(chatMessages.createdAt)
+        .limit(3);
+      responses.push(...userReplies);
+    }
+    return responses;
   }
 
   async createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent> {

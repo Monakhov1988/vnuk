@@ -21,6 +21,7 @@ export const users = pgTable("users", {
   linkedParentId: integer("linked_parent_id").references((): any => users.id),
   telegramChatId: text("telegram_chat_id").unique(),
   timezone: text("timezone").default("Europe/Moscow"),
+  proactiveOptOut: boolean("proactive_opt_out").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

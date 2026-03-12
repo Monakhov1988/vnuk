@@ -76,6 +76,10 @@ The system uses a React (TypeScript, Tailwind v4) frontend, an Express (TypeScri
 -   Sends Telegram pushes with "Confirmed" buttons for reminders.
 -   7 categories (follow-up, health check, weather, seasonal, memoir prompt, feature discovery, gratitude) with weighted random selection and priority rules.
 -   Timed delivery with random jitter for natural feel.
+-   **Adaptive daily limit**: 2 messages/day default, 3 if user responds with engagement (long replies, questions). Minimum 2h interval between proactive messages.
+-   **Full deduplication**: Category not repeated 2 days in a row; yesterday's categories get 80% weight reduction; same category never sent twice in one day. GPT receives last 5 proactive texts with instruction to not repeat/rephrase.
+-   **Opt-out/Opt-in**: Parent says "не пиши"/"хватит"/"отстань" → `proactiveOptOut=true`, bot confirms warmly. "Пиши снова"/"скучно" → opt back in. Field `proactive_opt_out` in users table.
+-   **Engagement analysis**: `analyzeEngagement()` checks last 5 user responses to proactive messages — if ≥3 are long (>50 chars) or contain questions → "high" engagement → 3 messages/day.
 
 **Design System:**
 -   Fonts: Lora (headings), Inter (body).

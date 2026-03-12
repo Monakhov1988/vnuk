@@ -292,28 +292,36 @@ export function pickFeatureToSuggest(
   return unused[Math.floor(Math.random() * unused.length)];
 }
 
-export function pickCategory(ctx: ProactiveContext, hasSubstantiveConversation: boolean): ProactiveCategory {
-  if (ctx.daysSinceLastChat >= 2) {
+export function pickCategory(
+  ctx: ProactiveContext,
+  hasSubstantiveConversation: boolean,
+  todayCategories: string[] = [],
+  yesterdayCategories: string[] = [],
+): ProactiveCategory {
+  const isUsedToday = (cat: string) => todayCategories.includes(cat);
+  const isUsedYesterday = (cat: string) => yesterdayCategories.includes(cat);
+
+  if (ctx.daysSinceLastChat >= 2 && !isUsedToday("gratitude") && !isUsedYesterday("gratitude")) {
     return "gratitude";
   }
 
-  if (ctx.healthGap !== null && ctx.healthGap >= 3) {
+  if (ctx.healthGap !== null && ctx.healthGap >= 3 && !isUsedToday("health_check") && !isUsedYesterday("health_check")) {
     if (Math.random() < 0.6) return "health_check";
   }
 
-  if (ctx.medicationStreak >= 1) {
+  if (ctx.medicationStreak >= 1 && !isUsedToday("health_check") && !isUsedYesterday("health_check")) {
     if (Math.random() < 0.2) return "health_check";
   }
 
-  if (ctx.seasonal.upcomingHolidays.length > 0) {
+  if (ctx.seasonal.upcomingHolidays.length > 0 && !isUsedToday("seasonal") && !isUsedYesterday("seasonal")) {
     if (Math.random() < 0.5) return "seasonal";
   }
 
-  if (hasSubstantiveConversation) {
+  if (hasSubstantiveConversation && !isUsedToday("follow_up") && !isUsedYesterday("follow_up")) {
     if (Math.random() < 0.55) return "follow_up";
   }
 
-  if (ctx.weather && ctx.day.timeOfDay === "утро") {
+  if (ctx.weather && ctx.day.timeOfDay === "утро" && !isUsedToday("weather") && !isUsedYesterday("weather")) {
     if (Math.random() < 0.4) return "weather";
   }
 
@@ -328,9 +336,14 @@ export function pickCategory(ctx: ProactiveContext, hasSubstantiveConversation: 
     { cat: "feature_discovery", weight: canSuggestFeature ? 5 : 0 },
     { cat: "gratitude", weight: 10 },
     { cat: "health_check", weight: ctx.healthGap !== null ? 10 : 5 },
-  ];
+  ].map(o => ({
+    ...o,
+    weight: isUsedToday(o.cat) ? 0 : (isUsedYesterday(o.cat) ? Math.floor(o.weight * 0.2) : o.weight),
+  }));
 
   const totalWeight = options.reduce((s, o) => s + o.weight, 0);
+  if (totalWeight === 0) return "follow_up";
+
   let rand = Math.random() * totalWeight;
   for (const opt of options) {
     rand -= opt.weight;

@@ -2498,6 +2498,8 @@ export async function generateProactiveMessage(
   parentId: number,
   category?: import("./proactiveContext").ProactiveCategory,
   proactiveCtx?: import("./proactiveContext").ProactiveContext,
+  todayCategories: string[] = [],
+  yesterdayCategories: string[] = [],
 ): Promise<{ text: string; category: string; memoirPromptId?: string; featureId?: string } | null> {
   try {
     const { gatherProactiveContext, pickCategory, pickMemoirPrompt, pickFeatureToSuggest } = await import("./proactiveContext");
@@ -2528,10 +2530,12 @@ export async function generateProactiveMessage(
       .map(m => `${m.role === "user" ? "Собеседник" : "Внучок"}: ${m.content.slice(0, 300)}`)
       .join("\n") || "Нет недавних сообщений.";
 
+    const recentProactiveTexts = await storage.getRecentProactiveTexts(parentId, 5);
+
     const nonProactiveMessages = recentMessages.filter(m => !m.intent?.startsWith("proactive"));
     const hasSubstantiveConversation = nonProactiveMessages.some(m => m.content.length > 15);
 
-    const chosenCategory = category || pickCategory(ctx, hasSubstantiveConversation);
+    const chosenCategory = category || pickCategory(ctx, hasSubstantiveConversation, todayCategories, yesterdayCategories);
 
     let categoryInstruction = "";
     let memoirPromptId: string | undefined;
@@ -2641,6 +2645,11 @@ ${h.name} — ${dayWord}! Упомяни его тепло и естествен
 
     const dayInfo = `${ctx.day.dayOfWeek}, ${ctx.day.timeOfDay} (${ctx.day.mskHour}:00 МСК)${ctx.day.isWeekend ? ", выходной" : ""}`;
 
+    let dedupBlock = "";
+    if (recentProactiveTexts.length > 0) {
+      dedupBlock = `\nТвои ПОСЛЕДНИЕ проактивные сообщения (НЕ ПОВТОРЯЙ и НЕ ПЕРЕФРАЗИРУЙ их — напиши что-то СОВЕРШЕННО ДРУГОЕ):\n${recentProactiveTexts.map((t, i) => `${i + 1}. «${t.slice(0, 200)}»`).join("\n")}\n`;
+    }
+
     const prompt = `Ты — Внучок, любящий внук. Сейчас ${dayInfo}.
 Обращение: на «${formality}».${ageTone}
 
@@ -2649,7 +2658,7 @@ ${memorySnippet}
 
 Последние сообщения:
 ${recentContext}
-
+${dedupBlock}
 ${categoryInstruction}
 
 Напиши ОДНО короткое тёплое сообщение (1-3 предложения).
@@ -2661,7 +2670,8 @@ ${categoryInstruction}
 - НЕ ВЫДУМЫВАЙ факты, события, истории
 - Будь естественным, как будто вспомнил и решил написать
 - Используй обращение на «${formality}»
-- НЕ пиши формально и казённо — ты внук, а не служба поддержки`;
+- НЕ пиши формально и казённо — ты внук, а не служба поддержки
+- Твоё сообщение ДОЛЖНО ОТЛИЧАТЬСЯ от предыдущих проактивных сообщений — другие слова, другой подход, другой вопрос`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",

@@ -169,8 +169,28 @@ function getProactiveCountToday(messages: any[], dateStr: string): number {
   }).length;
 }
 
-function getMaxProactivePerDay(_parentId: number): number {
-  return 1;
+async function analyzeEngagement(parentId: number): Promise<"high" | "normal" | "opted_out"> {
+  const parent = await storage.getUser(parentId);
+  if (parent?.proactiveOptOut) return "opted_out";
+
+  const responses = await storage.getRecentProactiveResponses(parentId, 5);
+  if (responses.length === 0) return "normal";
+
+  let engagedCount = 0;
+  for (const r of responses) {
+    const isLong = r.content.length > 50;
+    const hasQuestion = r.content.includes("?");
+    if (isLong || hasQuestion) engagedCount++;
+  }
+
+  return engagedCount >= 3 ? "high" : "normal";
+}
+
+async function getMaxProactivePerDay(parentId: number): Promise<number> {
+  const engagement = await analyzeEngagement(parentId);
+  if (engagement === "opted_out") return 0;
+  if (engagement === "high") return 3;
+  return 2;
 }
 
 async function checkProactiveMessages() {
@@ -188,20 +208,39 @@ async function checkProactiveMessages() {
       proactiveLock.add(parent.id);
 
       try {
+        if (parent.proactiveOptOut) continue;
+
         const recentMessages = await storage.getChatMessages(parent.id, 20);
         const todayCount = getProactiveCountToday(recentMessages, dateStr);
-        const maxPerDay = getMaxProactivePerDay(parent.id);
-        if (todayCount >= maxPerDay) continue;
+        const maxPerDay = await getMaxProactivePerDay(parent.id);
+        if (maxPerDay === 0 || todayCount >= maxPerDay) continue;
+
+        const lastProactiveTime = await storage.getLastProactiveTime(parent.id);
+        if (lastProactiveTime) {
+          const hoursSinceLastProactive = (Date.now() - lastProactiveTime.getTime()) / (1000 * 60 * 60);
+          if (hoursSinceLastProactive < 2) continue;
+        }
 
         const lastMsgTime = await storage.getLastMessageTime(parent.id);
         if (!lastMsgTime) continue;
 
         const hoursSinceLastMsg = (Date.now() - lastMsgTime.getTime()) / (1000 * 60 * 60);
-        if (hoursSinceLastMsg < 3) continue;
+        if (hoursSinceLastMsg < 2) continue;
+
+        const todayCategories = await storage.getProactiveCategoriesToday(parent.id, dateStr);
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayStr = new Date(yesterdayDate.toLocaleString("en-US", { timeZone: "Europe/Moscow" })).toISOString().slice(0, 10);
+        const yesterdayCategories = await storage.getProactiveCategoriesToday(parent.id, yesterdayStr);
 
         const ctx = await gatherProactiveContext(parent.id);
-        const result = await generateProactiveMessage(parent.id, undefined, ctx);
+        const result = await generateProactiveMessage(parent.id, undefined, ctx, todayCategories, yesterdayCategories);
         if (!result) continue;
+
+        if (todayCategories.includes(result.category)) {
+          console.log(`[scheduler] Category ${result.category} already used today for parent ${parent.id}, skipping`);
+          continue;
+        }
 
         const doubleCheck = await storage.getChatMessages(parent.id, 20);
         if (getProactiveCountToday(doubleCheck, dateStr) >= maxPerDay) {
@@ -243,7 +282,7 @@ async function checkProactiveMessages() {
 
         await bot.api.sendMessage(parent.telegramChatId!, result.text);
 
-        console.log(`[scheduler] Sent proactive:${result.category} to parent ${parent.id}`);
+        console.log(`[scheduler] Sent proactive:${result.category} to parent ${parent.id} (today: ${todayCount + 1}/${maxPerDay})`);
       } catch (err) {
         console.error(`[scheduler] Error sending proactive message to parent ${parent.id}:`, err);
       } finally {

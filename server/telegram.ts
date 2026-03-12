@@ -2325,6 +2325,32 @@ export async function startTelegramBot() {
       return;
     }
 
+    const lowerText = userText.toLowerCase().trim();
+    const optOutPatterns = /не пиши|хватит писать|отстань|надоел|не надо писать|прекрати писать|не присылай|хватит сообщений|не хочу сообщений|отписаться/;
+    const optInPatterns = /пиши снова|пиши мне|скучно|соскучил|хочу сообщений|верни сообщения|начни писать/;
+
+    if (optOutPatterns.test(lowerText) && user.role === "parent") {
+      try {
+        await storage.setProactiveOptOut(user.id, true);
+        await ctx.reply("Понял, не буду писать первым 🤗 Но я всегда рядом — просто напиши, и я тут же отвечу!");
+        console.log(`[telegram] Parent ${user.id} opted out of proactive messages`);
+      } catch (err) {
+        console.error("[telegram] Opt-out error:", err);
+      }
+      return;
+    }
+
+    if (optInPatterns.test(lowerText) && user.role === "parent") {
+      try {
+        await storage.setProactiveOptOut(user.id, false);
+        await ctx.reply("Ура, буду писать! 😊 Рад, что ты хочешь общаться — обещаю не надоедать!");
+        console.log(`[telegram] Parent ${user.id} opted back in to proactive messages`);
+      } catch (err) {
+        console.error("[telegram] Opt-in error:", err);
+      }
+      return;
+    }
+
     const extractedDishText = extractDishFromText(userText);
     const clarification = extractedDishText ? RECIPE_CLARIFICATIONS[extractedDishText] : null;
 
