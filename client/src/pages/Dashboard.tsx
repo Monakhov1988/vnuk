@@ -720,7 +720,8 @@ function ConnectChildTelegramCard({ botUsername }: { botUsername: string }) {
     }
   };
 
-  const deepLink = token ? `https://t.me/${botUsername}?start=${token}` : null;
+  const nativeLink = token ? `tg://resolve?domain=${botUsername}&start=${token}` : null;
+  const webLink = token ? `https://t.me/${botUsername}?start=${token}` : null;
 
   return (
     <Card className="mb-8 border-2 border-blue-200 bg-blue-50/50" data-testid="card-connect-telegram">
@@ -732,18 +733,28 @@ function ConnectChildTelegramCard({ botUsername }: { botUsername: string }) {
         <p className="text-sm text-muted-foreground mb-4">
           Получайте уведомления о родителе прямо в Telegram: вечернюю сводку, оповещения о давлении и важные алерты.
         </p>
-        {!deepLink ? (
+        {!nativeLink ? (
           <Button onClick={generateToken} disabled={loading} data-testid="button-generate-tg-link">
             {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
             Подключить Telegram
           </Button>
         ) : (
-          <div className="space-y-2">
-            <Button asChild data-testid="button-open-tg-link">
-              <a href={deepLink} target="_blank" rel="noopener noreferrer">
-                <Send className="w-4 h-4 mr-2" /> Открыть в Telegram
-              </a>
-            </Button>
+          <div className="space-y-3">
+            <div className="flex gap-2 flex-wrap">
+              <Button asChild data-testid="button-open-tg-native">
+                <a href={nativeLink}>
+                  <Send className="w-4 h-4 mr-2" /> Открыть в приложении
+                </a>
+              </Button>
+              <Button variant="outline" asChild data-testid="button-open-tg-web">
+                <a href={webLink!} target="_blank" rel="noopener noreferrer">
+                  Открыть в браузере
+                </a>
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Нажмите <b>Start</b> в Telegram после открытия бота
+            </p>
           </div>
         )}
       </CardContent>

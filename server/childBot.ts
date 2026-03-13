@@ -120,14 +120,22 @@ export async function startChildBot() {
   try {
     const me = await childBot.api.getMe();
     childBotUsername = me.username || null;
-    console.log(`[child-bot] Bot username: @${childBotUsername}`);
+    console.log(`[child-bot] Bot id=${me.id}, username=@${childBotUsername}`);
+
+    const webhookInfo = await childBot.api.getWebhookInfo();
+    if (webhookInfo.url) {
+      console.log(`[child-bot] Webhook was set to: ${webhookInfo.url}, deleting...`);
+      await childBot.api.deleteWebhook({ drop_pending_updates: true });
+    }
+    console.log(`[child-bot] Webhook cleared, using long polling`);
 
     await childBot.api.setMyCommands([
       { command: "start", description: "Начать / Подключить уведомления" },
     ]);
 
     childBot.start({
-      onStart: () => console.log("[child-bot] Child notification bot started successfully"),
+      onStart: () => console.log("[child-bot] Child notification bot started successfully (polling)"),
+      allowed_updates: ["message", "callback_query"],
     });
   } catch (err) {
     console.error("[child-bot] Failed to start child bot:", err);
