@@ -81,26 +81,26 @@ export default function LandingC() {
       </nav>
 
       <main>
-        <section className="pt-36 pb-24 md:pt-44 md:pb-36 px-6 overflow-hidden bg-gradient-to-br from-[#F3E7ED] via-[#F7F2EC] to-[#F3F1EE]">
+        <section className="pt-28 pb-16 md:pt-36 md:pb-20 px-6 overflow-hidden bg-gradient-to-br from-[#F3E7ED] via-[#F7F2EC] to-[#F3F1EE]">
           <div className="container mx-auto">
-            <div className="grid md:grid-cols-2 gap-16 items-center">
+            <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
               <div className="max-w-2xl relative z-10">
                 <Badge
                   variant="secondary"
-                  className="mb-8 bg-white/60 text-[#5F626B] hover:bg-white/80 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/50 flex items-center gap-2 w-fit"
+                  className="mb-5 bg-white/60 text-[#5F626B] hover:bg-white/80 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/50 flex items-center gap-2 w-fit"
                   data-testid="badge-hero-c"
                 >
                   <Zap className="w-3.5 h-3.5" />
                   Бесплатно в Telegram — говорит голосом
                 </Badge>
-                <h1 className="text-5xl md:text-7xl font-serif font-medium leading-[1.03] tracking-[-0.02em] mb-8 text-slate-900">
+                <h1 className="text-5xl md:text-7xl font-serif font-medium leading-[1.03] tracking-[-0.02em] mb-6 text-slate-900">
                   Спокойствие{" "}
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#143A2E] to-[#2D6A4F]">
                     за маму и папу
                   </span>
                   {" "}— каждый день
                 </h1>
-                <p className="text-lg text-[#5F626B] mb-10 leading-relaxed">
+                <p className="text-lg text-[#5F626B] mb-8 leading-relaxed">
                   Вы заняты — но всегда знаете, что с родителями всё в порядке.
                   Внучок заботится о них в Telegram: напомнит лекарства, защитит
                   от мошенников, расскажет рецепт. Родитель говорит голосом —
@@ -227,9 +227,9 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="outcomes" className="py-28 md:py-32 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE] relative">
+        <section id="outcomes" className="py-16 md:py-20 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE] relative">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-20">
+            <div className="text-center max-w-3xl mx-auto mb-12">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Что вы получаете
               </h2>
@@ -238,7 +238,7 @@ export default function LandingC() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
               <OutcomeCard
                 title="Лекарство не принято"
                 description="Нет подтверждения 15 мин — вы получите push."
@@ -305,9 +305,9 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="parents" className="py-28 md:py-32 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
+        <section id="parents" className="py-16 md:py-20 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-20">
+            <div className="text-center max-w-3xl mx-auto mb-12">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Узнаёте своего родителя?
               </h2>
@@ -339,9 +339,9 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section className="py-28 md:py-32 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
+        <section className="py-16 md:py-20 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-20">
+            <div className="text-center max-w-3xl mx-auto mb-12">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Как это работает
               </h2>
@@ -350,7 +350,7 @@ export default function LandingC() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
               <StepCard
                 step="1"
                 title="Отправьте ссылку"
@@ -370,9 +370,9 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="dialog" className="py-28 md:py-32 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
+        <section id="dialog" className="py-16 md:py-20 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-20">
+            <div className="text-center max-w-3xl mx-auto mb-12">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Живой диалог с Внучком
               </h2>
@@ -425,9 +425,9 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="dashboard-section" className="py-28 md:py-32 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE] relative overflow-hidden">
+        <section id="dashboard-section" className="py-16 md:py-20 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE] relative overflow-hidden">
           <div className="container mx-auto px-6">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="grid lg:grid-cols-2 gap-10 md:gap-12 items-center">
               <div className="order-2 lg:order-1">
                 <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] p-6">
                   <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
@@ -515,9 +515,9 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="features" className="py-28 md:py-32 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6] relative">
+        <section id="features" className="py-16 md:py-20 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6] relative">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-20">
+            <div className="text-center max-w-3xl mx-auto mb-12">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 16+ навыков на каждый день
               </h2>
@@ -632,9 +632,9 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="reviews" className="py-28 md:py-32 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
+        <section id="reviews" className="py-16 md:py-20 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-20">
+            <div className="text-center max-w-3xl mx-auto mb-12">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Истории семей
               </h2>
@@ -680,7 +680,7 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="pricing" className="py-28 md:py-32 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
+        <section id="pricing" className="py-16 md:py-20 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-4">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
@@ -691,7 +691,7 @@ export default function LandingC() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mt-12">
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mt-8">
               <PricingCard
                 name="Тест"
                 price="0"
@@ -734,7 +734,7 @@ export default function LandingC() {
               />
             </div>
 
-            <div className="max-w-4xl mx-auto mt-12 relative">
+            <div className="max-w-4xl mx-auto mt-8 relative">
               <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse rounded-[28px] overflow-hidden bg-white/75 backdrop-blur border border-white/60 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)]">
                 <thead>
@@ -760,7 +760,7 @@ export default function LandingC() {
               <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-slate-50 to-transparent pointer-events-none md:hidden" />
             </div>
 
-            <p className="text-center text-sm text-slate-500 mt-8" data-testid="text-risk-reversal-c">
+            <p className="text-center text-sm text-slate-500 mt-6" data-testid="text-risk-reversal-c">
               7 дней бесплатно · Отмена подписки в 1 клик
             </p>
 
@@ -777,9 +777,9 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="faq" className="py-28 md:py-32 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
+        <section id="faq" className="py-16 md:py-20 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-20">
+            <div className="text-center max-w-3xl mx-auto mb-12">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Частые вопросы
               </h2>
@@ -814,9 +814,9 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section className="py-28 md:py-32 px-6">
+        <section className="py-16 md:py-20 px-6">
           <div className="container mx-auto">
-            <div className="bg-gradient-to-br from-[#143A2E] to-[#0A1F17] rounded-[3rem] p-8 md:p-16 text-center text-white relative overflow-hidden">
+            <div className="bg-gradient-to-br from-[#143A2E] to-[#0A1F17] rounded-[3rem] p-7 md:p-12 text-center text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
               <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
 
@@ -825,8 +825,8 @@ export default function LandingC() {
                 <h2 className="text-3xl md:text-5xl font-serif font-medium tracking-[-0.02em] mb-6 text-white">
                   Подарите маме помощника <br /> за 3 минуты
                 </h2>
-                <p className="text-emerald-100/70 text-lg mb-10">
-                  Бесплатно — до 10 вопросов в день. Родителю не нужно ничего устанавливать — только Telegram.
+                <p className="text-emerald-100/70 text-lg mb-8">
+                  7 дней бесплатно. Родителю не нужно ничего устанавливать — только Telegram.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button
