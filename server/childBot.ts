@@ -75,13 +75,23 @@ export async function startChildBot() {
       await ctx.answerCallbackQuery({ text: "Ссылка истекла. Сгенерируйте новую." });
       return;
     }
-    await storage.updateUserTelegramChatId(tokenData.childId, chatId);
-    const childUser = await storage.getUser(tokenData.childId);
-    await ctx.answerCallbackQuery({ text: "Подключено!" });
-    await ctx.editMessageText(
-      `Telegram подключён, ${childUser?.name || ""}! 🎉\n\nТеперь вы будете получать:\n• Вечернюю сводку о родителе\n• Оповещения о давлении\n• Важные алерты безопасности\n• Уведомления о новых мемуарах`
-    );
-    console.log(`[child-bot] Child ${tokenData.childId} linked via confirmation button, chat ${chatId}`);
+    try {
+      const existingUser = await storage.getUserByTelegramChatId(chatId);
+      if (existingUser && existingUser.id !== tokenData.childId) {
+        await storage.clearUserTelegramChatId(existingUser.id);
+        console.log(`[child-bot] Cleared telegram_chat_id from user ${existingUser.id} (${existingUser.role}) to reassign to child ${tokenData.childId}`);
+      }
+      await storage.updateUserTelegramChatId(tokenData.childId, chatId);
+      const childUser = await storage.getUser(tokenData.childId);
+      await ctx.answerCallbackQuery({ text: "Подключено!" });
+      await ctx.editMessageText(
+        `Telegram подключён, ${childUser?.name || ""}! 🎉\n\nТеперь вы будете получать:\n• Вечернюю сводку о родителе\n• Оповещения о давлении\n• Важные алерты безопасности\n• Уведомления о новых мемуарах`
+      );
+      console.log(`[child-bot] Child ${tokenData.childId} linked via confirmation button, chat ${chatId}`);
+    } catch (err: any) {
+      console.error(`[child-bot] Link error:`, err.message);
+      await ctx.answerCallbackQuery({ text: "Ошибка привязки. Попробуйте снова." });
+    }
   });
 
   childBot.callbackQuery("link_cancel", async (ctx) => {
@@ -99,12 +109,22 @@ export async function startChildBot() {
         await ctx.reply("Код не найден, истёк или уже использован. Сгенерируйте новый в личном кабинете.");
         return;
       }
-      await storage.updateUserTelegramChatId(tokenData.childId, chatId);
-      const childUser = await storage.getUser(tokenData.childId);
-      await ctx.reply(
-        `Telegram подключён, ${childUser?.name || ""}! 🎉\n\nТеперь вы будете получать:\n• Вечернюю сводку о родителе\n• Оповещения о давлении\n• Важные алерты безопасности\n• Уведомления о новых мемуарах`
-      );
-      console.log(`[child-bot] Child ${tokenData.childId} linked via text code, chat ${chatId}`);
+      try {
+        const existingUser = await storage.getUserByTelegramChatId(chatId);
+        if (existingUser && existingUser.id !== tokenData.childId) {
+          await storage.clearUserTelegramChatId(existingUser.id);
+          console.log(`[child-bot] Cleared telegram_chat_id from user ${existingUser.id} (${existingUser.role}) to reassign to child ${tokenData.childId}`);
+        }
+        await storage.updateUserTelegramChatId(tokenData.childId, chatId);
+        const childUser = await storage.getUser(tokenData.childId);
+        await ctx.reply(
+          `Telegram подключён, ${childUser?.name || ""}! 🎉\n\nТеперь вы будете получать:\n• Вечернюю сводку о родителе\n• Оповещения о давлении\n• Важные алерты безопасности\n• Уведомления о новых мемуарах`
+        );
+        console.log(`[child-bot] Child ${tokenData.childId} linked via text code, chat ${chatId}`);
+      } catch (err: any) {
+        console.error(`[child-bot] Link error:`, err.message);
+        await ctx.reply("Ошибка привязки. Попробуйте сгенерировать новый код.");
+      }
       return;
     }
 
