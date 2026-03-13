@@ -318,13 +318,13 @@ export default function LandingC() {
 
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
               <ParentCard
-                image="/images/lonely-mom.png"
+                image="/images/active-parent-50.png"
                 archetype="Активный родитель 50+"
                 childQuote="Скучает, когда мы заняты. Не хватает общения."
                 botHelp="Рецепты, афиша, стихи. Тёплый собеседник каждый день."
               />
               <ParentCard
-                image="/images/empty-phone.png"
+                image="/images/tech-parent-60.png"
                 archetype="С техникой сложно 60+"
                 childQuote="«Я нажал что-то и всё пропало». Объяснять — мучение."
                 botHelp="Пошагово: ЖКХ, врач, Госуслуги. Голосом, без кнопок."
