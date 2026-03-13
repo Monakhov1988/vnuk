@@ -720,8 +720,7 @@ function ConnectChildTelegramCard({ botUsername }: { botUsername: string }) {
     }
   };
 
-  const nativeLink = token ? `tg://resolve?domain=${botUsername}&start=${token}` : null;
-  const webLink = token ? `https://t.me/${botUsername}?start=${token}` : null;
+  const deepLink = token ? `https://t.me/${botUsername}?start=${token}` : null;
 
   return (
     <Card className="mb-8 border-2 border-blue-200 bg-blue-50/50" data-testid="card-connect-telegram">
@@ -733,7 +732,7 @@ function ConnectChildTelegramCard({ botUsername }: { botUsername: string }) {
         <p className="text-sm text-muted-foreground mb-4">
           Получайте уведомления о родителе прямо в Telegram: вечернюю сводку, оповещения о давлении и важные алерты.
         </p>
-        {!nativeLink ? (
+        {!deepLink ? (
           <Button onClick={generateToken} disabled={loading} data-testid="button-generate-tg-link">
             {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
             Подключить Telegram
@@ -741,13 +740,10 @@ function ConnectChildTelegramCard({ botUsername }: { botUsername: string }) {
         ) : (
           <div className="space-y-2">
             <Button asChild data-testid="button-open-tg-link">
-              <a href={nativeLink}>
+              <a href={deepLink} target="_blank" rel="noopener noreferrer">
                 <Send className="w-4 h-4 mr-2" /> Открыть в Telegram
               </a>
             </Button>
-            <p className="text-xs text-muted-foreground">
-              Если приложение не открылось — <a href={webLink!} target="_blank" rel="noopener noreferrer" className="underline text-blue-600" data-testid="link-tg-web">откройте через браузер</a>
-            </p>
           </div>
         )}
       </CardContent>
