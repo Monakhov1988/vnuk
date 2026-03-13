@@ -50,31 +50,31 @@ export default function LandingC() {
   const [showAllFeatures, setShowAllFeatures] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#FFF8F0] selection:bg-amber-200/50" style={{ fontFamily: "'Inter', sans-serif" }}>
-      <nav className="fixed top-0 w-full z-50 bg-[#FFF8F0]/80 backdrop-blur-md border-b border-orange-100/50 py-4">
+    <div className="min-h-screen bg-white selection:bg-slate-200/50" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 py-4">
         <div className="container mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="bg-gradient-to-br from-orange-100 to-amber-100 p-2 rounded-xl">
-              <Heart className="w-6 h-6 text-orange-500" />
+            <div className="bg-gradient-to-br from-slate-800 to-slate-600 p-2 rounded-xl">
+              <Heart className="w-6 h-6 text-white" fill="white" />
             </div>
-            <span className="font-bold text-xl tracking-tight text-slate-800">
+            <span className="font-bold text-xl tracking-tight text-slate-900">
               Внучок
             </span>
           </div>
-          <div className="hidden md:flex gap-8 items-center text-sm font-medium text-slate-600">
-            <a href="#parents" className="hover:text-orange-600 transition-colors" data-testid="link-nav-parents-c">
+          <div className="hidden md:flex gap-8 items-center text-sm font-medium text-slate-500">
+            <a href="#parents" className="hover:text-slate-900 transition-colors" data-testid="link-nav-parents-c">
               Для кого
             </a>
-            <a href="#features" className="hover:text-orange-600 transition-colors" data-testid="link-nav-features-c">
+            <a href="#features" className="hover:text-slate-900 transition-colors" data-testid="link-nav-features-c">
               Возможности
             </a>
-            <a href="#pricing" className="hover:text-orange-600 transition-colors" data-testid="link-nav-pricing-c">
+            <a href="#pricing" className="hover:text-slate-900 transition-colors" data-testid="link-nav-pricing-c">
               Тарифы
             </a>
           </div>
           <Button
             asChild
-            className="rounded-full px-6 shadow-sm hover:shadow-md transition-all bg-orange-500 hover:bg-orange-600 text-white"
+            className="rounded-full px-6 shadow-none hover:shadow-md transition-all bg-slate-900 hover:bg-slate-800 text-white"
             data-testid="button-nav-cta-c"
           >
             <Link href="/auth">Попробовать бесплатно</Link>
@@ -89,7 +89,7 @@ export default function LandingC() {
               <div className="max-w-2xl relative z-10">
                 <Badge
                   variant="secondary"
-                  className="mb-6 bg-orange-100 text-orange-700 hover:bg-orange-200 px-4 py-1.5 rounded-full border-0 flex items-center gap-2 w-fit"
+                  className="mb-6 bg-slate-100 text-slate-600 hover:bg-slate-200 px-4 py-1.5 rounded-full border-0 flex items-center gap-2 w-fit"
                   data-testid="badge-hero-c"
                 >
                   <Zap className="w-3.5 h-3.5" />
@@ -97,7 +97,7 @@ export default function LandingC() {
                 </Badge>
                 <h1 className="text-4xl md:text-6xl font-bold leading-[1.1] mb-6 text-slate-900">
                   Спокойствие{" "}
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-amber-500">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-600 to-slate-400">
                     за маму и папу
                   </span>
                   {" "}— каждый день
@@ -113,7 +113,7 @@ export default function LandingC() {
                   <Button
                     asChild
                     size="lg"
-                    className="rounded-full text-base h-14 px-8 shadow-lg shadow-orange-200 bg-orange-500 hover:bg-orange-600 text-white"
+                    className="rounded-full text-base h-14 px-8 shadow-lg shadow-slate-200 bg-slate-900 hover:bg-slate-800 text-white"
                     data-testid="button-hero-gift-c"
                   >
                     <Link href="/auth">
@@ -124,7 +124,7 @@ export default function LandingC() {
                     asChild
                     size="lg"
                     variant="outline"
-                    className="rounded-full text-base h-14 px-8 border-orange-200 hover:bg-orange-50 text-slate-700"
+                    className="rounded-full text-base h-14 px-8 border-slate-200 hover:bg-slate-50 text-slate-700"
                     data-testid="button-hero-demo-c"
                   >
                     <a href="#dialog">Как это выглядит</a>
@@ -133,35 +133,35 @@ export default function LandingC() {
 
                 <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500" data-testid="badge-risk-reversal-c">
                   <span className="flex items-center gap-1.5">
-                    <Zap className="w-3.5 h-3.5 text-orange-400" />
+                    <Zap className="w-3.5 h-3.5 text-emerald-500" />
                     Бесплатно — до 10 вопросов в день
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-orange-400" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                     Отмена подписки в 1 клик
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <Mic className="w-3.5 h-3.5 text-orange-400" />
+                    <Mic className="w-3.5 h-3.5 text-emerald-500" />
                     Понимает голосовые
                   </span>
                 </div>
               </div>
 
               <div className="relative">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-orange-100 to-amber-50 rounded-full blur-3xl -z-10" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-slate-100 to-slate-50 rounded-full blur-3xl -z-10" />
 
                 <div className="relative mx-auto" style={{ maxWidth: "320px" }}>
-                  <div className="bg-slate-800 rounded-[2.5rem] p-3 shadow-2xl shadow-orange-200/50 border-4 border-slate-700">
+                  <div className="bg-slate-800 rounded-[2.5rem] p-3 shadow-2xl shadow-slate-300/50 border-4 border-slate-700">
                     <div className="bg-slate-800 rounded-full w-24 h-5 mx-auto mb-2 flex items-center justify-center">
                       <div className="w-12 h-3 bg-slate-900 rounded-full" />
                     </div>
 
-                    <div className="bg-[#E8D5B7] rounded-[1.5rem] overflow-hidden">
-                      <div className="bg-[#EFDED3] px-4 py-3 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-orange-400 flex items-center justify-center text-white font-bold text-xs">В</div>
+                    <div className="bg-slate-50 rounded-[1.5rem] overflow-hidden">
+                      <div className="bg-[#517DA2] px-4 py-3 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-violet-400 flex items-center justify-center text-white font-bold text-xs">В</div>
                         <div>
-                          <p className="font-semibold text-xs text-slate-800">Внучок</p>
-                          <p className="text-[10px] text-slate-500">онлайн</p>
+                          <p className="font-semibold text-xs text-white">Внучок</p>
+                          <p className="text-[10px] text-white/60">онлайн</p>
                         </div>
                       </div>
 
@@ -184,14 +184,14 @@ export default function LandingC() {
                       <div className="px-3 pb-3">
                         <div className="flex gap-1.5 justify-center">
                           {["💊", "🏠", "🎭", "📋"].map((emoji, i) => (
-                            <div key={i} className="bg-[#D4C4A8] rounded-lg px-3 py-1.5 text-sm">{emoji}</div>
+                            <div key={i} className="bg-slate-200 rounded-lg px-3 py-1.5 text-sm">{emoji}</div>
                           ))}
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="absolute -bottom-4 -right-4 bg-white/90 backdrop-blur-md rounded-2xl p-3 flex items-center gap-3 border border-white/40 shadow-xl shadow-orange-100/50 animate-in slide-in-from-bottom-4 duration-700 delay-300 max-w-[220px]">
+                  <div className="absolute -bottom-4 -right-4 bg-white/90 backdrop-blur-md rounded-2xl p-3 flex items-center gap-3 border border-white/40 shadow-xl shadow-slate-200/50 animate-in slide-in-from-bottom-4 duration-700 delay-300 max-w-[220px]">
                     <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                       <CheckCircle2 className="w-5 h-5 text-green-600" />
                     </div>
@@ -210,19 +210,19 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section className="py-8 bg-white border-b border-orange-50">
+        <section className="py-8 bg-white border-b border-slate-50">
           <div className="container mx-auto px-6">
             <div className="grid grid-cols-3 gap-6 max-w-3xl mx-auto text-center">
               <div data-testid="social-proof-families">
-                <p className="text-2xl md:text-3xl font-bold text-orange-500">1 200+</p>
+                <p className="text-2xl md:text-3xl font-bold text-slate-900">1 200+</p>
                 <p className="text-xs md:text-sm text-slate-500 mt-1">семей подключили</p>
               </div>
               <div data-testid="social-proof-messages">
-                <p className="text-2xl md:text-3xl font-bold text-orange-500">15 000+</p>
+                <p className="text-2xl md:text-3xl font-bold text-slate-900">15 000+</p>
                 <p className="text-xs md:text-sm text-slate-500 mt-1">сообщений в день</p>
               </div>
               <div data-testid="social-proof-meds">
-                <p className="text-2xl md:text-3xl font-bold text-orange-500">98%</p>
+                <p className="text-2xl md:text-3xl font-bold text-slate-900">98%</p>
                 <p className="text-xs md:text-sm text-slate-500 mt-1">лекарств напомнены вовремя</p>
               </div>
             </div>
@@ -251,7 +251,7 @@ export default function LandingC() {
                 icon={<ShieldAlert className="w-8 h-8" />}
                 title="Алерт при звонке мошенников"
                 description="Бот распознаёт 8 типов мошенничества: «банковские сотрудники», «внук в беде», лотереи. Мгновенно предупредит вас."
-                color="bg-amber-50 text-amber-500"
+                color="bg-slate-50 text-slate-500"
               />
               <OutcomeCard
                 icon={<Eye className="w-8 h-8" />}
@@ -262,8 +262,8 @@ export default function LandingC() {
             </div>
 
             <div className="max-w-2xl mx-auto mt-12 text-center">
-              <div className="bg-orange-50 rounded-2xl p-6 border border-orange-100 relative">
-                <Quote className="w-8 h-8 text-orange-200 absolute top-4 left-4" />
+              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 relative">
+                <Quote className="w-8 h-8 text-slate-200 absolute top-4 left-4" />
                 <p className="text-slate-700 text-base leading-relaxed italic pl-8">
                   Вы открываете кабинет утром, видите <span className="font-semibold text-green-600">«Всё хорошо»</span> — и спокойно идёте на работу. А вечером мама сама расскажет, какой пирог испекла.
                 </p>
@@ -272,7 +272,7 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="parents" className="py-24 bg-gradient-to-b from-white to-[#FFF8F0]">
+        <section id="parents" className="py-24 bg-gradient-to-b from-white to-slate-50">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-16">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
@@ -289,8 +289,8 @@ export default function LandingC() {
                 archetype="Активный родитель 50+"
                 childQuote="Мама вышла на пенсию и не знает, чем заняться. Скучает, когда мы заняты. Ей не хватает общения."
                 botHelp="Рецепты, афиша, кино, стихи, загадки. Тёплый собеседник на каждый день — как подружка, которая всегда на связи."
-                color="bg-amber-50 border-amber-100"
-                iconColor="text-amber-600"
+                color="bg-slate-50 border-slate-100"
+                iconColor="text-slate-600"
               />
               <ParentCard
                 emoji="📱"
@@ -312,7 +312,7 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section className="py-24 bg-[#FFF8F0]">
+        <section className="py-24 bg-slate-50">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-16">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
@@ -362,8 +362,8 @@ export default function LandingC() {
                     onClick={() => setActiveChat(i)}
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                       activeChat === i
-                        ? "bg-orange-500 text-white shadow-md"
-                        : "bg-white text-slate-600 border border-orange-200 hover:bg-orange-50"
+                        ? "bg-slate-900 text-white shadow-md"
+                        : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                     }`}
                     data-testid={`chat-tab-${i}`}
                   >
@@ -374,12 +374,12 @@ export default function LandingC() {
 
               <div className="mx-auto" style={{ maxWidth: "380px" }}>
                 <div className="bg-white rounded-[2rem] p-1 shadow-2xl shadow-slate-200/80 border border-slate-200">
-                  <div className="bg-[#E8D5B7] rounded-[1.75rem] overflow-hidden">
-                    <div className="bg-[#EFDED3] px-4 py-3 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-orange-400 flex items-center justify-center text-white font-bold text-sm">В</div>
+                  <div className="bg-slate-50 rounded-[1.75rem] overflow-hidden">
+                    <div className="bg-[#517DA2] px-4 py-3 flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-violet-400 flex items-center justify-center text-white font-bold text-sm">В</div>
                       <div>
-                        <p className="font-semibold text-sm text-slate-800">Внучок</p>
-                        <p className="text-xs text-slate-500">онлайн</p>
+                        <p className="font-semibold text-sm text-white">Внучок</p>
+                        <p className="text-xs text-white/60">онлайн</p>
                       </div>
                     </div>
 
@@ -398,11 +398,11 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="dashboard-section" className="py-24 bg-gradient-to-b from-white to-[#FFF8F0] relative overflow-hidden">
+        <section id="dashboard-section" className="py-24 bg-gradient-to-b from-white to-slate-50 relative overflow-hidden">
           <div className="container mx-auto px-6">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div className="order-2 lg:order-1">
-                <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-orange-100">
+                <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-slate-100">
                   <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
                     <div>
                       <h3 className="font-semibold text-lg">Ваш личный кабинет</h3>
@@ -431,9 +431,9 @@ export default function LandingC() {
                       time="Сегодня, 09:15"
                     />
                     <DashboardRow
-                      icon={<MessageCircle className="w-5 h-5 text-amber-600" />}
-                      bgColor="bg-amber-50 border-amber-100"
-                      iconBg="bg-amber-100"
+                      icon={<MessageCircle className="w-5 h-5 text-slate-600" />}
+                      bgColor="bg-slate-50 border-slate-100"
+                      iconBg="bg-slate-100"
                       title="Утренний чек-ин пройден"
                       subtitle="Настроение хорошее, планирует испечь пирог"
                       time="Сегодня, 09:20"
@@ -469,7 +469,7 @@ export default function LandingC() {
                     "Мгновенное уведомление при подозрительной активности",
                   ].map((item, i) => (
                     <li key={i} className="flex items-center gap-3 text-slate-700">
-                      <CheckCircle2 className="w-5 h-5 text-orange-500 shrink-0" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                       <span>{item}</span>
                     </li>
                   ))}
@@ -478,7 +478,7 @@ export default function LandingC() {
                 <Button
                   asChild
                   variant="outline"
-                  className="rounded-full bg-white border-orange-200 hover:bg-orange-50"
+                  className="rounded-full bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
                   data-testid="button-demo-dashboard-c"
                 >
                   <Link href="/dashboard">Открыть демо кабинета</Link>
@@ -488,7 +488,7 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="features" className="py-24 bg-[#FFF8F0] relative">
+        <section id="features" className="py-24 bg-slate-50 relative">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-16">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
@@ -518,8 +518,8 @@ export default function LandingC() {
                 icon={<ShieldAlert />}
                 title="Защита от мошенников"
                 description="Распознаёт 8 типов мошенничества. Предупредит родителя и оповестит вас."
-                color="bg-amber-50 text-amber-500"
-                borderColor="border-amber-100"
+                color="bg-slate-50 text-slate-500"
+                borderColor="border-slate-100"
               />
               <FeatureCard
                 icon={<Mic />}
@@ -594,7 +594,7 @@ export default function LandingC() {
             <div className="text-center mt-8">
               <button
                 onClick={() => setShowAllFeatures(!showAllFeatures)}
-                className="inline-flex items-center gap-2 text-orange-600 font-medium hover:text-orange-700 transition-colors"
+                className="inline-flex items-center gap-2 text-slate-700 font-medium hover:text-slate-800 transition-colors"
                 aria-expanded={showAllFeatures}
                 data-testid="button-toggle-features"
               >
@@ -653,7 +653,7 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="pricing" className="py-24 bg-[#FFF8F0]">
+        <section id="pricing" className="py-24 bg-slate-50">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-4">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
@@ -721,14 +721,14 @@ export default function LandingC() {
 
             <div className="max-w-4xl mx-auto mt-12 relative">
               <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse bg-white rounded-2xl overflow-hidden shadow-sm border border-orange-100">
+              <table className="w-full text-sm border-collapse bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
                 <thead>
-                  <tr className="bg-orange-50">
-                    <th className="text-left px-4 py-3 font-semibold text-slate-700 border-b border-orange-100">Возможность</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-orange-100">Бесплатный</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-orange-100">Базовый</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-orange-100 bg-orange-100">Стандарт</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-orange-100">Премиум</th>
+                  <tr className="bg-slate-50">
+                    <th className="text-left px-4 py-3 font-semibold text-slate-700 border-b border-slate-100">Возможность</th>
+                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-slate-100">Бесплатный</th>
+                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-slate-100">Базовый</th>
+                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-slate-100 bg-slate-100">Стандарт</th>
+                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-slate-100">Премиум</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -737,14 +737,14 @@ export default function LandingC() {
                       <td className="px-4 py-3 text-slate-700 border-b border-slate-100">{row.feature}</td>
                       <td className="text-center px-3 py-3 border-b border-slate-100">{renderComparisonValue(row.free)}</td>
                       <td className="text-center px-3 py-3 border-b border-slate-100">{renderComparisonValue(row.basic)}</td>
-                      <td className="text-center px-3 py-3 border-b border-slate-100 bg-orange-50/30">{renderComparisonValue(row.standard)}</td>
+                      <td className="text-center px-3 py-3 border-b border-slate-100 bg-slate-50/30">{renderComparisonValue(row.standard)}</td>
                       <td className="text-center px-3 py-3 border-b border-slate-100">{renderComparisonValue(row.premium)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               </div>
-              <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-[#FFF8F0] to-transparent pointer-events-none md:hidden" />
+              <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-slate-50 to-transparent pointer-events-none md:hidden" />
             </div>
 
             <p className="text-center text-sm text-slate-500 mt-8" data-testid="text-risk-reversal-c">
@@ -755,7 +755,7 @@ export default function LandingC() {
               <Button
                 asChild
                 variant="link"
-                className="text-orange-600"
+                className="text-slate-700"
                 data-testid="link-pricing-details-c"
               >
                 <Link href="/pricing">Подробнее о тарифах</Link>
@@ -764,7 +764,7 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="faq" className="py-24 bg-[#FFF8F0]">
+        <section id="faq" className="py-24 bg-slate-50">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-16">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
@@ -776,7 +776,7 @@ export default function LandingC() {
               {faqItems.map((item, i) => (
                 <div
                   key={i}
-                  className="bg-white rounded-2xl border border-orange-100 overflow-hidden"
+                  className="bg-white rounded-2xl border border-slate-100 overflow-hidden"
                 >
                   <button
                     className="w-full px-6 py-5 flex items-center justify-between text-left"
@@ -803,27 +803,27 @@ export default function LandingC() {
 
         <section className="py-24 px-6">
           <div className="container mx-auto">
-            <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-[3rem] p-8 md:p-16 text-center text-white relative overflow-hidden">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-[3rem] p-8 md:p-16 text-center text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-              <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-300/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
+              <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
 
               <div className="relative z-10 max-w-2xl mx-auto">
-                <Sparkles className="w-12 h-12 mx-auto mb-6 text-yellow-200" />
+                <Sparkles className="w-12 h-12 mx-auto mb-6 text-slate-400" />
                 <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white">
                   Подарите маме помощника <br /> за 3 минуты
                 </h2>
-                <p className="text-orange-100 text-lg mb-10">
+                <p className="text-slate-300 text-lg mb-10">
                   Бесплатно — до 10 вопросов в день. Родителю не нужно ничего устанавливать — только Telegram.
                 </p>
                 <Button
                   asChild
                   size="lg"
-                  className="rounded-full h-14 px-8 bg-white text-orange-600 hover:bg-orange-50 font-semibold text-lg shadow-xl"
+                  className="rounded-full h-14 px-8 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-lg shadow-xl"
                   data-testid="button-cta-final-c"
                 >
                   <Link href="/auth">Попробовать бесплатно</Link>
                 </Button>
-                <p className="mt-4 text-sm text-orange-200 opacity-80">
+                <p className="mt-4 text-sm text-slate-200 opacity-80">
                   Подписка от 490₽/мес для напоминаний и расширенных лимитов
                 </p>
               </div>
@@ -837,7 +837,7 @@ export default function LandingC() {
           <div className="flex flex-col md:flex-row justify-between items-start gap-8">
             <div>
               <div className="flex items-center gap-2 text-white mb-3">
-                <Heart className="w-5 h-5 text-orange-400" />
+                <Heart className="w-5 h-5 text-slate-400" />
                 <span className="font-bold tracking-tight">Внучок</span>
               </div>
               <p className="text-slate-500">Забота о родителях с помощью ИИ</p>
@@ -845,11 +845,11 @@ export default function LandingC() {
 
             <div className="flex flex-col gap-2">
               <h4 className="text-white font-semibold text-sm mb-1">Контакты</h4>
-              <a href="mailto:support@vnuchok.ru" className="flex items-center gap-2 hover:text-orange-400 transition-colors" data-testid="link-footer-email">
+              <a href="mailto:support@vnuchok.ru" className="flex items-center gap-2 hover:text-slate-300 transition-colors" data-testid="link-footer-email">
                 <Mail className="w-4 h-4" />
                 support@vnuchok.ru
               </a>
-              <a href="https://t.me/vnuchok_bot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-orange-400 transition-colors" data-testid="link-footer-telegram">
+              <a href="https://t.me/vnuchok_bot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-slate-300 transition-colors" data-testid="link-footer-telegram">
                 <Send className="w-4 h-4" />
                 @vnuchok_bot в Telegram
               </a>
@@ -857,13 +857,13 @@ export default function LandingC() {
 
             <div className="flex flex-col gap-2">
               <h4 className="text-white font-semibold text-sm mb-1">Информация</h4>
-              <a href="/privacy" className="hover:text-orange-400 transition-colors" data-testid="link-footer-privacy">
+              <a href="/privacy" className="hover:text-slate-300 transition-colors" data-testid="link-footer-privacy">
                 Политика конфиденциальности
               </a>
-              <a href="#faq" className="hover:text-orange-400 transition-colors" data-testid="link-footer-faq">
+              <a href="#faq" className="hover:text-slate-300 transition-colors" data-testid="link-footer-faq">
                 Частые вопросы
               </a>
-              <a href="/pricing" className="hover:text-orange-400 transition-colors" data-testid="link-footer-pricing">
+              <a href="/pricing" className="hover:text-slate-300 transition-colors" data-testid="link-footer-pricing">
                 Тарифы
               </a>
             </div>
@@ -875,10 +875,10 @@ export default function LandingC() {
         </div>
       </footer>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-white/80 backdrop-blur-md border-t border-orange-100 md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-white/80 backdrop-blur-md border-t border-slate-100 md:hidden">
         <Button
           asChild
-          className="w-full rounded-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-lg"
+          className="w-full rounded-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-semibold shadow-lg"
           data-testid="button-mobile-cta-c"
         >
           <Link href="/auth">Подарить маме помощника — бесплатно</Link>
@@ -1024,7 +1024,7 @@ function ParentCard({
       <p className="text-sm text-slate-600 mb-4 italic">«{childQuote}»</p>
       <div className="pt-3 border-t border-slate-100">
         <p className="text-sm text-slate-700 flex gap-2">
-          <span className="text-orange-500 shrink-0 mt-0.5">
+          <span className="text-emerald-500 shrink-0 mt-0.5">
             <CheckCircle2 className="w-4 h-4" />
           </span>
           {botHelp}
@@ -1082,25 +1082,25 @@ function TestimonialCard({
   const hasHalf = rating % 1 !== 0;
 
   return (
-    <div className="p-8 rounded-2xl bg-white border border-orange-100 shadow-sm hover:shadow-md transition-shadow" data-testid={`testimonial-card-c-${name}`}>
+    <div className="p-8 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow" data-testid={`testimonial-card-c-${name}`}>
       <div className="flex gap-1 mb-4">
         {Array.from({ length: fullStars }).map((_, i) => (
-          <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+          <Star key={i} className="w-4 h-4 fill-slate-400 text-slate-400" />
         ))}
-        {hasHalf && <StarHalf className="w-4 h-4 fill-amber-400 text-amber-400" />}
+        {hasHalf && <StarHalf className="w-4 h-4 fill-slate-400 text-slate-400" />}
       </div>
       <div className="relative mb-5">
-        <Quote className="w-6 h-6 text-orange-200 absolute -top-1 -left-1" />
+        <Quote className="w-6 h-6 text-slate-200 absolute -top-1 -left-1" />
         <p className="text-slate-700 text-sm leading-relaxed pl-6">{quote}</p>
       </div>
       <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-200 to-amber-200 flex items-center justify-center text-orange-700 font-bold text-sm">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-slate-700 font-bold text-sm">
           {name.charAt(0)}
         </div>
         <div>
           <p className="font-semibold text-sm text-slate-800">{name}</p>
           <p className="text-xs text-slate-500">{age} лет, {city}</p>
-          <p className="text-xs text-orange-500">{parentType}</p>
+          <p className="text-xs text-slate-600">{parentType}</p>
         </div>
       </div>
     </div>
@@ -1118,7 +1118,7 @@ function StepCard({
 }) {
   return (
     <div className="text-center p-8">
-      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-amber-400 flex items-center justify-center mb-5 mx-auto text-white font-bold text-xl shadow-lg shadow-orange-200">
+      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center mb-5 mx-auto text-white font-bold text-xl shadow-lg shadow-slate-300">
         {step}
       </div>
       <h3 className="text-xl font-bold mb-3 text-slate-900">{title}</h3>
@@ -1186,39 +1186,39 @@ function PricingCard({
 }) {
   return (
     <Card
-      className={`relative overflow-hidden transition-all hover:-translate-y-1 rounded-2xl ${popular ? "border-orange-400 shadow-lg shadow-orange-100 scale-105" : "border-orange-100"}`}
+      className={`relative overflow-hidden transition-all hover:-translate-y-1 rounded-2xl ${popular ? "border-slate-800 shadow-lg shadow-slate-200 scale-105" : "border-slate-100"}`}
       data-testid={`pricing-card-c-${name}`}
     >
       {popular && (
-        <div className="absolute top-0 right-0 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
+        <div className="absolute top-0 right-0 bg-slate-900 text-white text-xs font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
           <Star className="w-3 h-3" /> Популярный
         </div>
       )}
       <CardHeader className="text-center pb-2">
         <CardTitle className="text-xl">{name}</CardTitle>
-        <CardDescription className="text-orange-600 font-medium">
+        <CardDescription className="text-slate-500 font-medium">
           {subtitle}
         </CardDescription>
         <div className="mt-3">
           <span className="text-3xl font-bold">{price}₽</span>
           {!isFree && <span className="text-muted-foreground">/мес</span>}
         </div>
-        <div className="mt-3 bg-orange-50 rounded-lg px-3 py-2" data-testid={`pricing-result-c-${name}`}>
-          <p className="text-xs font-medium text-orange-700">{result}</p>
+        <div className="mt-3 bg-slate-50 rounded-lg px-3 py-2" data-testid={`pricing-result-c-${name}`}>
+          <p className="text-xs font-medium text-slate-600">{result}</p>
         </div>
       </CardHeader>
       <CardContent>
         <ul className="space-y-3 mb-6">
           {features.map((f) => (
             <li key={f} className="flex items-start gap-2 text-sm">
-              <Check className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+              <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
               <span>{f}</span>
             </li>
           ))}
         </ul>
         <Button
           asChild
-          className={`w-full rounded-full ${popular ? "bg-orange-500 hover:bg-orange-600" : ""}`}
+          className={`w-full rounded-full ${popular ? "bg-slate-900 hover:bg-slate-800" : ""}`}
           variant={popular ? "default" : "outline"}
           data-testid={`button-pricing-c-${name}`}
         >
