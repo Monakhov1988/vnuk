@@ -19,8 +19,6 @@ import {
   Lock,
   Quote,
   Zap,
-  Shield,
-  Eye,
   Clock,
   Train,
   Landmark,
@@ -242,32 +240,67 @@ export default function LandingC() {
 
             <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
               <OutcomeCard
-                icon={<BellRing className="w-8 h-8" />}
-                title="Push если лекарство не принято"
-                description="Бот напомнит родителю. Нет подтверждения за 15 минут — вы получите уведомление. Не нужно звонить и спрашивать."
-                color="bg-rose-50 text-rose-500"
+                title="Лекарство не принято"
+                description="Нет подтверждения 15 мин — вы получите push."
+                mockup={
+                  <div className="rounded-2xl bg-white border border-slate-100 p-3 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center">
+                        <BellRing className="w-4 h-4 text-rose-500" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold text-slate-800">Внучок</p>
+                        <p className="text-[10px] text-slate-400">сейчас</p>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-700 leading-snug">Мама не подтвердила приём эналаприла. Напоминание отправлено повторно.</p>
+                  </div>
+                }
               />
               <OutcomeCard
-                icon={<ShieldAlert className="w-8 h-8" />}
-                title="Алерт при звонке мошенников"
-                description="Бот распознаёт 8 типов мошенничества: «банковские сотрудники», «внук в беде», лотереи. Мгновенно предупредит вас."
-                color="bg-slate-50 text-slate-500"
+                title="Мошенник распознан"
+                description="8 типов мошенничества. Мгновенный алерт вам."
+                mockup={
+                  <div className="rounded-2xl bg-white border border-red-100 p-3 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                        <ShieldAlert className="w-4 h-4 text-red-500" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold text-red-700">Внимание</p>
+                        <p className="text-[10px] text-slate-400">2 мин назад</p>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-700 leading-snug">Мама получила подозрительный звонок — «сотрудник банка». Бот предупредил.</p>
+                  </div>
+                }
               />
               <OutcomeCard
-                icon={<Eye className="w-8 h-8" />}
-                title="Дашборд: всё в одном месте"
-                description="Давление, настроение, лекарства, счётчики — в личном кабинете. Статус «Всё хорошо» или «Требует внимания»."
-                color="bg-blue-50 text-blue-500"
+                title="Всё в одном месте"
+                description="Давление, лекарства, настроение — в кабинете."
+                mockup={
+                  <div className="rounded-2xl bg-white border border-slate-100 p-3 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-[11px] font-semibold text-slate-800">Статус</p>
+                      <span className="text-[10px] font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Всё хорошо</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-[10px] text-slate-600">
+                        <CheckCircle2 className="w-3 h-3 text-green-500" />
+                        <span>Лекарства приняты</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] text-slate-600">
+                        <HeartPulse className="w-3 h-3 text-blue-500" />
+                        <span>Давление 130/85</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] text-slate-600">
+                        <MessageCircle className="w-3 h-3 text-slate-400" />
+                        <span>Настроение хорошее</span>
+                      </div>
+                    </div>
+                  </div>
+                }
               />
-            </div>
-
-            <div className="max-w-2xl mx-auto mt-12 text-center">
-              <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] p-6 relative">
-                <Quote className="w-8 h-8 text-slate-200 absolute top-4 left-4" />
-                <p className="text-slate-700 text-base leading-relaxed italic pl-8">
-                  Вы открываете кабинет утром, видите <span className="font-semibold text-green-600">«Всё хорошо»</span> — и спокойно идёте на работу. А вечером мама сама расскажет, какой пирог испекла.
-                </p>
-              </div>
             </div>
           </div>
         </section>
@@ -285,28 +318,22 @@ export default function LandingC() {
 
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
               <ParentCard
-                emoji="💃"
+                image="/images/lonely-mom.png"
                 archetype="Активный родитель 50+"
-                childQuote="Мама вышла на пенсию и не знает, чем заняться. Скучает, когда мы заняты. Ей не хватает общения."
-                botHelp="Рецепты, афиша, кино, стихи, загадки. Тёплый собеседник на каждый день — как подружка, которая всегда на связи."
-                color="bg-slate-50 border-slate-100"
-                iconColor="text-slate-600"
+                childQuote="Скучает, когда мы заняты. Не хватает общения."
+                botHelp="Рецепты, афиша, стихи. Тёплый собеседник каждый день."
               />
               <ParentCard
-                emoji="📱"
+                image="/images/empty-phone.png"
                 archetype="С техникой сложно 60+"
-                childQuote="Папа опять звонит: «Я нажал что-то и всё пропало». Объяснять по видеозвонку — мучение для обоих."
-                botHelp="Пошагово объяснит: как оплатить ЖКХ, записаться к врачу, отправить фото, разобраться с Госуслугами."
-                color="bg-blue-50 border-blue-100"
-                iconColor="text-blue-600"
+                childQuote="«Я нажал что-то и всё пропало». Объяснять — мучение."
+                botHelp="Пошагово: ЖКХ, врач, Госуслуги. Голосом, без кнопок."
               />
               <ParentCard
-                emoji="💊"
+                image="/images/window-grandma.png"
                 archetype="Нужна забота 70+"
-                childQuote="Живёт одна, забывает лекарства. Боюсь, что позвонят мошенники — и она поверит."
-                botHelp="Напомнит про таблетки, запишет давление, распознает мошенника и мгновенно пришлёт вам алерт."
-                color="bg-rose-50 border-rose-100"
-                iconColor="text-rose-600"
+                childQuote="Живёт одна, забывает лекарства. Боюсь мошенников."
+                botHelp="Напомнит таблетки, запишет давление, распознает мошенника."
               />
             </div>
           </div>
@@ -1008,54 +1035,50 @@ const faqItems = [
 ];
 
 function OutcomeCard({
-  icon,
   title,
   description,
-  color,
+  mockup,
 }: {
-  icon: React.ReactNode;
   title: string;
   description: string;
-  color: string;
+  mockup: React.ReactNode;
 }) {
   return (
-    <div className="text-center p-8 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300" data-testid={`outcome-card-${title}`}>
-      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-5 mx-auto ${color}`}>
-        {icon}
+    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300 overflow-hidden" data-testid={`outcome-card-${title}`}>
+      <div className="p-5 pb-3 bg-gradient-to-b from-slate-50/80 to-transparent">
+        {mockup}
       </div>
-      <h3 className="text-lg font-serif font-medium mb-3 text-slate-900">{title}</h3>
-      <p className="text-[#5F626B] text-sm leading-relaxed">{description}</p>
+      <div className="px-5 pb-5">
+        <h3 className="text-base font-serif font-medium mb-1.5 text-slate-900">{title}</h3>
+        <p className="text-[#5F626B] text-sm leading-relaxed">{description}</p>
+      </div>
     </div>
   );
 }
 
 function ParentCard({
-  emoji,
+  image,
   archetype,
   childQuote,
   botHelp,
-  color,
-  iconColor,
 }: {
-  emoji: string;
+  image: string;
   archetype: string;
   childQuote: string;
   botHelp: string;
-  color: string;
-  iconColor: string;
 }) {
   return (
-    <div className={`rounded-[28px] p-6 bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300`} data-testid={`parent-card-${archetype.replace(/\s+/g, "-")}`}>
-      <div className="text-4xl mb-4">{emoji}</div>
-      <h3 className={`text-lg font-serif font-medium mb-3 ${iconColor}`}>{archetype}</h3>
-      <p className="text-sm text-slate-600 mb-4 italic">«{childQuote}»</p>
-      <div className="pt-3 border-t border-slate-100">
-        <p className="text-sm text-slate-700 flex gap-2">
-          <span className="text-emerald-500 shrink-0 mt-0.5">
-            <CheckCircle2 className="w-4 h-4" />
-          </span>
-          {botHelp}
-        </p>
+    <div className="rounded-[28px] overflow-hidden bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300" data-testid={`parent-card-${archetype.replace(/\s+/g, "-")}`}>
+      <div className="h-48 overflow-hidden">
+        <img src={image} alt={archetype} className="w-full h-full object-cover" loading="lazy" />
+      </div>
+      <div className="p-5">
+        <h3 className="text-lg font-serif font-medium mb-2 text-slate-900">{archetype}</h3>
+        <p className="text-sm text-[#5F626B] mb-3 italic">«{childQuote}»</p>
+        <div className="flex gap-2 text-sm text-slate-700">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+          <span>{botHelp}</span>
+        </div>
       </div>
     </div>
   );
