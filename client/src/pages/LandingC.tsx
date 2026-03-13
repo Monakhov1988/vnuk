@@ -815,15 +815,42 @@ export default function LandingC() {
                 <p className="text-slate-300 text-lg mb-10">
                   Бесплатно — до 10 вопросов в день. Родителю не нужно ничего устанавливать — только Telegram.
                 </p>
-                <Button
-                  asChild
-                  size="lg"
-                  className="rounded-full h-14 px-8 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-lg shadow-xl"
-                  data-testid="button-cta-final-c"
-                >
-                  <Link href="/auth">Попробовать бесплатно</Link>
-                </Button>
-                <p className="mt-4 text-sm text-slate-200 opacity-80">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="rounded-full h-14 px-8 bg-white text-slate-900 hover:bg-slate-100 font-semibold text-base"
+                    data-testid="button-cta-app-c"
+                  >
+                    <Link href="/auth">
+                      <Smartphone className="w-5 h-5 mr-2" />
+                      Приложение
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    size="lg"
+                    className="rounded-full h-14 px-8 bg-white/10 text-white hover:bg-white/20 font-semibold text-base border border-white/20"
+                    data-testid="button-cta-max-c"
+                  >
+                    <a href="#" onClick={(e) => { e.preventDefault(); alert("Скоро!"); }}>
+                      <MessageCircle className="w-5 h-5 mr-2" />
+                      Бот в MAX
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    size="lg"
+                    className="rounded-full h-14 px-8 bg-white/10 text-white hover:bg-white/20 font-semibold text-base border border-white/20"
+                    data-testid="button-cta-telegram-c"
+                  >
+                    <a href="https://t.me/GrandSonGleb_bot" target="_blank" rel="noopener noreferrer">
+                      <Send className="w-5 h-5 mr-2" />
+                      Бот в Telegram
+                    </a>
+                  </Button>
+                </div>
+                <p className="mt-6 text-sm text-slate-400 opacity-80">
                   Подписка от 490₽/мес для напоминаний и расширенных лимитов
                 </p>
               </div>
