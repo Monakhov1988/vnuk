@@ -683,6 +683,7 @@ export async function startTelegramBot() {
       return;
     }
 
+
     if (deepLinkCode) {
       if (existing) {
         if (existing.role === "parent") {
@@ -2099,6 +2100,23 @@ export async function startTelegramBot() {
 
   bot.on("message:text", async (ctx) => {
     let userText = ctx.message.text;
+
+    if (userText.trim().startsWith("CHILDTG_")) {
+      const chatId = ctx.chat.id.toString();
+      const token = userText.trim();
+      const tokenData = await storage.consumeChildTelegramToken(token);
+      if (!tokenData) {
+        await ctx.reply("Код не найден, истёк или уже использован. Сгенерируйте новый в личном кабинете.");
+        return;
+      }
+      await storage.updateUserTelegramChatId(tokenData.childId, chatId);
+      const childUser = await storage.getUser(tokenData.childId);
+      await ctx.reply(
+        `Telegram подключён, ${childUser?.name || ""}! Теперь вы будете получать уведомления о родителе: вечернюю сводку, оповещения о давлении и важные алерты.`
+      );
+      console.log(`[telegram] Child ${tokenData.childId} linked Telegram via text code, chat ${chatId}`);
+      return;
+    }
 
     if (userText === "/настройки") {
       const chatId = ctx.chat.id.toString();
