@@ -2252,7 +2252,7 @@ ${memoryLines}
       console.log(`[ai] SERVER SAFETY: violence/danger detected — replacing with de-escalation response`);
       let dangerFormality: "ты" | "вы" = "ты";
       try {
-        const pSettings = userId ? await storage.getPersonalitySettings(userId) : null;
+        const pSettings = settingsParentId ? await storage.getPersonalitySettings(settingsParentId) : null;
         if (pSettings?.formality === "вы") dangerFormality = "вы";
       } catch {}
       reply = dangerFormality === "вы"
