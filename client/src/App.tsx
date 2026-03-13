@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import LandingA from "@/pages/LandingA";
 import LandingB from "@/pages/LandingB";
 import LandingC from "@/pages/LandingC";
+import LandingD from "@/pages/LandingD";
 import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
 import PricingPage from "@/pages/PricingPage";
@@ -89,6 +90,14 @@ function LandingCPage() {
   return <LandingC />;
 }
 
+function LandingDPage() {
+  useEffect(() => {
+    localStorage.setItem("vnuchok_ab_variant", "D");
+    trackEvent("D", "landing_view");
+  }, []);
+  return <LandingD />;
+}
+
 function Router() {
   return (
     <Switch>
@@ -96,6 +105,7 @@ function Router() {
       <Route path="/a" component={LandingAPage} />
       <Route path="/b" component={LandingBPage} />
       <Route path="/c" component={LandingCPage} />
+      <Route path="/d" component={LandingDPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/pricing" component={PricingPage} />
