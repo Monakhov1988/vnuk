@@ -766,3 +766,65 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+
+// TODO: Remove after prod deploy confirms child record exists (Task #9 one-time data repair)
+export async function ensureChildLinkedToParent(): Promise<void> {
+  const PARENT_TELEGRAM_CHAT_ID = "923281106";
+  const CHILD_NAME = "Мария";
+
+  try {
+    const parents = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.telegramChatId, PARENT_TELEGRAM_CHAT_ID),
+          eq(users.role, "parent")
+        )
+      );
+
+    if (parents.length === 0) {
+      console.log("[seed] Parent with telegram_chat_id=923281106 not found, skipping");
+      return;
+    }
+
+    if (parents.length > 1) {
+      console.error(`[seed] CRITICAL: Multiple parents found with telegram_chat_id=${PARENT_TELEGRAM_CHAT_ID}, aborting to avoid wrong linkage`);
+      throw new Error("Ambiguous parent lookup: multiple parents share telegram_chat_id=923281106");
+    }
+
+    const parent = parents[0];
+
+    const existingChildren = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.linkedParentId, parent.id),
+          eq(users.role, "child")
+        )
+      );
+
+    if (existingChildren.length > 0) {
+      console.log(`[seed] Child already linked to parent id=${parent.id}: id=${existingChildren[0].id} name='${existingChildren[0].name}', skipping`);
+      return;
+    }
+
+    const [child] = await db
+      .insert(users)
+      .values({
+        name: CHILD_NAME,
+        email: `child_${parent.id}_${Date.now()}@generated.local`,
+        password: "not-used",
+        role: "child",
+        linkedParentId: parent.id,
+        telegramChatId: PARENT_TELEGRAM_CHAT_ID,
+      })
+      .returning();
+
+    console.log(`[seed] Created child id=${child.id} linked to parent id=${parent.id} (name=${CHILD_NAME}, telegram_chat_id=${PARENT_TELEGRAM_CHAT_ID})`);
+  } catch (err) {
+    console.error("[seed] CRITICAL: Failed to ensure child record:", err);
+    throw err;
+  }
+}

@@ -7,6 +7,7 @@ import { serveStatic } from "./static";
 import { startTelegramBot, stopTelegramBot } from "./telegram";
 import { startChildBot } from "./childBot";
 import { startScheduler } from "./scheduler";
+import { ensureChildLinkedToParent } from "./storage";
 import { createServer } from "http";
 
 const app = express();
@@ -91,6 +92,7 @@ app.use((req, res, next) => {
 
 (async () => {
   await registerRoutes(httpServer, app);
+  await ensureChildLinkedToParent();
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
