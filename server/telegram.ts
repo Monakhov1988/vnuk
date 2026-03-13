@@ -56,7 +56,7 @@ function detectPersonalitySettingsIntent(text: string): { changes: Record<string
 
 function isEmergencyMessage(text: string): boolean {
   const intent = detectIntentLocal(text, false);
-  return ["home_danger", "lost", "emergency", "scam", "financial_risk"].includes(intent);
+  return ["home_danger", "lost", "emergency", "scam", "financial_risk", "danger"].includes(intent);
 }
 
 const DAILY_MESSAGE_LIMITS: Record<string, number> = {
@@ -231,6 +231,7 @@ export function formatAlertTitle(intent: string | null): string {
     case "financial_risk": return "Подозрительное финансовое решение!";
     case "home_danger": return "Опасная ситуация дома!";
     case "lost": return "Родитель потерялся на улице!";
+    case "danger": return "Агрессия / угроза насилия!";
     default: return "Родитель сообщил о проблеме со здоровьем!";
   }
 }
@@ -251,6 +252,8 @@ export function formatAlertPush(intent: string | null, parentName: string, messa
       return `🚨 *Опасная ситуация дома!*\n\n${parentName} написал(а): «${truncMsg}»\n\n⚡ Проверьте ситуацию дома! При необходимости звоните 112`;
     case "lost":
       return `🚨 *Родитель потерялся на улице!*\n\n${parentName} написал(а): «${truncMsg}»\n\n⚡ Помогите определить местоположение! Позвоните прямо сейчас!`;
+    case "danger":
+      return `🚨 *Агрессия / угроза насилия!*\n\n${parentName} написал(а): «${truncMsg}»\n\n⚡ Позвоните и поговорите! Ситуация может быть серьёзной.`;
     default:
       return `🚨 *Проблема со здоровьем!*\n\n${parentName} написал(а): «${truncMsg}»\n\n⚡ Вызовите скорую если нужно! 112`;
   }

@@ -535,7 +535,7 @@ export async function registerRoutes(
 
       const parentId = user?.role === "parent" ? userId : (user?.linkedParentId ?? userId);
       const lastUserMsg = messages[messages.length - 1]?.content || "";
-      const emergencyIntents = ["emergency", "scam", "home_danger", "lost", "financial_risk"];
+      const emergencyIntents = ["emergency", "scam", "home_danger", "lost", "financial_risk", "danger"];
       const isEmergency = emergencyIntents.includes(detectIntentLocal(lastUserMsg, false));
 
       if (!isEmergency) {
@@ -573,7 +573,7 @@ export async function registerRoutes(
       const result = await chatWithGrandchild(messages, parentName, userId);
 
       const serverIntent = detectIntentLocal(lastUserMsg, false);
-      const emergencyIntentsForAlert = ["emergency", "scam", "home_danger", "lost", "financial_risk"];
+      const emergencyIntentsForAlert = ["emergency", "scam", "home_danger", "lost", "financial_risk", "danger"];
       const localEmergency = emergencyIntentsForAlert.includes(serverIntent);
       const shouldAlert = result.hasAlert || localEmergency;
       const alertIntent = result.hasAlert ? result.intent : serverIntent;
@@ -590,6 +590,8 @@ export async function registerRoutes(
           ? "Опасная ситуация дома!"
           : alertIntent === "lost"
           ? "Родитель потерялся на улице!"
+          : alertIntent === "danger"
+          ? "Агрессия / угроза насилия!"
           : "Родитель сообщил о проблеме со здоровьем!";
         const alertDescription = messages[messages.length - 1]?.content || "";
 
