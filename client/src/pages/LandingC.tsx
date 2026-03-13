@@ -78,7 +78,7 @@ export default function LandingC() {
             className="rounded-xl px-6 transition-all duration-300 bg-[#143A2E] hover:bg-[#0F2F25] text-white shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)]"
             data-testid="button-nav-cta-c"
           >
-            <Link href="/auth">Попробовать бесплатно</Link>
+            <Link href="/auth">7 дней бесплатно</Link>
           </Button>
         </div>
       </nav>
@@ -101,14 +101,17 @@ export default function LandingC() {
                     Подари заботу
                   </span>
                 </h1>
-                <p className="text-xl md:text-2xl text-slate-700 mb-4 font-serif leading-snug">
+                <p className="text-xl md:text-2xl text-slate-700 mb-3 font-serif leading-snug">
                   Внучок — тёплый AI-спутник для родителя и&nbsp;ваше спокойствие каждый день
+                </p>
+                <p className="text-sm text-[#5F626B]/80 mb-4 italic">
+                  Вы не можете быть рядом каждый день — и это нормально. Внучок берёт ежедневную рутину заботы на себя.
                 </p>
                 <p className="text-base text-[#5F626B] mb-8 leading-relaxed">
                   Развеет скуку — поговорит, подберёт фильм, рецепт, стихи.
-                  Поможет с Госуслугами, ЖКХ, записью к&nbsp;врачу и&nbsp;лекарствами — голосом, по&nbsp;шагам.
-                  Напомнит таблетки, запишет давление, распознает мошенников
-                  и&nbsp;мгновенно предупредит вас. В&nbsp;Telegram — не&nbsp;нужно ничего устанавливать.
+                  Поможет с Госуслугами, ЖКХ, записью к&nbsp;врачу — голосом, по&nbsp;шагам.
+                  Напомнит лекарства, запишет давление, распознает мошенников
+                  и&nbsp;сразу предупредит вас. В&nbsp;Telegram — не&nbsp;нужно ничего устанавливать.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -119,7 +122,7 @@ export default function LandingC() {
                     data-testid="button-hero-gift-c"
                   >
                     <Link href="/auth">
-                      Подарить заботу <ArrowRight className="ml-2 w-5 h-5" />
+                      Начать 7 дней бесплатно <ArrowRight className="ml-2 w-5 h-5" />
                     </Link>
                   </Button>
                   <Button
@@ -567,7 +570,7 @@ export default function LandingC() {
               <FeatureCard
                 icon={<ShieldAlert />}
                 title="Защита от мошенников"
-                description="Распознаёт 8 типов мошенничества. Предупредит родителя и оповестит вас."
+                description="Распознаёт 18+ схем мошенничества. Предупредит родителя и оповестит вас."
                 color="bg-slate-50 text-slate-500"
                 borderColor="border-slate-100"
               />
@@ -710,7 +713,7 @@ export default function LandingC() {
                 Дешевле букета цветов в месяц
               </h2>
               <p className="text-[#5F626B] text-lg">
-                7 дней бесплатно. Подписка — от 990₽/мес.
+                7 дней бесплатно, затем от 990₽/мес — это 33₽ в день
               </p>
             </div>
 
@@ -783,9 +786,20 @@ export default function LandingC() {
               <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-slate-50 to-transparent pointer-events-none md:hidden" />
             </div>
 
-            <p className="text-center text-sm text-slate-500 mt-6" data-testid="text-risk-reversal-c">
-              7 дней бесплатно · Отмена подписки в 1 клик
-            </p>
+            <div className="flex flex-wrap justify-center gap-6 mt-6 text-sm text-slate-500" data-testid="text-risk-reversal-c">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                7 дней бесплатно
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-emerald-500" />
+                Данные под защитой
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-emerald-500" />
+                Отмена в 1 клик
+              </span>
+            </div>
 
             <div className="text-center mt-4">
               <Button
@@ -845,11 +859,11 @@ export default function LandingC() {
 
               <div className="relative z-10 max-w-2xl mx-auto">
                 <Sparkles className="w-12 h-12 mx-auto mb-6 text-emerald-300/60" />
-                <h2 className="text-3xl md:text-5xl font-serif font-medium tracking-[-0.02em] mb-6 text-white">
-                  Подарите маме помощника <br /> за 3 минуты
+                <h2 className="text-3xl md:text-5xl font-serif font-medium tracking-[-0.02em] mb-4 text-white">
+                  Каждый день без Внучка — это пропущенные лекарства и&nbsp;риск
                 </h2>
                 <p className="text-emerald-100/70 text-lg mb-8">
-                  7 дней бесплатно. Родителю не нужно ничего устанавливать — только Telegram.
+                  Начните сегодня — 7 дней бесплатно. Родителю нужен только Telegram.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button
@@ -859,20 +873,8 @@ export default function LandingC() {
                     data-testid="button-cta-app-c"
                   >
                     <Link href="/auth">
-                      <Smartphone className="w-5 h-5 mr-2" />
-                      Приложение
+                      Начать 7 дней бесплатно <ArrowRight className="ml-2 w-5 h-5" />
                     </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    size="lg"
-                    className="rounded-xl h-14 px-8 bg-white/10 text-white hover:bg-white/20 font-semibold text-base border border-white/20 backdrop-blur-sm transition-all duration-300"
-                    data-testid="button-cta-max-c"
-                  >
-                    <a href="#" onClick={(e) => { e.preventDefault(); alert("Скоро!"); }}>
-                      <MessageCircle className="w-5 h-5 mr-2" />
-                      Бот в MAX
-                    </a>
                   </Button>
                   <Button
                     asChild
@@ -882,12 +884,12 @@ export default function LandingC() {
                   >
                     <a href="https://t.me/GrandSonGleb_bot" target="_blank" rel="noopener noreferrer">
                       <Send className="w-5 h-5 mr-2" />
-                      Бот в Telegram
+                      Запустить бот в Telegram
                     </a>
                   </Button>
                 </div>
                 <p className="mt-6 text-sm text-emerald-200/50">
-                  Подписка от 490₽/мес для напоминаний и расширенных лимитов
+                  Это не замена вам — это ваша забота между звонками
                 </p>
               </div>
             </div>
@@ -944,7 +946,7 @@ export default function LandingC() {
           className="w-full rounded-xl h-12 bg-[#143A2E] hover:bg-[#0F2F25] text-white font-semibold shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)] transition-all duration-300"
           data-testid="button-mobile-cta-c"
         >
-          <Link href="/auth">Подарить маме помощника — бесплатно</Link>
+          <Link href="/auth">Начать 7 дней бесплатно</Link>
         </Button>
       </div>
     </div>
