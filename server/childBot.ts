@@ -46,9 +46,47 @@ export async function startChildBot() {
       return;
     }
 
+    const recentToken = await storage.findMostRecentPendingToken();
+    if (recentToken) {
+      const childUser = await storage.getUser(recentToken.childId);
+      if (childUser) {
+        const { InlineKeyboard } = await import("grammy");
+        const kb = new InlineKeyboard()
+          .text("Да, это я", `link_confirm_${recentToken.token}`)
+          .text("Нет", "link_cancel");
+        await ctx.reply(
+          `Вы — ${childUser.name}?\n\nНажмите «Да, это я» для подключения уведомлений.`,
+          { reply_markup: kb }
+        );
+        return;
+      }
+    }
+
     await ctx.reply(
       "Этот бот предназначен для уведомлений родственников.\n\nЧтобы подключиться, нажмите «Подключить Telegram» в личном кабинете на сайте."
     );
+  });
+
+  childBot.callbackQuery(/^link_confirm_(.+)$/, async (ctx) => {
+    const token = ctx.match[1];
+    const chatId = ctx.chat!.id.toString();
+    const tokenData = await storage.consumeChildTelegramToken(token);
+    if (!tokenData) {
+      await ctx.answerCallbackQuery({ text: "Ссылка истекла. Сгенерируйте новую." });
+      return;
+    }
+    await storage.updateUserTelegramChatId(tokenData.childId, chatId);
+    const childUser = await storage.getUser(tokenData.childId);
+    await ctx.answerCallbackQuery({ text: "Подключено!" });
+    await ctx.editMessageText(
+      `Telegram подключён, ${childUser?.name || ""}! 🎉\n\nТеперь вы будете получать:\n• Вечернюю сводку о родителе\n• Оповещения о давлении\n• Важные алерты безопасности\n• Уведомления о новых мемуарах`
+    );
+    console.log(`[child-bot] Child ${tokenData.childId} linked via confirmation button, chat ${chatId}`);
+  });
+
+  childBot.callbackQuery("link_cancel", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText("Хорошо. Если нужно подключить уведомления — нажмите «Подключить Telegram» в личном кабинете.");
   });
 
   childBot.on("message:text", async (ctx) => {

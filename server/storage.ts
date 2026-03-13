@@ -102,6 +102,7 @@ export interface IStorage {
   createChildTelegramToken(token: string, childId: number, expiresAt: Date): Promise<ChildTelegramToken>;
   consumeChildTelegramToken(token: string): Promise<ChildTelegramToken | undefined>;
   findPendingChildToken(childId: number): Promise<ChildTelegramToken | undefined>;
+  findMostRecentPendingToken(): Promise<ChildTelegramToken | undefined>;
   clearUserTelegramChatId(userId: number): Promise<void>;
 
   createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent>;
@@ -574,6 +575,18 @@ export class DatabaseStorage implements IStorage {
         gte(childTelegramTokens.expiresAt, new Date())
       ))
       .returning();
+    return row;
+  }
+
+  async findMostRecentPendingToken(): Promise<ChildTelegramToken | undefined> {
+    const [row] = await db.select()
+      .from(childTelegramTokens)
+      .where(and(
+        eq(childTelegramTokens.used, false),
+        gte(childTelegramTokens.expiresAt, new Date())
+      ))
+      .orderBy(desc(childTelegramTokens.createdAt))
+      .limit(1);
     return row;
   }
 
