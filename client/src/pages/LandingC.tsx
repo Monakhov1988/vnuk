@@ -253,7 +253,41 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="outcomes" className="py-16 md:py-20 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE] relative">
+        <section id="parents" className="py-16 md:py-20 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
+          <div className="container mx-auto px-6">
+            <div className="text-center max-w-3xl mx-auto mb-12">
+              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
+                Узнаёте своего родителя?
+              </h2>
+              <p className="text-[#5F626B] text-lg">
+                Внучок подстраивается под каждого
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              <ParentCard
+                image="/images/active-parent-50.png"
+                archetype="Активный родитель 50+"
+                childQuote="Скучает, когда мы заняты. Не хватает общения."
+                botHelp="Рецепты, афиша, стихи. Тёплый собеседник каждый день."
+              />
+              <ParentCard
+                image="/images/tech-parent-60.png"
+                archetype="С техникой сложно 60+"
+                childQuote="«Я нажал что-то и всё пропало». Объяснять — мучение."
+                botHelp="Пошагово: ЖКХ, врач, Госуслуги. Голосом, без кнопок."
+              />
+              <ParentCard
+                image="/images/care-parent-70.png"
+                archetype="Нужна забота 70+"
+                childQuote="Живёт одна, забывает лекарства. Переживаю каждый день."
+                botHelp="Напомнит таблетки, запишет давление, сообщит вам если что-то не так."
+              />
+            </div>
+          </div>
+        </section>
+
+        <section id="outcomes" className="py-16 md:py-20 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6] relative">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-12">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
@@ -326,40 +360,6 @@ export default function LandingC() {
                     </div>
                   </div>
                 }
-              />
-            </div>
-          </div>
-        </section>
-
-        <section id="parents" className="py-16 md:py-20 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
-          <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
-                Узнаёте своего родителя?
-              </h2>
-              <p className="text-[#5F626B] text-lg">
-                Внучок подстраивается под каждого
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              <ParentCard
-                image="/images/active-parent-50.png"
-                archetype="Активный родитель 50+"
-                childQuote="Скучает, когда мы заняты. Не хватает общения."
-                botHelp="Рецепты, афиша, стихи. Тёплый собеседник каждый день."
-              />
-              <ParentCard
-                image="/images/tech-parent-60.png"
-                archetype="С техникой сложно 60+"
-                childQuote="«Я нажал что-то и всё пропало». Объяснять — мучение."
-                botHelp="Пошагово: ЖКХ, врач, Госуслуги. Голосом, без кнопок."
-              />
-              <ParentCard
-                image="/images/care-parent-70.png"
-                archetype="Нужна забота 70+"
-                childQuote="Живёт одна, забывает лекарства. Переживаю каждый день."
-                botHelp="Напомнит таблетки, запишет давление, сообщит вам если что-то не так."
               />
             </div>
           </div>
@@ -568,11 +568,11 @@ export default function LandingC() {
                 borderColor="border-blue-100"
               />
               <FeatureCard
-                icon={<ShieldAlert />}
-                title="Защита от мошенников"
-                description="Распознаёт 18+ схем мошенничества. Предупредит родителя и оповестит вас."
-                color="bg-slate-50 text-slate-500"
-                borderColor="border-slate-100"
+                icon={<MessageCircle />}
+                title="Рецепты и кулинария"
+                description="Пошаговые рецепты из того, что есть дома. С учётом диет и ограничений."
+                color="bg-cyan-50 text-cyan-500"
+                borderColor="border-cyan-100"
               />
               <FeatureCard
                 icon={<Mic />}
@@ -582,18 +582,18 @@ export default function LandingC() {
                 borderColor="border-purple-100"
               />
               <FeatureCard
-                icon={<MessageCircle />}
-                title="Рецепты и кулинария"
-                description="Пошаговые рецепты из того, что есть дома. С учётом диет и ограничений."
-                color="bg-cyan-50 text-cyan-500"
-                borderColor="border-cyan-100"
-              />
-              <FeatureCard
                 icon={<Camera />}
                 title="Счётчики и ЖКХ"
                 description="Фотографирует счётчик — ИИ распознаёт цифры. Подскажет как оплатить."
                 color="bg-emerald-50 text-emerald-500"
                 borderColor="border-emerald-100"
+              />
+              <FeatureCard
+                icon={<ShieldAlert />}
+                title="Распознаёт подозрительное"
+                description="Если заметит что-то тревожное в разговоре — предупредит родителя и оповестит вас."
+                color="bg-slate-50 text-slate-500"
+                borderColor="border-slate-100"
               />
             </div>
 
@@ -702,6 +702,36 @@ export default function LandingC() {
                 quote="Перестала звонить маме из чувства вины. Теперь звоню потому что хочу. А мама довольна — у неё появился «внук», который всё знает. Хотелось бы ещё интеграцию с календарём."
                 rating={4.5}
               />
+            </div>
+          </div>
+        </section>
+
+        <section className="py-12 md:py-16 bg-gradient-to-b from-[#F4F1EE] to-[#F3F0F4]">
+          <div className="container mx-auto px-6">
+            <div className="max-w-3xl mx-auto">
+              <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] p-6 md:p-8">
+                <h3 className="text-xl md:text-2xl font-serif font-medium text-slate-900 mb-4">
+                  «А если родитель не&nbsp;будет пользоваться?»
+                </h3>
+                <div className="space-y-3 text-[#5F626B] text-sm leading-relaxed">
+                  <div className="flex gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <p><strong className="text-slate-700">Обычный Telegram</strong> — не нужно скачивать новое приложение. Если родитель пишет в WhatsApp, справится и тут.</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <p><strong className="text-slate-700">Голосом, без кнопок</strong> — родитель говорит как по телефону, бот отвечает голосом. Печатать не нужно.</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <p><strong className="text-slate-700">Бот знакомится сам</strong> — не нужно ничего настраивать. Внучок представится, спросит имя, город и начнёт помогать.</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <p><strong className="text-slate-700">7 дней бесплатно</strong> — попробуйте без обязательств. Если не подойдёт — ничего не платите.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
