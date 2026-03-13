@@ -674,6 +674,10 @@ export async function startTelegramBot() {
         await ctx.reply("Ссылка истекла или уже использована. Сгенерируйте новую в личном кабинете.");
         return;
       }
+      if (existing && existing.id !== tokenData.childId) {
+        await storage.clearUserTelegramChatId(existing.id);
+        console.log(`[telegram] Cleared chatId from user ${existing.id} (${existing.name}) to reassign to child ${tokenData.childId}`);
+      }
       await storage.updateUserTelegramChatId(tokenData.childId, chatId);
       const childUser = await storage.getUser(tokenData.childId);
       await ctx.reply(
@@ -2108,6 +2112,11 @@ export async function startTelegramBot() {
       if (!tokenData) {
         await ctx.reply("Код не найден, истёк или уже использован. Сгенерируйте новый в личном кабинете.");
         return;
+      }
+      const existingOwner = await storage.getUserByTelegramChatId(chatId);
+      if (existingOwner && existingOwner.id !== tokenData.childId) {
+        await storage.clearUserTelegramChatId(existingOwner.id);
+        console.log(`[telegram] Cleared chatId from user ${existingOwner.id} (${existingOwner.name}) to reassign to child ${tokenData.childId}`);
       }
       await storage.updateUserTelegramChatId(tokenData.childId, chatId);
       const childUser = await storage.getUser(tokenData.childId);

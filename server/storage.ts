@@ -102,6 +102,7 @@ export interface IStorage {
   createChildTelegramToken(token: string, childId: number, expiresAt: Date): Promise<ChildTelegramToken>;
   consumeChildTelegramToken(token: string): Promise<ChildTelegramToken | undefined>;
   findPendingChildToken(childId: number): Promise<ChildTelegramToken | undefined>;
+  clearUserTelegramChatId(userId: number): Promise<void>;
 
   createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent>;
   getAnalyticsStats(variant?: string): Promise<{ variant: string; eventType: string; count: number }[]>;
@@ -195,6 +196,10 @@ export class DatabaseStorage implements IStorage {
   async updateUserTelegramChatId(userId: number, chatId: string): Promise<User> {
     const [user] = await db.update(users).set({ telegramChatId: chatId }).where(eq(users.id, userId)).returning();
     return user;
+  }
+
+  async clearUserTelegramChatId(userId: number): Promise<void> {
+    await db.update(users).set({ telegramChatId: null }).where(eq(users.id, userId));
   }
 
   async updateUserName(userId: number, name: string): Promise<User> {
