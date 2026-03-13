@@ -330,7 +330,7 @@ export default function LandingC() {
                 botHelp="Пошагово: ЖКХ, врач, Госуслуги. Голосом, без кнопок."
               />
               <ParentCard
-                image="/images/window-grandma.png"
+                image="/images/care-parent-70.png"
                 archetype="Нужна забота 70+"
                 childQuote="Живёт одна, забывает лекарства. Боюсь мошенников."
                 botHelp="Напомнит таблетки, запишет давление, распознает мошенника."
