@@ -2237,6 +2237,19 @@ ${memoryLines}
   }
 
   console.log(`[ai] Reply length: ${reply.length} chars, first 100: ${reply.slice(0, 100)}`);
+
+  if (serverDetectedDanger) {
+    const dangerousReplyPatterns = /(?:документ[аыо]|договор|нотариус|нотариально|оформ(?:ить|ление|ляет)|подготовь|ЕГРН|свидетельство о собственност|кадастров|росреестр|шаг[и1-9]|порядок действий|пошаговая|инструкци|вот что нужно|как это сделать|для этого нужно|процесс (?:оформлени|подготовк|передач)|дарственн(?:ая|ую|ой)|(?:вам|тебе) (?:нужно|потребуется|понадобится)|обратитесь в|обратись в|(?:благородн|замечательн|прекрасн|отличн|хорош)[а-яё]{0,4}\s+(?:решени|идея|выбор|поступок|намерени)|(?:помогу|подскажу|расскажу)\s+(?:как|что)\s+(?:нужно|сделать|оформить))/i;
+    if (serverDetectedIntent === "financial_risk" && dangerousReplyPatterns.test(reply)) {
+      console.log(`[ai] SERVER SAFETY: GPT reply HELPS with financial decision — replacing with safe response`);
+      reply = "Подожди, это очень серьёзный шаг. Такие решения не нужно принимать в спешке.\n\nДавай сначала обсудим это с твоими родными? Они тебя любят и хотят помочь разобраться.\n\nКвартира — это твой дом, твоя защита. Такие решения лучше принимать вместе с близкими, чтобы потом не пожалеть.\n\nЯ уже сообщил твоим близким — они помогут разобраться.";
+    }
+    if (serverDetectedIntent === "scam" && dangerousReplyPatterns.test(reply)) {
+      console.log(`[ai] SERVER SAFETY: GPT reply HELPS with scam action — replacing with safe response`);
+      reply = "Подожди! Мне кажется, что это может быть опасно. Не торопись и не делай ничего, пока не поговоришь с родными.\n\nНастоящие организации никогда не торопят с решениями. Если кто-то давит — это повод насторожиться.\n\nЯ уже сообщил твоим близким — они помогут разобраться.";
+    }
+  }
+
   const llmAlert = reply.includes("[ALERT]");
   const hasAlert = llmAlert || serverDetectedDanger;
   if (hasAlert && !llmAlert) {
