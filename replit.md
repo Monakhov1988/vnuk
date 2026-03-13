@@ -43,6 +43,9 @@ The system uses a React (TypeScript, Tailwind v4) frontend, an Express (TypeScri
 -   Integrates OpenAI API (GPT-4o-mini, DALL-E 3) and Perplexity API (sonar) for web search.
 -   **`chatWithGrandchild`**: Personalized "Vnuchok" persona (25-year-old medical student).
 -   **Safety System**: Six-level safety for anti-injection, health, alarms, fraud, and danger detection. Critical alerts detected server-side.
+    -   **`detectIntentLocal()`**: 18+ pattern groups — home_danger, lost, overdose, suicide, stroke, heart attack, fall, breathing, bleeding/burns, allergic reaction, diabetic emergency, seizure, poisoning, hypothermia/heatstroke, general emergency, scam (classic/deepfake/lottery/phishing/romantic/healer/document pressure/financial), financial_risk, suspicious visitors.
+    -   **False positive filter**: Idioms like "умираю от смеха", "инфаркт от красоты" bypass emergency detection.
+    -   **Server-side override**: All 4 channels (Telegram voice, voice-confirm, text, web chat) have unified `shouldAlert = AI_alert || local_emergency` pattern — if AI misses [ALERT] but server regex detects danger, alert is forced.
 -   **Data Protection**: PII filter, explicit avoidance of repeating personal data.
 -   **Anti-hallucination**: Strict prompts, Perplexity-First Architecture for factual queries (search before GPT rephrases).
 -   **Pipelines**:
