@@ -720,7 +720,8 @@ function ConnectChildTelegramCard({ botUsername }: { botUsername: string }) {
     }
   };
 
-  const deepLink = token ? `https://t.me/${botUsername}?start=${token}` : null;
+  const nativeLink = token ? `tg://resolve?domain=${botUsername}&start=${token}` : null;
+  const webLink = token ? `https://t.me/${botUsername}?start=${token}` : null;
 
   return (
     <Card className="mb-8 border-2 border-blue-200 bg-blue-50/50" data-testid="card-connect-telegram">
@@ -732,35 +733,21 @@ function ConnectChildTelegramCard({ botUsername }: { botUsername: string }) {
         <p className="text-sm text-muted-foreground mb-4">
           Получайте уведомления о родителе прямо в Telegram: вечернюю сводку, оповещения о давлении и важные алерты.
         </p>
-        {!deepLink ? (
+        {!nativeLink ? (
           <Button onClick={generateToken} disabled={loading} data-testid="button-generate-tg-link">
             {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-            Получить ссылку
+            Подключить Telegram
           </Button>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             <Button asChild data-testid="button-open-tg-link">
-              <a href={deepLink} target="_blank" rel="noopener noreferrer">
-                <Send className="w-4 h-4 mr-2" /> Открыть Telegram
+              <a href={nativeLink}>
+                <Send className="w-4 h-4 mr-2" /> Открыть в Telegram
               </a>
             </Button>
-            <div className="text-xs text-muted-foreground">
-              <p className="mb-1">Если ссылка не сработала, откройте бот @{botUsername} и отправьте этот код:</p>
-              <div className="flex items-center gap-2">
-                <code className="bg-white px-2 py-1 rounded border text-sm font-mono select-all" data-testid="text-child-tg-code">{token}</code>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  data-testid="button-copy-tg-code"
-                  onClick={() => {
-                    navigator.clipboard.writeText(token!);
-                    toast({ title: "Скопировано!" });
-                  }}
-                >
-                  Копировать
-                </Button>
-              </div>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Если приложение не открылось — <a href={webLink!} target="_blank" rel="noopener noreferrer" className="underline text-blue-600" data-testid="link-tg-web">откройте через браузер</a>
+            </p>
           </div>
         )}
       </CardContent>

@@ -13,6 +13,11 @@ export async function startChildBot() {
 
   childBot = new Bot(token);
 
+  childBot.use(async (ctx, next) => {
+    console.log(`[child-bot] Update received: ${JSON.stringify(ctx.update).substring(0, 300)}`);
+    await next();
+  });
+
   childBot.command("start", async (ctx) => {
     const chatId = ctx.chat.id.toString();
     const deepLinkCode = ctx.match?.trim().toUpperCase() || "";
