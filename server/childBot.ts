@@ -4,6 +4,34 @@ import { storage } from "./storage";
 export let childBot: Bot | null = null;
 export let childBotUsername: string | null = null;
 
+function buildLinkSuccessMessage(childName: string, parentName?: string): string {
+  const lines = [`Telegram подключён, ${childName}! 🎉\n`];
+  if (parentName) {
+    lines.push(`Вы будете получать уведомления о ${parentName}:`);
+  } else {
+    lines.push(`Вы будете получать уведомления о вашем родителе:`);
+  }
+  lines.push(
+    `• Вечерняя сводка — каждый день в 21:00`,
+    `• Оповещения о давлении — если показатели выходят за норму`,
+    `• Алерты безопасности — мошенники, опасность`,
+    `• Новые мемуары — когда родитель делится воспоминаниями`,
+    ``,
+  );
+  if (!parentName) {
+    lines.push(
+      `Следующий шаг — пригласите родителя:`,
+      `Отправьте ему ссылку из личного кабинета на сайте. Родитель нажмёт — и бот Внучок (@vnuchok1_bot) сам начнёт знакомство.\n`,
+    );
+  } else {
+    lines.push(
+      `Родитель уже подключён! ${parentName} общается с Внучком через @vnuchok1_bot.\n`,
+    );
+  }
+  lines.push(`Управлять напоминаниями и следить за активностью — в личном кабинете на сайте.`);
+  return lines.join('\n');
+}
+
 export async function startChildBot() {
   const token = process.env.TELEGRAM_CHILD_BOT_TOKEN;
   if (!token) {
@@ -36,18 +64,8 @@ export async function startChildBot() {
       await storage.updateUserTelegramChatId(tokenData.childId, chatId);
       const childUser = await storage.getUser(tokenData.childId);
       const parent = await storage.getLinkedParent(tokenData.childId);
-      const parentName = parent?.name || "вашего родителя";
-      await ctx.reply(
-        `Telegram подключён, ${childUser?.name || ""}! 🎉\n\n` +
-        `Теперь вы будете получать уведомления о ${parentName}:\n` +
-        `• Вечерняя сводка — каждый день в 21:00\n` +
-        `• Оповещения о давлении — если показатели выходят за норму\n` +
-        `• Алерты безопасности — мошенники, опасность\n` +
-        `• Новые мемуары — когда родитель делится воспоминаниями\n\n` +
-        `Что дальше?\n` +
-        `Отправьте родителю ссылку на бот @vnuchok1_bot — это AI-помощник Внучок. Там родитель может общаться, искать рецепты, узнавать погоду, записывать мемуары и многое другое.\n\n` +
-        `Управлять напоминаниями и видеть активность родителя можно в личном кабинете на сайте.`
-      );
+      const successMsg = buildLinkSuccessMessage(childUser?.name || "", parent?.name);
+      await ctx.reply(successMsg);
       console.log(`[child-bot] Child ${tokenData.childId} linked Telegram chat ${chatId}`);
       return;
     }
@@ -98,17 +116,8 @@ export async function startChildBot() {
       await storage.updateUserTelegramChatId(tokenData.childId, chatId);
       const childUser = await storage.getUser(tokenData.childId);
       const parent = await storage.getLinkedParent(tokenData.childId);
-      const parentName = parent?.name || "вашего родителя";
       await ctx.answerCallbackQuery({ text: "Подключено!" });
-      await ctx.editMessageText(
-        `Telegram подключён, ${childUser?.name || ""}! 🎉\n\n` +
-        `Уведомления о ${parentName}:\n` +
-        `• Вечерняя сводка (21:00)\n` +
-        `• Давление вне нормы\n` +
-        `• Алерты безопасности\n` +
-        `• Новые мемуары\n\n` +
-        `Отправьте родителю ссылку на @vnuchok1_bot — AI-помощник для общения, рецептов, погоды и мемуаров.`
-      );
+      await ctx.editMessageText(buildLinkSuccessMessage(childUser?.name || "", parent?.name));
       console.log(`[child-bot] Child ${tokenData.childId} linked via confirmation button, chat ${chatId}`);
     } catch (err: any) {
       console.error(`[child-bot] Link error:`, err.message);
@@ -140,18 +149,8 @@ export async function startChildBot() {
         await storage.updateUserTelegramChatId(tokenData.childId, chatId);
         const childUser = await storage.getUser(tokenData.childId);
         const parent = await storage.getLinkedParent(tokenData.childId);
-        const parentName = parent?.name || "вашего родителя";
-        await ctx.reply(
-          `Telegram подключён, ${childUser?.name || ""}! 🎉\n\n` +
-          `Теперь вы будете получать уведомления о ${parentName}:\n` +
-          `• Вечерняя сводка — каждый день в 21:00\n` +
-          `• Оповещения о давлении — если показатели выходят за норму\n` +
-          `• Алерты безопасности — мошенники, опасность\n` +
-          `• Новые мемуары — когда родитель делится воспоминаниями\n\n` +
-          `Что дальше?\n` +
-          `Отправьте родителю ссылку на бот @vnuchok1_bot — это AI-помощник Внучок. Там родитель может общаться, искать рецепты, узнавать погоду, записывать мемуары и многое другое.\n\n` +
-          `Управлять напоминаниями и видеть активность родителя можно в личном кабинете на сайте.`
-        );
+        const successMsg = buildLinkSuccessMessage(childUser?.name || "", parent?.name);
+        await ctx.reply(successMsg);
         console.log(`[child-bot] Child ${tokenData.childId} linked via text code, chat ${chatId}`);
       } catch (err: any) {
         console.error(`[child-bot] Link error:`, err.message);

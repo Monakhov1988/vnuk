@@ -243,12 +243,12 @@ function ChildDashboard({ user, dashboard, status }: { user: any; dashboard: any
         </div>
       </div>
 
-      {!dashboard?.parent && (
-        <InviteParentCard linkCode={user.linkCode} botUsername={dashboard?.botUsername} />
+      {!dashboard?.user?.hasTelegram && dashboard?.botUsername && (
+        <ConnectChildTelegramCard botUsername={dashboard.childBotUsername || dashboard.botUsername} />
       )}
 
-      {dashboard?.parent && !dashboard?.user?.hasTelegram && dashboard?.botUsername && (
-        <ConnectChildTelegramCard botUsername={dashboard.childBotUsername || dashboard.botUsername} />
+      {!dashboard?.parent && (
+        <InviteParentCard linkCode={user.linkCode} botUsername={dashboard?.botUsername} />
       )}
 
       {dashboard?.engagementStats && <EngagementCard stats={dashboard.engagementStats} />}
