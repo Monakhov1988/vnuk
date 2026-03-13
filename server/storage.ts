@@ -532,13 +532,16 @@ export class DatabaseStorage implements IStorage {
 
     const responses: { content: string; role: string }[] = [];
     for (const pm of proactiveMessages) {
+      if (!pm.createdAt) continue;
+      const afterTime = pm.createdAt;
+      const beforeTime = new Date(pm.createdAt.getTime() + 4 * 60 * 60 * 1000);
       const userReplies = await db.select({ content: chatMessages.content, role: chatMessages.role })
         .from(chatMessages)
         .where(and(
           eq(chatMessages.parentId, parentId),
           eq(chatMessages.role, "user"),
-          sql`${chatMessages.createdAt} > ${pm.createdAt}`,
-          sql`${chatMessages.createdAt} < ${pm.createdAt} + INTERVAL '4 hours'`
+          gte(chatMessages.createdAt, afterTime),
+          sql`${chatMessages.createdAt} < ${beforeTime}`
         ))
         .orderBy(chatMessages.createdAt)
         .limit(3);
