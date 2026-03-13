@@ -688,6 +688,21 @@ export async function startTelegramBot() {
 
     if (deepLinkCode) {
       if (existing) {
+        if (existing.role === "parent") {
+          const codeOwner = await storage.consumeLinkCode(deepLinkCode);
+          if (codeOwner && codeOwner.role === "child" && !codeOwner.linkedParentId) {
+            await storage.linkParent(codeOwner.id, existing.id);
+            const newCode = generateLinkCode();
+            await storage.updateUserLinkCode(codeOwner.id, newCode);
+            console.log(`[telegram] Late-link: parent ${existing.id} linked to child ${codeOwner.id} via deep-link`);
+            await ctx.reply(
+              `${existing.name}, теперь ${codeOwner.name || "ваш близкий"} подключён и будет знать, что у вас всё хорошо 😊\n\n` +
+              `Чем помочь сегодня?`,
+              { reply_markup: persistentKeyboard }
+            );
+            return;
+          }
+        }
         await ctx.reply(
           `Вы уже зарегистрированы как ${existing.name}! Чем помочь сегодня?\n\n` +
           `Нажмите кнопку внизу или просто напишите мне:`,
