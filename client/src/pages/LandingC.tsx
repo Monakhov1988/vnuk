@@ -50,31 +50,31 @@ export default function LandingC() {
   const [showAllFeatures, setShowAllFeatures] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white selection:bg-slate-200/50" style={{ fontFamily: "'Inter', sans-serif" }}>
-      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 py-4">
+    <div className="min-h-screen bg-[#F6F4F2] selection:bg-[#EADDE4]/60 text-slate-900">
+      <nav className="fixed top-0 w-full z-50 bg-[#F6F4F2]/70 backdrop-blur-xl border-b border-white/40 py-5">
         <div className="container mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-600 p-2 rounded-xl">
-              <Heart className="w-6 h-6 text-white" fill="white" />
+          <div className="flex items-center gap-2.5">
+            <div className="rounded-lg bg-white/70 border border-white/60 p-2">
+              <Heart className="w-5 h-5 text-[#143A2E]" fill="#143A2E" />
             </div>
-            <span className="font-bold text-xl tracking-tight text-slate-900">
+            <span className="font-serif font-medium text-xl tracking-tight text-slate-900">
               Внучок
             </span>
           </div>
-          <div className="hidden md:flex gap-8 items-center text-sm font-medium text-slate-500">
-            <a href="#parents" className="hover:text-slate-900 transition-colors" data-testid="link-nav-parents-c">
+          <div className="hidden md:flex gap-8 items-center text-sm font-medium text-slate-600/80 tracking-wide">
+            <a href="#parents" className="hover:text-slate-900 transition-all duration-300" data-testid="link-nav-parents-c">
               Для кого
             </a>
-            <a href="#features" className="hover:text-slate-900 transition-colors" data-testid="link-nav-features-c">
+            <a href="#features" className="hover:text-slate-900 transition-all duration-300" data-testid="link-nav-features-c">
               Возможности
             </a>
-            <a href="#pricing" className="hover:text-slate-900 transition-colors" data-testid="link-nav-pricing-c">
+            <a href="#pricing" className="hover:text-slate-900 transition-all duration-300" data-testid="link-nav-pricing-c">
               Тарифы
             </a>
           </div>
           <Button
             asChild
-            className="rounded-full px-6 shadow-none hover:shadow-md transition-all bg-slate-900 hover:bg-slate-800 text-white"
+            className="rounded-xl px-6 transition-all duration-300 bg-[#143A2E] hover:bg-[#0F2F25] text-white shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)]"
             data-testid="button-nav-cta-c"
           >
             <Link href="/auth">Попробовать бесплатно</Link>
@@ -83,37 +83,37 @@ export default function LandingC() {
       </nav>
 
       <main>
-        <section className="pt-32 pb-20 md:pt-40 md:pb-32 px-6 overflow-hidden">
+        <section className="pt-36 pb-24 md:pt-44 md:pb-36 px-6 overflow-hidden bg-gradient-to-br from-[#F3E7ED] via-[#F7F2EC] to-[#F3F1EE]">
           <div className="container mx-auto">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="grid md:grid-cols-2 gap-16 items-center">
               <div className="max-w-2xl relative z-10">
                 <Badge
                   variant="secondary"
-                  className="mb-6 bg-slate-100 text-slate-600 hover:bg-slate-200 px-4 py-1.5 rounded-full border-0 flex items-center gap-2 w-fit"
+                  className="mb-8 bg-white/60 text-[#5F626B] hover:bg-white/80 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/50 flex items-center gap-2 w-fit"
                   data-testid="badge-hero-c"
                 >
                   <Zap className="w-3.5 h-3.5" />
                   Бесплатно в Telegram — говорит голосом
                 </Badge>
-                <h1 className="text-4xl md:text-6xl font-bold leading-[1.1] mb-6 text-slate-900">
+                <h1 className="text-5xl md:text-7xl font-serif font-medium leading-[1.03] tracking-[-0.02em] mb-8 text-slate-900">
                   Спокойствие{" "}
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-600 to-slate-400">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#143A2E] to-[#2D6A4F]">
                     за маму и папу
                   </span>
                   {" "}— каждый день
                 </h1>
-                <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                <p className="text-lg text-[#5F626B] mb-10 leading-relaxed">
                   Вы заняты — но всегда знаете, что с родителями всё в порядке.
                   Внучок заботится о них в Telegram: напомнит лекарства, защитит
                   от мошенников, расскажет рецепт. Родитель говорит голосом —
                   не нужно печатать.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <Button
                     asChild
                     size="lg"
-                    className="rounded-full text-base h-14 px-8 shadow-lg shadow-slate-200 bg-slate-900 hover:bg-slate-800 text-white"
+                    className="rounded-xl text-base h-14 px-8 bg-[#143A2E] hover:bg-[#0F2F25] text-white shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)] transition-all duration-300"
                     data-testid="button-hero-gift-c"
                   >
                     <Link href="/auth">
@@ -124,14 +124,14 @@ export default function LandingC() {
                     asChild
                     size="lg"
                     variant="outline"
-                    className="rounded-full text-base h-14 px-8 border-slate-200 hover:bg-slate-50 text-slate-700"
+                    className="rounded-xl text-base h-14 px-8 bg-white/70 border-white/60 backdrop-blur hover:bg-white/90 text-slate-700 transition-all duration-300"
                     data-testid="button-hero-demo-c"
                   >
                     <a href="#dialog">Как это выглядит</a>
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500" data-testid="badge-risk-reversal-c">
+                <div className="flex flex-wrap items-center gap-4 text-sm text-[#5F626B]" data-testid="badge-risk-reversal-c">
                   <span className="flex items-center gap-1.5">
                     <Zap className="w-3.5 h-3.5 text-emerald-500" />
                     Бесплатно — до 10 вопросов в день
@@ -210,32 +210,32 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section className="py-8 bg-white border-b border-slate-50">
+        <section className="py-10 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE] border-b border-white/40">
           <div className="container mx-auto px-6">
             <div className="grid grid-cols-3 gap-6 max-w-3xl mx-auto text-center">
               <div data-testid="social-proof-families">
-                <p className="text-2xl md:text-3xl font-bold text-slate-900">1 200+</p>
-                <p className="text-xs md:text-sm text-slate-500 mt-1">семей подключили</p>
+                <p className="text-2xl md:text-3xl font-serif font-medium text-slate-900">1 200+</p>
+                <p className="text-xs md:text-sm text-[#5F626B] mt-1">семей подключили</p>
               </div>
               <div data-testid="social-proof-messages">
-                <p className="text-2xl md:text-3xl font-bold text-slate-900">15 000+</p>
-                <p className="text-xs md:text-sm text-slate-500 mt-1">сообщений в день</p>
+                <p className="text-2xl md:text-3xl font-serif font-medium text-slate-900">15 000+</p>
+                <p className="text-xs md:text-sm text-[#5F626B] mt-1">сообщений в день</p>
               </div>
               <div data-testid="social-proof-meds">
-                <p className="text-2xl md:text-3xl font-bold text-slate-900">98%</p>
-                <p className="text-xs md:text-sm text-slate-500 mt-1">лекарств напомнены вовремя</p>
+                <p className="text-2xl md:text-3xl font-serif font-medium text-slate-900">98%</p>
+                <p className="text-xs md:text-sm text-[#5F626B] mt-1">лекарств напомнены вовремя</p>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="outcomes" className="py-24 bg-white relative">
+        <section id="outcomes" className="py-28 md:py-32 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE] relative">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
+            <div className="text-center max-w-3xl mx-auto mb-20">
+              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Что вы получаете
               </h2>
-              <p className="text-slate-600 text-lg">
+              <p className="text-[#5F626B] text-lg">
                 Конкретные уведомления и данные — а не просто «заботу»
               </p>
             </div>
@@ -262,7 +262,7 @@ export default function LandingC() {
             </div>
 
             <div className="max-w-2xl mx-auto mt-12 text-center">
-              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 relative">
+              <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] p-6 relative">
                 <Quote className="w-8 h-8 text-slate-200 absolute top-4 left-4" />
                 <p className="text-slate-700 text-base leading-relaxed italic pl-8">
                   Вы открываете кабинет утром, видите <span className="font-semibold text-green-600">«Всё хорошо»</span> — и спокойно идёте на работу. А вечером мама сама расскажет, какой пирог испекла.
@@ -272,13 +272,13 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="parents" className="py-24 bg-gradient-to-b from-white to-slate-50">
+        <section id="parents" className="py-28 md:py-32 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
+            <div className="text-center max-w-3xl mx-auto mb-20">
+              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Узнаёте своего родителя?
               </h2>
-              <p className="text-slate-600 text-lg">
+              <p className="text-[#5F626B] text-lg">
                 Внучок подстраивается под каждого
               </p>
             </div>
@@ -312,13 +312,13 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section className="py-24 bg-slate-50">
+        <section className="py-28 md:py-32 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
+            <div className="text-center max-w-3xl mx-auto mb-20">
+              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Как это работает
               </h2>
-              <p className="text-slate-600 text-lg">
+              <p className="text-[#5F626B] text-lg">
                 Три шага — и ваш родитель под заботливым присмотром
               </p>
             </div>
@@ -343,10 +343,10 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="dialog" className="py-24 bg-white">
+        <section id="dialog" className="py-28 md:py-32 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
+            <div className="text-center max-w-3xl mx-auto mb-20">
+              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Живой диалог с Внучком
               </h2>
               <p className="text-slate-600 text-lg">
@@ -362,8 +362,8 @@ export default function LandingC() {
                     onClick={() => setActiveChat(i)}
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                       activeChat === i
-                        ? "bg-slate-900 text-white shadow-md"
-                        : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                        ? "bg-[#143A2E] text-white shadow-md"
+                        : "bg-white/70 text-[#5F626B] border border-white/60 backdrop-blur-sm hover:bg-white/90"
                     }`}
                     data-testid={`chat-tab-${i}`}
                   >
@@ -373,7 +373,7 @@ export default function LandingC() {
               </div>
 
               <div className="mx-auto" style={{ maxWidth: "380px" }}>
-                <div className="bg-white rounded-[2rem] p-1 shadow-2xl shadow-slate-200/80 border border-slate-200">
+                <div className="rounded-[2rem] p-1 bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)]">
                   <div className="bg-slate-50 rounded-[1.75rem] overflow-hidden">
                     <div className="bg-[#517DA2] px-4 py-3 flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-violet-400 flex items-center justify-center text-white font-bold text-sm">В</div>
@@ -398,11 +398,11 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="dashboard-section" className="py-24 bg-gradient-to-b from-white to-slate-50 relative overflow-hidden">
+        <section id="dashboard-section" className="py-28 md:py-32 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE] relative overflow-hidden">
           <div className="container mx-auto px-6">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div className="order-2 lg:order-1">
-                <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-slate-100">
+                <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] p-6">
                   <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
                     <div>
                       <h3 className="font-semibold text-lg">Ваш личный кабинет</h3>
@@ -451,12 +451,12 @@ export default function LandingC() {
               </div>
 
               <div className="order-1 lg:order-2">
-                <h2 className="text-3xl md:text-4xl font-bold mb-6 text-slate-900">
+                <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-6 text-slate-900">
                   Вы видите всё.
                   <br />
                   Без навязчивых звонков.
                 </h2>
-                <p className="text-lg text-slate-600 mb-8">
+                <p className="text-lg text-[#5F626B] mb-8">
                   В личном кабинете — полная картина дня.
                   Лекарства, давление, настроение, счётчики — всё в одном месте.
                 </p>
@@ -478,7 +478,7 @@ export default function LandingC() {
                 <Button
                   asChild
                   variant="outline"
-                  className="rounded-full bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                  className="rounded-xl bg-white/70 border-white/60 backdrop-blur hover:bg-white/90 text-slate-700 transition-all duration-300"
                   data-testid="button-demo-dashboard-c"
                 >
                   <Link href="/dashboard">Открыть демо кабинета</Link>
@@ -488,13 +488,13 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="features" className="py-24 bg-slate-50 relative">
+        <section id="features" className="py-28 md:py-32 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6] relative">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
+            <div className="text-center max-w-3xl mx-auto mb-20">
+              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 16+ навыков на каждый день
               </h2>
-              <p className="text-slate-600 text-lg">
+              <p className="text-[#5F626B] text-lg">
                 От рецептов и транспорта до защиты от мошенников
               </p>
             </div>
@@ -605,13 +605,13 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="reviews" className="py-24 bg-white">
+        <section id="reviews" className="py-28 md:py-32 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
+            <div className="text-center max-w-3xl mx-auto mb-20">
+              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Истории семей
               </h2>
-              <p className="text-slate-600 text-lg">
+              <p className="text-[#5F626B] text-lg">
                 Те, кто уже подарил родителям Внучка
               </p>
             </div>
@@ -653,13 +653,13 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="pricing" className="py-24 bg-slate-50">
+        <section id="pricing" className="py-28 md:py-32 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-4">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
+              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Дешевле букета цветов в месяц
               </h2>
-              <p className="text-slate-600 text-lg">
+              <p className="text-[#5F626B] text-lg">
                 Начните бесплатно — до 10 вопросов в день. Подписка — от 490₽/мес.
               </p>
             </div>
@@ -721,24 +721,24 @@ export default function LandingC() {
 
             <div className="max-w-4xl mx-auto mt-12 relative">
               <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
+              <table className="w-full text-sm border-collapse rounded-[28px] overflow-hidden bg-white/75 backdrop-blur border border-white/60 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)]">
                 <thead>
-                  <tr className="bg-slate-50">
-                    <th className="text-left px-4 py-3 font-semibold text-slate-700 border-b border-slate-100">Возможность</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-slate-100">Бесплатный</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-slate-100">Базовый</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-slate-100 bg-slate-100">Стандарт</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-slate-100">Премиум</th>
+                  <tr className="bg-gradient-to-r from-[#F3E9F0] to-[#EDF2F8]">
+                    <th className="text-left px-4 py-3 font-semibold text-slate-700 border-b border-white/40">Возможность</th>
+                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40">Бесплатный</th>
+                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40">Базовый</th>
+                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40 bg-[#F5EDF3]">Стандарт</th>
+                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40">Премиум</th>
                   </tr>
                 </thead>
                 <tbody>
                   {comparisonRows.map((row, i) => (
-                    <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
-                      <td className="px-4 py-3 text-slate-700 border-b border-slate-100">{row.feature}</td>
-                      <td className="text-center px-3 py-3 border-b border-slate-100">{renderComparisonValue(row.free)}</td>
-                      <td className="text-center px-3 py-3 border-b border-slate-100">{renderComparisonValue(row.basic)}</td>
-                      <td className="text-center px-3 py-3 border-b border-slate-100 bg-slate-50/30">{renderComparisonValue(row.standard)}</td>
-                      <td className="text-center px-3 py-3 border-b border-slate-100">{renderComparisonValue(row.premium)}</td>
+                    <tr key={i} className={i % 2 === 0 ? "bg-white/60" : "bg-white/30"}>
+                      <td className="px-4 py-3 text-slate-700 border-b border-white/40">{row.feature}</td>
+                      <td className="text-center px-3 py-3 border-b border-white/40">{renderComparisonValue(row.free)}</td>
+                      <td className="text-center px-3 py-3 border-b border-white/40">{renderComparisonValue(row.basic)}</td>
+                      <td className="text-center px-3 py-3 border-b border-white/40 bg-[#F5EDF3]/30">{renderComparisonValue(row.standard)}</td>
+                      <td className="text-center px-3 py-3 border-b border-white/40">{renderComparisonValue(row.premium)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -764,10 +764,10 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section id="faq" className="py-24 bg-slate-50">
+        <section id="faq" className="py-28 md:py-32 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
+            <div className="text-center max-w-3xl mx-auto mb-20">
+              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
                 Частые вопросы
               </h2>
             </div>
@@ -776,7 +776,7 @@ export default function LandingC() {
               {faqItems.map((item, i) => (
                 <div
                   key={i}
-                  className="bg-white rounded-2xl border border-slate-100 overflow-hidden"
+                  className="rounded-[20px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_8px_30px_-16px_rgba(49,35,45,.15)] overflow-hidden"
                 >
                   <button
                     className="w-full px-6 py-5 flex items-center justify-between text-left"
@@ -801,25 +801,25 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section className="py-24 px-6">
+        <section className="py-28 md:py-32 px-6">
           <div className="container mx-auto">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-[3rem] p-8 md:p-16 text-center text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-              <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
+            <div className="bg-gradient-to-br from-[#143A2E] to-[#0A1F17] rounded-[3rem] p-8 md:p-16 text-center text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+              <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
 
               <div className="relative z-10 max-w-2xl mx-auto">
-                <Sparkles className="w-12 h-12 mx-auto mb-6 text-slate-400" />
-                <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white">
+                <Sparkles className="w-12 h-12 mx-auto mb-6 text-emerald-300/60" />
+                <h2 className="text-3xl md:text-5xl font-serif font-medium tracking-[-0.02em] mb-6 text-white">
                   Подарите маме помощника <br /> за 3 минуты
                 </h2>
-                <p className="text-slate-300 text-lg mb-10">
+                <p className="text-emerald-100/70 text-lg mb-10">
                   Бесплатно — до 10 вопросов в день. Родителю не нужно ничего устанавливать — только Telegram.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button
                     asChild
                     size="lg"
-                    className="rounded-full h-14 px-8 bg-white text-slate-900 hover:bg-slate-100 font-semibold text-base"
+                    className="rounded-xl h-14 px-8 bg-white text-[#143A2E] hover:bg-white/90 font-semibold text-base transition-all duration-300 shadow-[0_12px_30px_-16px_rgba(255,255,255,.3)]"
                     data-testid="button-cta-app-c"
                   >
                     <Link href="/auth">
@@ -830,7 +830,7 @@ export default function LandingC() {
                   <Button
                     asChild
                     size="lg"
-                    className="rounded-full h-14 px-8 bg-white/10 text-white hover:bg-white/20 font-semibold text-base border border-white/20"
+                    className="rounded-xl h-14 px-8 bg-white/10 text-white hover:bg-white/20 font-semibold text-base border border-white/20 backdrop-blur-sm transition-all duration-300"
                     data-testid="button-cta-max-c"
                   >
                     <a href="#" onClick={(e) => { e.preventDefault(); alert("Скоро!"); }}>
@@ -841,7 +841,7 @@ export default function LandingC() {
                   <Button
                     asChild
                     size="lg"
-                    className="rounded-full h-14 px-8 bg-white/10 text-white hover:bg-white/20 font-semibold text-base border border-white/20"
+                    className="rounded-xl h-14 px-8 bg-white/10 text-white hover:bg-white/20 font-semibold text-base border border-white/20 backdrop-blur-sm transition-all duration-300"
                     data-testid="button-cta-telegram-c"
                   >
                     <a href="https://t.me/GrandSonGleb_bot" target="_blank" rel="noopener noreferrer">
@@ -850,7 +850,7 @@ export default function LandingC() {
                     </a>
                   </Button>
                 </div>
-                <p className="mt-6 text-sm text-slate-400 opacity-80">
+                <p className="mt-6 text-sm text-emerald-200/50">
                   Подписка от 490₽/мес для напоминаний и расширенных лимитов
                 </p>
               </div>
@@ -902,10 +902,10 @@ export default function LandingC() {
         </div>
       </footer>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-white/80 backdrop-blur-md border-t border-slate-100 md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-[#F6F4F2]/80 backdrop-blur-xl border-t border-white/40 md:hidden">
         <Button
           asChild
-          className="w-full rounded-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-semibold shadow-lg"
+          className="w-full rounded-xl h-12 bg-[#143A2E] hover:bg-[#0F2F25] text-white font-semibold shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)] transition-all duration-300"
           data-testid="button-mobile-cta-c"
         >
           <Link href="/auth">Подарить маме помощника — бесплатно</Link>
@@ -1019,12 +1019,12 @@ function OutcomeCard({
   color: string;
 }) {
   return (
-    <div className="text-center p-8 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow" data-testid={`outcome-card-${title}`}>
+    <div className="text-center p-8 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300" data-testid={`outcome-card-${title}`}>
       <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-5 mx-auto ${color}`}>
         {icon}
       </div>
-      <h3 className="text-lg font-bold mb-3 text-slate-900">{title}</h3>
-      <p className="text-slate-600 text-sm leading-relaxed">{description}</p>
+      <h3 className="text-lg font-serif font-medium mb-3 text-slate-900">{title}</h3>
+      <p className="text-[#5F626B] text-sm leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -1045,9 +1045,9 @@ function ParentCard({
   iconColor: string;
 }) {
   return (
-    <div className={`rounded-2xl p-6 border ${color} hover:shadow-md transition-shadow`} data-testid={`parent-card-${archetype.replace(/\s+/g, "-")}`}>
+    <div className={`rounded-[28px] p-6 bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300`} data-testid={`parent-card-${archetype.replace(/\s+/g, "-")}`}>
       <div className="text-4xl mb-4">{emoji}</div>
-      <h3 className={`text-lg font-bold mb-3 ${iconColor}`}>{archetype}</h3>
+      <h3 className={`text-lg font-serif font-medium mb-3 ${iconColor}`}>{archetype}</h3>
       <p className="text-sm text-slate-600 mb-4 italic">«{childQuote}»</p>
       <div className="pt-3 border-t border-slate-100">
         <p className="text-sm text-slate-700 flex gap-2">
@@ -1109,19 +1109,19 @@ function TestimonialCard({
   const hasHalf = rating % 1 !== 0;
 
   return (
-    <div className="p-8 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow" data-testid={`testimonial-card-c-${name}`}>
+    <div className="p-8 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300" data-testid={`testimonial-card-c-${name}`}>
       <div className="flex gap-1 mb-4">
         {Array.from({ length: fullStars }).map((_, i) => (
-          <Star key={i} className="w-4 h-4 fill-slate-400 text-slate-400" />
+          <Star key={i} className="w-4 h-4 fill-[#143A2E] text-[#143A2E]" />
         ))}
-        {hasHalf && <StarHalf className="w-4 h-4 fill-slate-400 text-slate-400" />}
+        {hasHalf && <StarHalf className="w-4 h-4 fill-[#143A2E] text-[#143A2E]" />}
       </div>
       <div className="relative mb-5">
         <Quote className="w-6 h-6 text-slate-200 absolute -top-1 -left-1" />
         <p className="text-slate-700 text-sm leading-relaxed pl-6">{quote}</p>
       </div>
-      <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-slate-700 font-bold text-sm">
+      <div className="flex items-center gap-3 pt-4 border-t border-white/40">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E8E2E6] to-[#D5CED4] flex items-center justify-center text-slate-700 font-bold text-sm">
           {name.charAt(0)}
         </div>
         <div>
@@ -1145,11 +1145,11 @@ function StepCard({
 }) {
   return (
     <div className="text-center p-8">
-      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center mb-5 mx-auto text-white font-bold text-xl shadow-lg shadow-slate-300">
+      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#143A2E] to-[#0F2F25] flex items-center justify-center mb-5 mx-auto text-white font-serif font-medium text-xl shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)]">
         {step}
       </div>
-      <h3 className="text-xl font-bold mb-3 text-slate-900">{title}</h3>
-      <p className="text-slate-600 text-sm leading-relaxed">{description}</p>
+      <h3 className="text-xl font-serif font-medium mb-3 text-slate-900">{title}</h3>
+      <p className="text-[#5F626B] text-sm leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -1184,12 +1184,12 @@ function FeatureCard({
   borderColor: string;
 }) {
   return (
-    <div className={`bg-white border ${borderColor} rounded-2xl p-6 hover:-translate-y-1 transition-all duration-300 shadow-sm hover:shadow-md`} data-testid={`feature-card-c-${title}`}>
+    <div className={`rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] p-6 hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300`} data-testid={`feature-card-c-${title}`}>
       <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${color}`}>
         {icon}
       </div>
-      <h3 className="text-lg font-bold mb-2 text-slate-900">{title}</h3>
-      <p className="text-slate-600 leading-relaxed text-sm">{description}</p>
+      <h3 className="text-lg font-serif font-medium mb-2 text-slate-900">{title}</h3>
+      <p className="text-[#5F626B] leading-relaxed text-sm">{description}</p>
     </div>
   );
 }
@@ -1213,24 +1213,24 @@ function PricingCard({
 }) {
   return (
     <Card
-      className={`relative overflow-hidden transition-all hover:-translate-y-1 rounded-2xl ${popular ? "border-slate-800 shadow-lg shadow-slate-200 scale-105" : "border-slate-100"}`}
+      className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] ${popular ? "scale-105 border-[#143A2E]/30" : ""}`}
       data-testid={`pricing-card-c-${name}`}
     >
       {popular && (
-        <div className="absolute top-0 right-0 bg-slate-900 text-white text-xs font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
+        <div className="absolute top-0 right-0 bg-[#143A2E] text-white text-xs font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
           <Star className="w-3 h-3" /> Популярный
         </div>
       )}
       <CardHeader className="text-center pb-2">
-        <CardTitle className="text-xl">{name}</CardTitle>
-        <CardDescription className="text-slate-500 font-medium">
+        <CardTitle className="text-xl font-serif font-medium">{name}</CardTitle>
+        <CardDescription className="text-[#5F626B] font-medium">
           {subtitle}
         </CardDescription>
         <div className="mt-3">
-          <span className="text-3xl font-bold">{price}₽</span>
+          <span className="text-3xl font-serif font-medium">{price}₽</span>
           {!isFree && <span className="text-muted-foreground">/мес</span>}
         </div>
-        <div className="mt-3 bg-slate-50 rounded-lg px-3 py-2" data-testid={`pricing-result-c-${name}`}>
+        <div className="mt-3 bg-gradient-to-r from-[#F3E9F0] to-[#EDF2F8] rounded-lg px-3 py-2" data-testid={`pricing-result-c-${name}`}>
           <p className="text-xs font-medium text-slate-600">{result}</p>
         </div>
       </CardHeader>
@@ -1245,7 +1245,7 @@ function PricingCard({
         </ul>
         <Button
           asChild
-          className={`w-full rounded-full ${popular ? "bg-slate-900 hover:bg-slate-800" : ""}`}
+          className={`w-full rounded-xl transition-all duration-300 ${popular ? "bg-[#143A2E] hover:bg-[#0F2F25] shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)]" : ""}`}
           variant={popular ? "default" : "outline"}
           data-testid={`button-pricing-c-${name}`}
         >
