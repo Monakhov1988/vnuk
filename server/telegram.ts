@@ -2104,8 +2104,11 @@ export async function startTelegramBot() {
 
   bot.on("message:text", async (ctx) => {
     let userText = ctx.message.text;
+    console.log(`[telegram] TEXT from chat ${ctx.chat.id}: "${userText.substring(0, 50)}"`);
 
     if (userText.trim().startsWith("CHILDTG_")) {
+      console.log(`[telegram] CHILDTG_ code detected: ${userText.trim()}`);
+
       const chatId = ctx.chat.id.toString();
       const token = userText.trim();
       const tokenData = await storage.consumeChildTelegramToken(token);
