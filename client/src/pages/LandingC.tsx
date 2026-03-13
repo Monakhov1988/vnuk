@@ -98,16 +98,17 @@ export default function LandingC() {
                 </Badge>
                 <h1 className="text-5xl md:text-7xl font-serif font-medium leading-[1.03] tracking-[-0.02em] mb-6 text-slate-900">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#143A2E] to-[#2D6A4F]">
-                    AI-компаньон
+                    Подари заботу
                   </span>
-                  {" "}для родителя, который заботится сам
                 </h1>
-                <p className="text-lg text-[#5F626B] mb-8 leading-relaxed">
-                  Это не «спросил — ответил». Внучок каждый день сам выходит
-                  на связь: напоминает лекарства, спрашивает про давление,
-                  распознаёт мошенников и мгновенно предупреждает вас.
-                  Запоминает привычки, ведёт «Книгу жизни» и подстраивается
-                  под характер родителя.
+                <p className="text-xl md:text-2xl text-slate-700 mb-4 font-serif leading-snug">
+                  Внучок — AI-помощник для родителей, который сам пишет первым, помнит всё и&nbsp;адаптируется
+                </p>
+                <p className="text-base text-[#5F626B] mb-8 leading-relaxed">
+                  Напомнит лекарства, спросит про давление, распознает
+                  мошенников и сразу предупредит вас. Ведёт «Книгу жизни»
+                  и подстраивается под характер родителя. В Telegram,
+                  голосом — не нужно печатать.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -118,7 +119,7 @@ export default function LandingC() {
                     data-testid="button-hero-gift-c"
                   >
                     <Link href="/auth">
-                      Подарить маме помощника <ArrowRight className="ml-2 w-5 h-5" />
+                      Подарить заботу <ArrowRight className="ml-2 w-5 h-5" />
                     </Link>
                   </Button>
                   <Button
