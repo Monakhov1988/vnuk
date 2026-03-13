@@ -6,6 +6,7 @@ import { storage } from "./storage";
 import { chatWithGrandchild, recognizeMeter, analyzeIntent, detectIntentLocal } from "./ai";
 import { extractDishFromText, RECIPE_CLARIFICATIONS } from "./recipeUtils";
 import { bot, formatAlertPush } from "./telegram";
+import { sendChildNotification } from "./childBot";
 import {
   insertReminderSchema,
   insertEventSchema,
@@ -458,13 +459,11 @@ export async function registerRoutes(
             title: `Давление ${anomalyType} нормы: ${log.systolic}/${log.diastolic}`,
             description: `${parentName}: ${log.systolic}/${log.diastolic}${log.note ? ` — ${log.note}` : ""}`,
           });
-          if (child.telegramChatId && bot) {
-            try {
-              await bot.api.sendMessage(
-                child.telegramChatId,
-                `❤️‍🩹 Давление ${parentName} сегодня: ${log.systolic}/${log.diastolic} — ${anomalyType} обычного.\n\nВозможно, стоит позвонить.`
-              );
-            } catch {}
+          if (child.telegramChatId) {
+            await sendChildNotification(
+              child.telegramChatId,
+              `❤️‍🩹 Давление ${parentName} сегодня: ${log.systolic}/${log.diastolic} — ${anomalyType} обычного.\n\nВозможно, стоит позвонить.`
+            );
           }
         }
       }
@@ -596,16 +595,12 @@ export async function registerRoutes(
               title: alertTitle,
               description: alertDescription,
             });
-            if (child.telegramChatId && bot) {
-              try {
-                await bot.api.sendMessage(
-                  child.telegramChatId,
-                  formatAlertPush(result.intent, user.name || "Родитель", alertDescription),
-                  { parse_mode: "Markdown" }
-                );
-              } catch (pushErr) {
-                console.error("[routes] Failed to send alert push to child:", pushErr);
-              }
+            if (child.telegramChatId) {
+              await sendChildNotification(
+                child.telegramChatId,
+                formatAlertPush(result.intent, user.name || "Родитель", alertDescription),
+                "Markdown"
+              );
             }
           }
           if (children.length === 0) {
@@ -731,9 +726,14 @@ export async function registerRoutes(
       }
 
       let botUsernameValue: string | null = null;
+      let childBotUsernameValue: string | null = null;
       try {
         const { botUsername } = await import("./telegram");
         botUsernameValue = botUsername;
+      } catch {}
+      try {
+        const { childBotUsername } = await import("./childBot");
+        childBotUsernameValue = childBotUsername;
       } catch {}
 
       return res.json({
@@ -748,6 +748,7 @@ export async function registerRoutes(
         memoirs: memoirsList,
         engagementStats,
         botUsername: botUsernameValue,
+        childBotUsername: childBotUsernameValue,
       });
     } catch (e: any) {
       return res.status(500).json({ message: e.message });

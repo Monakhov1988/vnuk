@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { InlineKeyboard } from "grammy";
 import { storage } from "./storage";
 import { bot } from "./telegram";
+import { sendChildNotification } from "./childBot";
 import { generateProactiveMessage } from "./ai";
 import { gatherProactiveContext } from "./proactiveContext";
 
@@ -138,12 +139,10 @@ async function checkMissedReminders() {
         });
 
         if (child.telegramChatId) {
-          try {
-            await bot.api.sendMessage(
-              child.telegramChatId,
-              `⚠️ ${parent.name} не подтвердил(а) приём лекарства "${reminder.medicineName}" (${String(checkHour).padStart(2, "0")}:${String(checkMinute).padStart(2, "0")}). Возможно, стоит позвонить.`
-            );
-          } catch {}
+          await sendChildNotification(
+            child.telegramChatId,
+            `⚠️ ${parent.name} не подтвердил(а) приём лекарства "${reminder.medicineName}" (${String(checkHour).padStart(2, "0")}:${String(checkMinute).padStart(2, "0")}). Возможно, стоит позвонить.`
+          );
         }
       }
 
@@ -387,11 +386,7 @@ async function generateWeeklySafetyReport() {
             });
 
             if (child.telegramChatId) {
-              try {
-                await bot.api.sendMessage(child.telegramChatId, reportText);
-              } catch (tgErr) {
-                console.error(`[scheduler] Failed to send weekly report to child ${child.id} via Telegram:`, tgErr);
-              }
+              await sendChildNotification(child.telegramChatId, reportText);
             }
           } catch (childErr) {
             console.error(`[scheduler] Failed to create weekly report event for child ${child.id}:`, childErr);
@@ -462,11 +457,7 @@ async function generateDailySummary() {
 
         for (const child of children) {
           if (!child.telegramChatId) continue;
-          try {
-            await bot.api.sendMessage(child.telegramChatId, summaryText);
-          } catch (err) {
-            console.error(`[scheduler] Failed to send daily summary to child ${child.id}:`, err);
-          }
+          await sendChildNotification(child.telegramChatId, summaryText);
         }
 
         console.log(`[scheduler] Daily summary sent for parent ${parent.id}`);
@@ -508,11 +499,7 @@ async function generateMonthlyMilestones() {
 
         for (const child of children) {
           if (!child.telegramChatId) continue;
-          try {
-            await bot.api.sendMessage(child.telegramChatId, milestoneText);
-          } catch (err) {
-            console.error(`[scheduler] Failed to send milestone to child ${child.id}:`, err);
-          }
+          await sendChildNotification(child.telegramChatId, milestoneText);
         }
 
         console.log(`[scheduler] Monthly milestone sent for parent ${parent.id}`);

@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { startTelegramBot, stopTelegramBot } from "./telegram";
+import { startChildBot } from "./childBot";
 import { startScheduler } from "./scheduler";
 import { createServer } from "http";
 
@@ -121,6 +122,7 @@ app.use((req, res, next) => {
     () => {
       log(`serving on port ${port}`);
       startTelegramBot();
+      startChildBot();
       startScheduler();
     },
   );

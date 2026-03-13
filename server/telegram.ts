@@ -1,6 +1,7 @@
 import { Bot, InlineKeyboard, Keyboard, InputFile } from "grammy";
 import crypto from "crypto";
 import { storage } from "./storage";
+import { sendChildNotification } from "./childBot";
 import { chatWithGrandchild, recognizeMeter, detectIntentLocal, adaptMemoir } from "./ai";
 import { speechToText, textToSpeech } from "./voice";
 import { searchRecipe, deleteCache } from "./tools";
@@ -668,26 +669,6 @@ export async function startTelegramBot() {
     const existing = await storage.getUserByTelegramChatId(chatId);
     console.log("[telegram] /start lookup result:", existing ? `found user id=${existing.id} name=${existing.name}` : "NOT FOUND");
 
-    if (deepLinkCode && deepLinkCode.startsWith("CHILDTG_")) {
-      const tokenData = await storage.consumeChildTelegramToken(deepLinkCode);
-      if (!tokenData) {
-        await ctx.reply("Ссылка истекла или уже использована. Сгенерируйте новую в личном кабинете.");
-        return;
-      }
-      if (existing && existing.id !== tokenData.childId) {
-        await storage.clearUserTelegramChatId(existing.id);
-        console.log(`[telegram] Cleared chatId from user ${existing.id} (${existing.name}) to reassign to child ${tokenData.childId}`);
-      }
-      await storage.updateUserTelegramChatId(tokenData.childId, chatId);
-      const childUser = await storage.getUser(tokenData.childId);
-      await ctx.reply(
-        `Telegram подключён, ${childUser?.name || ""}! Теперь вы будете получать уведомления о родителе: вечернюю сводку, оповещения о давлении и важные алерты.`
-      );
-      console.log(`[telegram] Child ${tokenData.childId} linked Telegram chat ${chatId}`);
-      return;
-    }
-
-
     if (deepLinkCode) {
       if (existing) {
         if (existing.role === "parent") {
@@ -1293,14 +1274,10 @@ export async function startTelegramBot() {
         });
 
         if (child.telegramChatId) {
-          try {
-            await bot!.api.sendMessage(
-              child.telegramChatId,
-              `📖 ${parentName} записал(а) новую историю в Книгу жизни:\n\n«${pending.title}»\n\n${pending.content.slice(0, 300)}${pending.content.length > 300 ? "..." : ""}\n\nЗагляните в Книгу жизни — это бесценно 💛`
-            );
-          } catch (err) {
-            console.error("[telegram] Failed to notify child about memoir:", err);
-          }
+          await sendChildNotification(
+            child.telegramChatId,
+            `📖 ${parentName} записал(а) новую историю в Книгу жизни:\n\n«${pending.title}»\n\n${pending.content.slice(0, 300)}${pending.content.length > 300 ? "..." : ""}\n\nЗагляните в Книгу жизни — это бесценно 💛`
+          );
         }
       }
 
@@ -1425,14 +1402,10 @@ export async function startTelegramBot() {
           });
 
           if (child.telegramChatId) {
-            try {
-              await bot!.api.sendMessage(
-                child.telegramChatId,
-                `❤️‍🩹 Давление ${user.name} сегодня: ${systolic}/${diastolic} — ${anomalyType} обычного.\n\nВозможно, стоит позвонить.`
-              );
-            } catch (err) {
-              console.error("[telegram] Failed to notify child about BP anomaly:", err);
-            }
+            await sendChildNotification(
+              child.telegramChatId,
+              `❤️‍🩹 Давление ${user.name} сегодня: ${systolic}/${diastolic} — ${anomalyType} обычного.\n\nВозможно, стоит позвонить.`
+            );
           }
         }
       }
@@ -1993,15 +1966,11 @@ export async function startTelegramBot() {
           });
 
           if (child.telegramChatId) {
-            try {
-              await bot!.api.sendMessage(
-                child.telegramChatId,
-                formatAlertPush(result.intent, user.name, userText),
-                { parse_mode: "Markdown" }
-              );
-            } catch (err) {
-              console.error("[telegram] Failed to notify child:", err);
-            }
+            await sendChildNotification(
+              child.telegramChatId,
+              formatAlertPush(result.intent, user.name, userText),
+              "Markdown"
+            );
           }
         }
 
@@ -2105,30 +2074,6 @@ export async function startTelegramBot() {
   bot.on("message:text", async (ctx) => {
     let userText = ctx.message.text;
     console.log(`[telegram] TEXT from chat ${ctx.chat.id}: "${userText.substring(0, 50)}"`);
-
-    if (userText.trim().startsWith("CHILDTG_")) {
-      console.log(`[telegram] CHILDTG_ code detected: ${userText.trim()}`);
-
-      const chatId = ctx.chat.id.toString();
-      const token = userText.trim();
-      const tokenData = await storage.consumeChildTelegramToken(token);
-      if (!tokenData) {
-        await ctx.reply("Код не найден, истёк или уже использован. Сгенерируйте новый в личном кабинете.");
-        return;
-      }
-      const existingOwner = await storage.getUserByTelegramChatId(chatId);
-      if (existingOwner && existingOwner.id !== tokenData.childId) {
-        await storage.clearUserTelegramChatId(existingOwner.id);
-        console.log(`[telegram] Cleared chatId from user ${existingOwner.id} (${existingOwner.name}) to reassign to child ${tokenData.childId}`);
-      }
-      await storage.updateUserTelegramChatId(tokenData.childId, chatId);
-      const childUser = await storage.getUser(tokenData.childId);
-      await ctx.reply(
-        `Telegram подключён, ${childUser?.name || ""}! Теперь вы будете получать уведомления о родителе: вечернюю сводку, оповещения о давлении и важные алерты.`
-      );
-      console.log(`[telegram] Child ${tokenData.childId} linked Telegram via text code, chat ${chatId}`);
-      return;
-    }
 
     if (userText === "/настройки") {
       const chatId = ctx.chat.id.toString();
@@ -2326,13 +2271,11 @@ export async function startTelegramBot() {
               description: confirmedText,
             });
             if (child.telegramChatId) {
-              try {
-                await bot!.api.sendMessage(
-                  child.telegramChatId,
-                  formatAlertPush(result.intent, user.name, confirmedText),
-                  { parse_mode: "Markdown" }
-                );
-              } catch {}
+              await sendChildNotification(
+                child.telegramChatId,
+                formatAlertPush(result.intent, user.name, confirmedText),
+                "Markdown"
+              );
             }
           }
         }
@@ -2512,15 +2455,11 @@ export async function startTelegramBot() {
           });
 
           if (child.telegramChatId) {
-            try {
-              await bot!.api.sendMessage(
-                child.telegramChatId,
-                formatAlertPush(result.intent, user.name, userText),
-                { parse_mode: "Markdown" }
-              );
-            } catch (err) {
-              console.error("[telegram] Failed to notify child:", err);
-            }
+            await sendChildNotification(
+              child.telegramChatId,
+              formatAlertPush(result.intent, user.name, userText),
+              "Markdown"
+            );
           }
         }
 

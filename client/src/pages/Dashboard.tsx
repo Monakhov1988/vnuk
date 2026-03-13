@@ -248,7 +248,7 @@ function ChildDashboard({ user, dashboard, status }: { user: any; dashboard: any
       )}
 
       {dashboard?.parent && !dashboard?.user?.hasTelegram && dashboard?.botUsername && (
-        <ConnectChildTelegramCard botUsername={dashboard.botUsername} />
+        <ConnectChildTelegramCard botUsername={dashboard.childBotUsername || dashboard.botUsername} />
       )}
 
       {dashboard?.engagementStats && <EngagementCard stats={dashboard.engagementStats} />}

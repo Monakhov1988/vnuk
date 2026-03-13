@@ -50,3 +50,6 @@ mockupState = "FULLSTACK"
 
 [userenv.development]
 TELEGRAM_BOT_TOKEN_DEV = "8584520187:AAErlA3s5aDKWDHVOv4uqN2Q5kcjIZRpegA"
+
+[userenv.shared]
+TELEGRAM_CHILD_BOT_TOKEN = "8507516406:AAH9_jLiXygpldq3qtBoiulWn4hPM5J-wUU"
