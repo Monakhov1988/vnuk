@@ -110,8 +110,8 @@ export default function LandingC() {
                 <p className="text-base text-[#5F626B] mb-8 leading-relaxed">
                   Развеет скуку — поговорит, подберёт фильм, рецепт, стихи.
                   Поможет с Госуслугами, ЖКХ, записью к&nbsp;врачу — голосом, по&nbsp;шагам.
-                  Напомнит лекарства, запишет давление, распознает мошенников
-                  и&nbsp;сразу предупредит вас. В&nbsp;Telegram — не&nbsp;нужно ничего устанавливать.
+                  Напомнит лекарства, запишет давление, сообщит вам если
+                  что-то не&nbsp;так. В&nbsp;Telegram — не&nbsp;нужно ничего устанавливать.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -220,7 +220,7 @@ export default function LandingC() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
               {[
                 { icon: <Send className="w-5 h-5 text-emerald-600" />, title: "Пишет первым каждый день", desc: "Лекарства, давление, настроение — без напоминаний от вас" },
-                { icon: <ShieldAlert className="w-5 h-5 text-rose-500" />, title: "Антимошенник: 18+ схем", desc: "Распознаёт риск в реальном времени и сразу шлёт тревогу вам" },
+                { icon: <Heart className="w-5 h-5 text-rose-400" />, title: "Не будет одиноко", desc: "Поговорит, развлечёт, подберёт фильм, рецепт, стихи по настроению" },
                 { icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />, title: "Кабинет для ребёнка", desc: "Статус, события, давление, лекарства — всё в одной ленте" },
                 { icon: <Brain className="w-5 h-5 text-violet-500" />, title: "Память и «Книга жизни»", desc: "Помнит важное, ведёт воспоминания и адаптируется" },
               ].map((item, i) => (
@@ -284,20 +284,20 @@ export default function LandingC() {
                 }
               />
               <OutcomeCard
-                title="Мошенник звонит — тревога за секунды"
-                description="18+ схем обмана. Бот предупредит родителя и уведомит вас."
+                title="Родителю не скучно — он занят"
+                description="Внучок поговорит, развлечёт, поможет с бытом."
                 mockup={
-                  <div className="rounded-2xl bg-white border border-red-100 p-3 shadow-sm">
+                  <div className="rounded-2xl bg-white border border-violet-100 p-3 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
-                        <ShieldAlert className="w-4 h-4 text-red-500" />
+                      <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
+                        <MessageCircle className="w-4 h-4 text-violet-500" />
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold text-red-700">Внимание</p>
-                        <p className="text-[10px] text-slate-400">2 мин назад</p>
+                        <p className="text-[11px] font-semibold text-slate-800">Внучок</p>
+                        <p className="text-[10px] text-slate-400">14:30</p>
                       </div>
                     </div>
-                    <p className="text-[11px] text-slate-700 leading-snug">Мама получила подозрительный звонок — «сотрудник банка». Бот предупредил.</p>
+                    <p className="text-[11px] text-slate-700 leading-snug">Мария Игоревна, нашёл отличный рецепт шарлотки! Хотите расскажу по шагам?</p>
                   </div>
                 }
               />
@@ -358,8 +358,8 @@ export default function LandingC() {
               <ParentCard
                 image="/images/care-parent-70.png"
                 archetype="Нужна забота 70+"
-                childQuote="Живёт одна, забывает лекарства. Боюсь мошенников."
-                botHelp="Напомнит таблетки, запишет давление, распознает мошенника."
+                childQuote="Живёт одна, забывает лекарства. Переживаю каждый день."
+                botHelp="Напомнит таблетки, запишет давление, сообщит вам если что-то не так."
               />
             </div>
           </div>
@@ -548,7 +548,7 @@ export default function LandingC() {
                 16+ навыков на каждый день
               </h2>
               <p className="text-[#5F626B] text-lg">
-                От рецептов и транспорта до защиты от мошенников
+                От рецептов и транспорта до записи к врачу
               </p>
             </div>
 
@@ -740,8 +740,8 @@ export default function LandingC() {
                 features={[
                   "100 вопросов в день",
                   "Напоминания о лекарствах",
-                  "Защита от мошенников",
                   "Бот пишет первым",
+                  "Помощь с Госуслугами и ЖКХ",
                   "Распознавание счётчиков",
                 ]}
               />
@@ -860,7 +860,7 @@ export default function LandingC() {
               <div className="relative z-10 max-w-2xl mx-auto">
                 <Sparkles className="w-12 h-12 mx-auto mb-6 text-emerald-300/60" />
                 <h2 className="text-3xl md:text-5xl font-serif font-medium tracking-[-0.02em] mb-4 text-white">
-                  Каждый день без Внучка — это пропущенные лекарства и&nbsp;риск
+                  Подарите маме заботу за&nbsp;3&nbsp;минуты
                 </h2>
                 <p className="text-emerald-100/70 text-lg mb-8">
                   Начните сегодня — 7 дней бесплатно. Родителю нужен только Telegram.
@@ -1002,7 +1002,7 @@ const comparisonRows: { feature: string; test: boolean | string; standard: boole
   { feature: "Срок доступа", test: "7 дней", standard: "∞", premium: "∞" },
   { feature: "Напоминания о лекарствах", test: true, standard: true, premium: true },
   { feature: "Дневник давления", test: true, standard: true, premium: true },
-  { feature: "Защита от мошенников", test: true, standard: true, premium: true },
+  { feature: "Помощь с Госуслугами и ЖКХ", test: true, standard: true, premium: true },
   { feature: "Голосовой ввод", test: true, standard: true, premium: true },
   { feature: "Бот пишет первым", test: true, standard: true, premium: true },
   { feature: "Счётчики по фото", test: false, standard: true, premium: true },
@@ -1035,7 +1035,7 @@ const faqItems = [
   },
   {
     q: "Кто видит переписку?",
-    a: "Только вы в личном кабинете. Данные не используются для обучения моделей. Бот распознаёт мошенников и мгновенно предупреждает вас.",
+    a: "Только вы в личном кабинете. Данные не используются для обучения моделей и надёжно защищены.",
   },
   {
     q: "Можно отменить подписку?",
@@ -1043,7 +1043,7 @@ const faqItems = [
   },
   {
     q: "Сколько стоит?",
-    a: "7 дней бесплатно — полный доступ. Стандарт — 990₽/мес (100 вопросов + защита от мошенников). Премиум — 1 990₽/мес (безлимит + персонализация).",
+    a: "7 дней бесплатно — полный доступ. Стандарт — 990₽/мес (100 вопросов + все функции). Премиум — 1 990₽/мес (безлимит + персонализация).",
   },
 ];
 
