@@ -19,7 +19,7 @@ export const users = pgTable("users", {
   linkCode: varchar("link_code", { length: 8 }).unique(),
   linkCodeExpiresAt: timestamp("link_code_expires_at"),
   linkedParentId: integer("linked_parent_id").references((): any => users.id),
-  telegramChatId: text("telegram_chat_id").unique(),
+  telegramChatId: text("telegram_chat_id"),
   timezone: text("timezone").default("Europe/Moscow"),
   proactiveOptOut: boolean("proactive_opt_out").default(false),
   createdAt: timestamp("created_at").defaultNow(),
