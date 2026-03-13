@@ -1951,8 +1951,15 @@ export async function startTelegramBot() {
         hasAlert: result.hasAlert,
       });
 
-      if (result.hasAlert) {
-        const alertTitle = formatAlertTitle(result.intent);
+      const serverIntent = detectIntentLocal(userText, false);
+      const shouldAlert = result.hasAlert || isEmergencyMessage(userText);
+      const alertIntent = result.hasAlert ? result.intent : serverIntent;
+
+      if (shouldAlert) {
+        const alertTitle = formatAlertTitle(alertIntent);
+        if (!result.hasAlert) {
+          console.log(`[telegram] Server-side emergency override: intent=${serverIntent}, text="${userText.slice(0, 80)}"`);
+        }
 
         const children = await storage.getChildrenByParentId(user.id);
         for (const child of children) {
@@ -1968,7 +1975,7 @@ export async function startTelegramBot() {
           if (child.telegramChatId) {
             await sendChildNotification(
               child.telegramChatId,
-              formatAlertPush(result.intent, user.name, userText),
+              formatAlertPush(alertIntent, user.name, userText),
               "Markdown"
             );
           }
