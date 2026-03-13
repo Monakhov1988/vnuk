@@ -2264,8 +2264,15 @@ export async function startTelegramBot() {
           hasAlert: result.hasAlert,
         });
 
-        if (result.hasAlert) {
-          const alertTitle = formatAlertTitle(result.intent);
+        const serverIntentVC = detectIntentLocal(confirmedText, false);
+        const shouldAlertVC = result.hasAlert || isEmergencyMessage(confirmedText);
+        const alertIntentVC = result.hasAlert ? result.intent : serverIntentVC;
+
+        if (shouldAlertVC) {
+          const alertTitle = formatAlertTitle(alertIntentVC);
+          if (!result.hasAlert) {
+            console.log(`[telegram] Server-side emergency override (voice-confirm): intent=${serverIntentVC}, text="${confirmedText.slice(0, 80)}"`);
+          }
 
           const children = await storage.getChildrenByParentId(user.id);
           for (const child of children) {
@@ -2280,7 +2287,7 @@ export async function startTelegramBot() {
             if (child.telegramChatId) {
               await sendChildNotification(
                 child.telegramChatId,
-                formatAlertPush(result.intent, user.name, confirmedText),
+                formatAlertPush(alertIntentVC, user.name, confirmedText),
                 "Markdown"
               );
             }
@@ -2447,8 +2454,15 @@ export async function startTelegramBot() {
         hasAlert: result.hasAlert,
       });
 
-      if (result.hasAlert) {
-        const alertTitle = formatAlertTitle(result.intent);
+      const serverIntentTxt = detectIntentLocal(userText, false);
+      const shouldAlertTxt = result.hasAlert || isEmergencyMessage(userText);
+      const alertIntentTxt = result.hasAlert ? result.intent : serverIntentTxt;
+
+      if (shouldAlertTxt) {
+        const alertTitle = formatAlertTitle(alertIntentTxt);
+        if (!result.hasAlert) {
+          console.log(`[telegram] Server-side emergency override (text): intent=${serverIntentTxt}, text="${userText.slice(0, 80)}"`);
+        }
 
         const children = await storage.getChildrenByParentId(user.id);
         for (const child of children) {
@@ -2464,7 +2478,7 @@ export async function startTelegramBot() {
           if (child.telegramChatId) {
             await sendChildNotification(
               child.telegramChatId,
-              formatAlertPush(result.intent, user.name, userText),
+              formatAlertPush(alertIntentTxt, user.name, userText),
               "Markdown"
             );
           }

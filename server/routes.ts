@@ -572,14 +572,23 @@ export async function registerRoutes(
       const parentName = user?.role === "parent" ? user.name : (parent?.name || undefined);
       const result = await chatWithGrandchild(messages, parentName, userId);
 
-      if (result.hasAlert) {
-        const alertTitle = result.intent === "scam"
+      const serverIntent = detectIntentLocal(lastUserMsg, false);
+      const emergencyIntentsForAlert = ["emergency", "scam", "home_danger", "lost", "financial_risk"];
+      const localEmergency = emergencyIntentsForAlert.includes(serverIntent);
+      const shouldAlert = result.hasAlert || localEmergency;
+      const alertIntent = result.hasAlert ? result.intent : serverIntent;
+
+      if (shouldAlert) {
+        if (!result.hasAlert) {
+          console.log(`[routes] Server-side emergency override: intent=${serverIntent}, text="${lastUserMsg.slice(0, 80)}"`);
+        }
+        const alertTitle = alertIntent === "scam"
           ? "Возможная попытка мошенничества!"
-          : result.intent === "financial_risk"
+          : alertIntent === "financial_risk"
           ? "Подозрительное финансовое решение!"
-          : result.intent === "home_danger"
+          : alertIntent === "home_danger"
           ? "Опасная ситуация дома!"
-          : result.intent === "lost"
+          : alertIntent === "lost"
           ? "Родитель потерялся на улице!"
           : "Родитель сообщил о проблеме со здоровьем!";
         const alertDescription = messages[messages.length - 1]?.content || "";
@@ -598,7 +607,7 @@ export async function registerRoutes(
             if (child.telegramChatId) {
               await sendChildNotification(
                 child.telegramChatId,
-                formatAlertPush(result.intent, user.name || "Родитель", alertDescription),
+                formatAlertPush(alertIntent, user.name || "Родитель", alertDescription),
                 "Markdown"
               );
             }
