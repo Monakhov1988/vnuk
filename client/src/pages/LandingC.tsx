@@ -30,6 +30,9 @@ import {
   Smartphone,
   Mail,
   ExternalLink,
+  Brain,
+  BookOpen,
+  LayoutDashboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,20 +94,20 @@ export default function LandingC() {
                   data-testid="badge-hero-c"
                 >
                   <Zap className="w-3.5 h-3.5" />
-                  Бесплатно в Telegram — говорит голосом
+                  Не чат-бот: сам пишет первым и держит вас в курсе
                 </Badge>
                 <h1 className="text-5xl md:text-7xl font-serif font-medium leading-[1.03] tracking-[-0.02em] mb-6 text-slate-900">
-                  Спокойствие{" "}
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#143A2E] to-[#2D6A4F]">
-                    за маму и папу
+                    AI-компаньон
                   </span>
-                  {" "}— каждый день
+                  {" "}для родителя, который заботится сам
                 </h1>
                 <p className="text-lg text-[#5F626B] mb-8 leading-relaxed">
-                  Вы заняты — но всегда знаете, что с родителями всё в порядке.
-                  Внучок заботится о них в Telegram: напомнит лекарства, защитит
-                  от мошенников, расскажет рецепт. Родитель говорит голосом —
-                  не нужно печатать.
+                  Это не «спросил — ответил». Внучок каждый день сам выходит
+                  на связь: напоминает лекарства, спрашивает про давление,
+                  распознаёт мошенников и мгновенно предупреждает вас.
+                  Запоминает привычки, ведёт «Книгу жизни» и подстраивается
+                  под характер родителя.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -132,11 +135,11 @@ export default function LandingC() {
                 <div className="flex flex-wrap items-center gap-4 text-sm text-[#5F626B]" data-testid="badge-risk-reversal-c">
                   <span className="flex items-center gap-1.5">
                     <Zap className="w-3.5 h-3.5 text-emerald-500" />
-                    Бесплатно — до 10 вопросов в день
+                    7 дней бесплатно
                   </span>
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                    Отмена подписки в 1 клик
+                    Telegram — не нужно ничего ставить
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Mic className="w-3.5 h-3.5 text-emerald-500" />
@@ -208,7 +211,26 @@ export default function LandingC() {
           </div>
         </section>
 
-        <section className="py-10 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE] border-b border-white/40">
+        <section className="py-8 bg-gradient-to-b from-[#F3F1EE] to-[#F8F5F2]" data-testid="killer-features-strip">
+          <div className="container mx-auto px-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+              {[
+                { icon: <Send className="w-5 h-5 text-emerald-600" />, title: "Пишет первым каждый день", desc: "Лекарства, давление, настроение — без напоминаний от вас" },
+                { icon: <ShieldAlert className="w-5 h-5 text-rose-500" />, title: "Антимошенник: 18+ схем", desc: "Распознаёт риск в реальном времени и сразу шлёт тревогу вам" },
+                { icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />, title: "Кабинет для ребёнка", desc: "Статус, события, давление, лекарства — всё в одной ленте" },
+                { icon: <Brain className="w-5 h-5 text-violet-500" />, title: "Память и «Книга жизни»", desc: "Помнит важное, ведёт воспоминания и адаптируется" },
+              ].map((item, i) => (
+                <div key={i} className="rounded-2xl bg-white/70 backdrop-blur-sm border border-white/60 p-4 shadow-[0_4px_20px_-8px_rgba(49,35,45,.1)]" data-testid={`killer-feature-${i}`}>
+                  <div className="mb-2">{item.icon}</div>
+                  <p className="font-semibold text-sm text-slate-800 mb-1">{item.title}</p>
+                  <p className="text-xs text-[#5F626B] leading-snug">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-8 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE] border-b border-white/40">
           <div className="container mx-auto px-6">
             <div className="grid grid-cols-3 gap-6 max-w-3xl mx-auto text-center">
               <div data-testid="social-proof-families">
@@ -231,17 +253,17 @@ export default function LandingC() {
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-12">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
-                Что вы получаете
+                Не обещания — а контроль и спокойствие
               </h2>
               <p className="text-[#5F626B] text-lg">
-                Конкретные уведомления и данные — а не просто «заботу»
+                Каждый день видите факты: что с родителем, где риск и когда нужно ваше участие
               </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
               <OutcomeCard
-                title="Лекарство не принято"
-                description="Нет подтверждения 15 мин — вы получите push."
+                title="Лекарство пропущено — вы узнаёте первыми"
+                description="Нет подтверждения 15 мин — повтор родителю и алерт вам."
                 mockup={
                   <div className="rounded-2xl bg-white border border-slate-100 p-3 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
@@ -258,8 +280,8 @@ export default function LandingC() {
                 }
               />
               <OutcomeCard
-                title="Мошенник распознан"
-                description="8 типов мошенничества. Мгновенный алерт вам."
+                title="Мошенник звонит — тревога за секунды"
+                description="18+ схем обмана. Бот предупредит родителя и уведомит вас."
                 mockup={
                   <div className="rounded-2xl bg-white border border-red-100 p-3 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
@@ -276,8 +298,8 @@ export default function LandingC() {
                 }
               />
               <OutcomeCard
-                title="Всё в одном месте"
-                description="Давление, лекарства, настроение — в кабинете."
+                title="Всё хорошо — видите без звонков"
+                description="Давление, активность, настроение — в вашем кабинете."
                 mockup={
                   <div className="rounded-2xl bg-white border border-slate-100 p-3 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
