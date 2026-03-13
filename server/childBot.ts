@@ -68,18 +68,32 @@ export async function startChildBot() {
   });
 
   childBot.callbackQuery(/^link_confirm_(.+)$/, async (ctx) => {
-    const token = ctx.match[1];
+    const tokenStr = ctx.match[1];
     const chatId = ctx.chat!.id.toString();
-    const tokenData = await storage.consumeChildTelegramToken(token);
+
+    const alreadyLinked = await storage.getUserByTelegramChatId(chatId);
+    if (alreadyLinked && alreadyLinked.role === "child") {
+      await ctx.answerCallbackQuery({ text: "Уже подключено!" });
+      await ctx.editMessageText(
+        `Telegram уже подключён, ${alreadyLinked.name || ""}! 🎉\n\nВы получаете уведомления.`
+      );
+      return;
+    }
+
+    let tokenData = await storage.consumeChildTelegramToken(tokenStr);
     if (!tokenData) {
-      await ctx.answerCallbackQuery({ text: "Ссылка истекла. Сгенерируйте новую." });
+      const freshToken = await storage.findMostRecentPendingToken();
+      if (freshToken) {
+        tokenData = await storage.consumeChildTelegramToken(freshToken.token);
+      }
+    }
+    if (!tokenData) {
+      await ctx.answerCallbackQuery({ text: "Код истёк. Сгенерируйте новый в ЛК." });
       return;
     }
     try {
-      const existingUser = await storage.getUserByTelegramChatId(chatId);
-      if (existingUser && existingUser.id !== tokenData.childId) {
-        await storage.clearUserTelegramChatId(existingUser.id);
-        console.log(`[child-bot] Cleared telegram_chat_id from user ${existingUser.id} (${existingUser.role}) to reassign to child ${tokenData.childId}`);
+      if (alreadyLinked && alreadyLinked.id !== tokenData.childId) {
+        await storage.clearUserTelegramChatId(alreadyLinked.id);
       }
       await storage.updateUserTelegramChatId(tokenData.childId, chatId);
       const childUser = await storage.getUser(tokenData.childId);
