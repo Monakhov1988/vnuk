@@ -16,8 +16,9 @@ import {
   type TopicSetting, type PersonalitySetting,
   type InsertAnalyticsEvent, type AnalyticsEvent,
   type InsertSearchQualityLog, type SearchQualityLog,
+  type ChildTelegramToken,
   users, reminders, events, utilityMetrics, memoirs, healthLogs, subscriptions, waitlist, chatMessages, aiUsageLogs, userMemory,
-  topicSettings, personalitySettings, analyticsEvents, searchQualityLogs,
+  topicSettings, personalitySettings, analyticsEvents, searchQualityLogs, childTelegramTokens,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -97,6 +98,9 @@ export interface IStorage {
   getLastProactiveTime(parentId: number): Promise<Date | null>;
   getProactiveCategoriesToday(parentId: number, dateStr: string): Promise<string[]>;
   getRecentProactiveResponses(parentId: number, limit: number): Promise<{ content: string; role: string }[]>;
+
+  createChildTelegramToken(token: string, childId: number, expiresAt: Date): Promise<ChildTelegramToken>;
+  consumeChildTelegramToken(token: string): Promise<ChildTelegramToken | undefined>;
 
   createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent>;
   getAnalyticsStats(variant?: string): Promise<{ variant: string; eventType: string; count: number }[]>;
@@ -548,6 +552,23 @@ export class DatabaseStorage implements IStorage {
       responses.push(...userReplies);
     }
     return responses;
+  }
+
+  async createChildTelegramToken(token: string, childId: number, expiresAt: Date): Promise<ChildTelegramToken> {
+    const [created] = await db.insert(childTelegramTokens).values({ token, childId, expiresAt }).returning();
+    return created;
+  }
+
+  async consumeChildTelegramToken(token: string): Promise<ChildTelegramToken | undefined> {
+    const [row] = await db.update(childTelegramTokens)
+      .set({ used: true })
+      .where(and(
+        eq(childTelegramTokens.token, token),
+        eq(childTelegramTokens.used, false),
+        gte(childTelegramTokens.expiresAt, new Date())
+      ))
+      .returning();
+    return row;
   }
 
   async createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent> {

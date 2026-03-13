@@ -209,8 +209,6 @@ export async function registerRoutes(
   });
 
   // ========== CHILD TELEGRAM LINKING ==========
-  const childTelegramTokens = new Map<string, { childId: number; expiresAt: number }>();
-
   app.post("/api/child-telegram-token", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
@@ -222,14 +220,13 @@ export async function registerRoutes(
         return res.json({ alreadyLinked: true });
       }
       const token = "CHILDTG_" + crypto.randomBytes(4).toString("hex").toUpperCase();
-      childTelegramTokens.set(token, { childId: userId, expiresAt: Date.now() + 30 * 60 * 1000 });
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await storage.createChildTelegramToken(token, userId, expiresAt);
       return res.json({ token });
     } catch (e: any) {
       return res.status(400).json({ message: e.message });
     }
   });
-
-  (globalThis as any).__childTelegramTokens = childTelegramTokens;
 
   // ========== LINK PARENT ==========
   const linkSchema = z.object({

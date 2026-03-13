@@ -25,6 +25,17 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const childTelegramTokens = pgTable("child_telegram_tokens", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  token: varchar("token", { length: 32 }).notNull().unique(),
+  childId: integer("child_id").notNull().references(() => users.id),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type ChildTelegramToken = typeof childTelegramTokens.$inferSelect;
+
 export const subscriptions = pgTable("subscriptions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("user_id").notNull().references(() => users.id),

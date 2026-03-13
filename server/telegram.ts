@@ -669,14 +669,11 @@ export async function startTelegramBot() {
     console.log("[telegram] /start lookup result:", existing ? `found user id=${existing.id} name=${existing.name}` : "NOT FOUND");
 
     if (deepLinkCode && deepLinkCode.startsWith("CHILDTG_")) {
-      const childTokens = (globalThis as any).__childTelegramTokens as Map<string, { childId: number; expiresAt: number }> | undefined;
-      const tokenData = childTokens?.get(deepLinkCode);
-      if (!tokenData || tokenData.expiresAt < Date.now()) {
-        childTokens?.delete(deepLinkCode);
-        await ctx.reply("Ссылка истекла. Сгенерируйте новую в личном кабинете.");
+      const tokenData = await storage.consumeChildTelegramToken(deepLinkCode);
+      if (!tokenData) {
+        await ctx.reply("Ссылка истекла или уже использована. Сгенерируйте новую в личном кабинете.");
         return;
       }
-      childTokens?.delete(deepLinkCode);
       await storage.updateUserTelegramChatId(tokenData.childId, chatId);
       const childUser = await storage.getUser(tokenData.childId);
       await ctx.reply(
