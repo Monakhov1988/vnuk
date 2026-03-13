@@ -720,8 +720,19 @@ function ConnectChildTelegramCard({ botUsername }: { botUsername: string }) {
     }
   };
 
-  const nativeLink = token ? `tg://resolve?domain=${botUsername}&start=${token}` : null;
-  const webLink = token ? `https://t.me/${botUsername}?start=${token}` : null;
+  const [copied, setCopied] = useState(false);
+  const botLink = `https://t.me/${botUsername}`;
+
+  const copyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      toast({ title: "Код скопирован!" });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Не удалось скопировать", variant: "destructive" });
+    }
+  };
 
   return (
     <Card className="mb-8 border-2 border-blue-200 bg-blue-50/50" data-testid="card-connect-telegram">
@@ -733,28 +744,35 @@ function ConnectChildTelegramCard({ botUsername }: { botUsername: string }) {
         <p className="text-sm text-muted-foreground mb-4">
           Получайте уведомления о родителе прямо в Telegram: вечернюю сводку, оповещения о давлении и важные алерты.
         </p>
-        {!nativeLink ? (
+        {!token ? (
           <Button onClick={generateToken} disabled={loading} data-testid="button-generate-tg-link">
             {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
             Подключить Telegram
           </Button>
         ) : (
-          <div className="space-y-3">
-            <div className="flex gap-2 flex-wrap">
-              <Button asChild data-testid="button-open-tg-native">
-                <a href={nativeLink}>
-                  <Send className="w-4 h-4 mr-2" /> Открыть в приложении
-                </a>
-              </Button>
-              <Button variant="outline" asChild data-testid="button-open-tg-web">
-                <a href={webLink!} target="_blank" rel="noopener noreferrer">
-                  Открыть в браузере
-                </a>
-              </Button>
+          <div className="space-y-4">
+            <div className="bg-white rounded-lg p-4 border border-blue-100">
+              <p className="text-sm font-medium text-blue-900 mb-2">Ваш код привязки:</p>
+              <div className="flex items-center gap-2">
+                <code className="text-lg font-mono font-bold bg-blue-50 px-4 py-2 rounded tracking-widest select-all" data-testid="text-link-code">{token}</code>
+                <Button variant="ghost" size="sm" onClick={() => copyCode(token)} data-testid="button-copy-code">
+                  {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Нажмите <b>Start</b> в Telegram после открытия бота
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-blue-900">Как подключить:</p>
+              <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                <li>Откройте бот <a href={botLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline" data-testid="link-open-bot">@{botUsername}</a> в Telegram</li>
+                <li>Нажмите <b>Start</b> (или /start)</li>
+                <li>Отправьте боту скопированный код</li>
+              </ol>
+            </div>
+            <Button variant="outline" asChild className="w-full" data-testid="button-open-tg">
+              <a href={`tg://resolve?domain=${botUsername}`}>
+                <Send className="w-4 h-4 mr-2" /> Открыть бот в Telegram
+              </a>
+            </Button>
           </div>
         )}
       </CardContent>

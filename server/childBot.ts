@@ -133,10 +133,34 @@ export async function startChildBot() {
       { command: "start", description: "Начать / Подключить уведомления" },
     ]);
 
-    childBot.start({
-      onStart: () => console.log("[child-bot] Child notification bot started successfully (polling)"),
-      allowed_updates: ["message", "callback_query"],
-    });
+    console.log("[child-bot] Starting manual polling loop (bypassing grammy.start)...");
+    let offset = 0;
+    const pollLoop = async () => {
+      while (true) {
+        try {
+          const url = `https://api.telegram.org/bot${token}/getUpdates?timeout=30&offset=${offset}&allowed_updates=${encodeURIComponent(JSON.stringify(["message","callback_query"]))}`;
+          const resp = await fetch(url);
+          const data = await resp.json() as any;
+          if (data.ok && data.result && data.result.length > 0) {
+            console.log(`[child-bot] RAW POLL: got ${data.result.length} updates`);
+            for (const upd of data.result) {
+              console.log(`[child-bot] RAW UPDATE: ${JSON.stringify(upd).substring(0, 500)}`);
+              offset = upd.update_id + 1;
+              try {
+                await childBot!.handleUpdate(upd);
+              } catch (e: any) {
+                console.error(`[child-bot] handleUpdate error:`, e.message);
+              }
+            }
+          }
+        } catch (e: any) {
+          console.error(`[child-bot] Poll error: ${e.message}`);
+          await new Promise(r => setTimeout(r, 3000));
+        }
+      }
+    };
+    pollLoop();
+    console.log("[child-bot] Child notification bot started successfully (manual polling)");
   } catch (err) {
     console.error("[child-bot] Failed to start child bot:", err);
     childBot = null;
