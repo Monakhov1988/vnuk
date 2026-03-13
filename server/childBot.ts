@@ -133,7 +133,8 @@ export async function startChildBot() {
       { command: "start", description: "Начать / Подключить уведомления" },
     ]);
 
-    console.log("[child-bot] Starting manual polling loop (bypassing grammy.start)...");
+    await childBot.init();
+    console.log("[child-bot] Bot initialized, starting manual polling loop...");
     let offset = 0;
     const pollLoop = async () => {
       while (true) {
