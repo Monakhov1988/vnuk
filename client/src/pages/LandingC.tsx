@@ -687,34 +687,22 @@ export default function LandingC() {
                 Дешевле букета цветов в месяц
               </h2>
               <p className="text-[#5F626B] text-lg">
-                Начните бесплатно — до 10 вопросов в день. Подписка — от 490₽/мес.
+                7 дней бесплатно. Подписка — от 990₽/мес.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto mt-12">
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mt-12">
               <PricingCard
-                name="Бесплатный"
+                name="Тест"
                 price="0"
                 isFree
-                subtitle="Попробовать"
-                result="10 вопросов в день — навсегда"
+                subtitle="7 дней бесплатно"
+                result="Попробуйте все возможности"
                 features={[
-                  "10 вопросов в день",
-                  "Рецепты, погода, транспорт",
-                  "Стихи, загадки, открытки",
-                  "Голосовой ввод",
-                ]}
-              />
-              <PricingCard
-                name="Базовый"
-                price="490"
-                subtitle="Контроль лекарств"
-                result="Вы знаете, что родитель принял лекарства"
-                features={[
-                  "30 вопросов в день",
+                  "Полный доступ на 7 дней",
+                  "100 вопросов в день",
                   "Напоминания о лекарствах",
-                  "Дневник давления",
-                  "Лента событий",
+                  "Голосовой ввод",
                 ]}
               />
               <PricingCard
@@ -725,7 +713,7 @@ export default function LandingC() {
                 result="Родитель не одинок — и вы спокойны"
                 features={[
                   "100 вопросов в день",
-                  "Все из Базового",
+                  "Напоминания о лекарствах",
                   "Защита от мошенников",
                   "Бот пишет первым",
                   "Распознавание счётчиков",
@@ -752,8 +740,7 @@ export default function LandingC() {
                 <thead>
                   <tr className="bg-gradient-to-r from-[#F3E9F0] to-[#EDF2F8]">
                     <th className="text-left px-4 py-3 font-semibold text-slate-700 border-b border-white/40">Возможность</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40">Бесплатный</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40">Базовый</th>
+                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40">Тест</th>
                     <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40 bg-[#F5EDF3]">Стандарт</th>
                     <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40">Премиум</th>
                   </tr>
@@ -762,8 +749,7 @@ export default function LandingC() {
                   {comparisonRows.map((row, i) => (
                     <tr key={i} className={i % 2 === 0 ? "bg-white/60" : "bg-white/30"}>
                       <td className="px-4 py-3 text-slate-700 border-b border-white/40">{row.feature}</td>
-                      <td className="text-center px-3 py-3 border-b border-white/40">{renderComparisonValue(row.free)}</td>
-                      <td className="text-center px-3 py-3 border-b border-white/40">{renderComparisonValue(row.basic)}</td>
+                      <td className="text-center px-3 py-3 border-b border-white/40">{renderComparisonValue(row.test)}</td>
                       <td className="text-center px-3 py-3 border-b border-white/40 bg-[#F5EDF3]/30">{renderComparisonValue(row.standard)}</td>
                       <td className="text-center px-3 py-3 border-b border-white/40">{renderComparisonValue(row.premium)}</td>
                     </tr>
@@ -775,7 +761,7 @@ export default function LandingC() {
             </div>
 
             <p className="text-center text-sm text-slate-500 mt-8" data-testid="text-risk-reversal-c">
-              Бесплатный тариф навсегда · Отмена подписки в 1 клик
+              7 дней бесплатно · Отмена подписки в 1 клик
             </p>
 
             <div className="text-center mt-4">
@@ -986,15 +972,17 @@ const chatScenarios = [
   },
 ];
 
-const comparisonRows = [
-  { feature: "Вопросов в день", free: "10", basic: "30", standard: "100", premium: "∞" },
-  { feature: "Напоминания о лекарствах", free: false, basic: true, standard: true, premium: true },
-  { feature: "Дневник давления", free: false, basic: true, standard: true, premium: true },
-  { feature: "Защита от мошенников", free: false, basic: false, standard: true, premium: true },
-  { feature: "Голосовой ввод", free: true, basic: true, standard: true, premium: true },
-  { feature: "Бот пишет первым", free: false, basic: false, standard: true, premium: true },
-  { feature: "Счётчики по фото", free: false, basic: false, standard: true, premium: true },
-  { feature: "Открытки и картинки", free: false, basic: false, standard: false, premium: true },
+const comparisonRows: { feature: string; test: boolean | string; standard: boolean | string; premium: boolean | string }[] = [
+  { feature: "Вопросов в день", test: "100", standard: "100", premium: "∞" },
+  { feature: "Срок доступа", test: "7 дней", standard: "∞", premium: "∞" },
+  { feature: "Напоминания о лекарствах", test: true, standard: true, premium: true },
+  { feature: "Дневник давления", test: true, standard: true, premium: true },
+  { feature: "Защита от мошенников", test: true, standard: true, premium: true },
+  { feature: "Голосовой ввод", test: true, standard: true, premium: true },
+  { feature: "Бот пишет первым", test: true, standard: true, premium: true },
+  { feature: "Счётчики по фото", test: false, standard: true, premium: true },
+  { feature: "Открытки и картинки", test: false, standard: false, premium: true },
+  { feature: "Настройка личности бота", test: false, standard: false, premium: true },
 ];
 
 function renderComparisonValue(val: boolean | string) {
@@ -1026,11 +1014,11 @@ const faqItems = [
   },
   {
     q: "Можно отменить подписку?",
-    a: "В любой момент, в 1 клик. Бесплатный тариф (10 вопросов/день) работает без подписки и навсегда.",
+    a: "В любой момент, в 1 клик. Первые 7 дней — бесплатно, без обязательств.",
   },
   {
     q: "Сколько стоит?",
-    a: "Бесплатно — до 10 вопросов в день, навсегда. Базовый тариф — 490₽/мес (30 вопросов + напоминания). Популярный — 990₽/мес (100 вопросов + защита от мошенников). Премиум — 1 990₽/мес (безлимит).",
+    a: "7 дней бесплатно — полный доступ. Стандарт — 990₽/мес (100 вопросов + защита от мошенников). Премиум — 1 990₽/мес (безлимит + персонализация).",
   },
 ];
 
