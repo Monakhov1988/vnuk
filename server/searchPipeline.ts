@@ -326,10 +326,12 @@ export async function searchPipeline(config: PipelineConfig): Promise<PipelineRe
 
     if (successResults.length === 1) {
       mergedResult = successResults[0].content;
+    } else if (mergeStrategy === "best") {
+      const bestResult = successResults.reduce((a, b) => a.content.length >= b.content.length ? a : b);
+      mergedResult = bestResult.content;
+      console.log(`[pipeline] ${toolName}: "best" strategy — picked "${bestResult.label}" (${bestResult.content.length} chars), skipping GPT merge to prevent hallucination`);
     } else if (mergePrompt) {
-      const strategySuffix = mergeStrategy === "best"
-        ? "\n\nСТРАТЕГИЯ: ВЫБЕРИ ОДИН лучший, более полный и точный источник. Не смешивай информацию из разных источников. Верни текст лучшего источника, при необходимости немного отредактировав для ясности."
-        : mergeStrategy === "compare"
+      const strategySuffix = mergeStrategy === "compare"
         ? "\n\nСТРАТЕГИЯ: ПОКАЖИ ОБА варианта, кратко указав различия между ними. Пользователь должен видеть информацию из каждого источника отдельно."
         : "\n\nСТРАТЕГИЯ: ОБЪЕДИНИ информацию из всех источников в единый связный ответ. Убери дубли, сохрани все уникальные факты.";
       try {
