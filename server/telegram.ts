@@ -2023,7 +2023,7 @@ export async function startTelegramBot() {
         }
       }
 
-      if (result.intent === "memoir" && userText.length >= 30) {
+      if (result.intent === "memoir" && userText.length >= 20) {
         handleMemoirFlow(chatId, userText, user.id, ctx).catch(err =>
           console.error("[telegram] Memoir flow error (voice):", err)
         );
@@ -2529,7 +2529,7 @@ export async function startTelegramBot() {
         }
       }
 
-      if (result.intent === "memoir" && userText.length >= 30) {
+      if (result.intent === "memoir" && userText.length >= 20) {
         handleMemoirFlow(chatId, userText, user.id, ctx).catch(err =>
           console.error("[telegram] Memoir flow error (text):", err)
         );
