@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "MgvL-XmssdE-s6ojkErk_"
+uri = "file://.local/marketing_strategy.md"
+type = "text"
+title = "Маркетинговая стратегия запуска Внучок — тест спроса 90 дней"
