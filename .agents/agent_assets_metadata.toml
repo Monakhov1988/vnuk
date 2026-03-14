@@ -6,3 +6,9 @@ id = "MgvL-XmssdE-s6ojkErk_"
 uri = "file://.local/marketing_strategy.md"
 type = "text"
 title = "Маркетинговая стратегия запуска Внучок — тест спроса 90 дней"
+
+[[outputs]]
+id = "sPkYKySZlWXhVx0LUydWq"
+uri = "file://.local/gift_keywords_analysis.md"
+type = "text"
+title = "Анализ: «Подарок маме» как рекламный канал для Внучка"
