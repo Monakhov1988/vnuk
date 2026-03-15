@@ -343,7 +343,7 @@ export default function GiftLanding() {
 
             <TopicBadges />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            <div className="flex md:grid md:grid-cols-2 gap-6 max-w-4xl mx-auto overflow-x-auto snap-x snap-mandatory pb-4 -mx-6 px-6 md:mx-auto md:px-0 md:overflow-visible md:pb-0 scrollbar-hide">
               <DialogCard
                 title="Утро: забота о здоровье"
                 messages={[
@@ -367,25 +367,48 @@ export default function GiftLanding() {
               />
             </div>
 
-            <h3 className="text-2xl md:text-3xl font-serif font-medium tracking-[-0.02em] text-slate-900 text-center mt-12 mb-6">
+            <h3 className="text-2xl md:text-3xl font-serif font-medium tracking-[-0.02em] text-slate-900 text-center mt-12 mb-8">
               Забота, которая работает без&nbsp;вас
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 max-w-4xl mx-auto">
-              {[
-                { icon: <Send className="w-5 h-5 text-emerald-600" />, label: "Для мамы", title: "Пишет первым каждый день", desc: "Лекарства, давление, настроение — без напоминаний от вас" },
-                { icon: <Heart className="w-5 h-5 text-rose-400" />, label: "Для мамы", title: "Не будет одиноко", desc: "Поговорит, развлечёт, подберёт фильм, рецепт, стихи" },
-                { icon: <Brain className="w-5 h-5 text-violet-500" />, label: "Для мамы", title: "Помнит и адаптируется", desc: "Запоминает важное и подстраивается под характер" },
-                { icon: <Mail className="w-5 h-5 text-blue-500" />, label: "Для вас", title: "Вечерний отчёт", desc: "Каждый день в 21:00 — давление, лекарства, настроение" },
-                { icon: <ShieldAlert className="w-5 h-5 text-rose-500" />, label: "Для вас", title: "Сигнал, если что-то не так", desc: "Опасность, мошенники, плохое самочувствие — вы узнаете сразу" },
-                { icon: <BookOpen className="w-5 h-5 text-violet-500" />, label: "Для вас", title: "Книга жизни мамы", desc: "Бережно собирает воспоминания — истории, которые не расскажет по телефону" },
-              ].map((item, i) => (
-                <div key={i} className="rounded-2xl bg-white/70 backdrop-blur-sm border border-white/60 p-3 md:p-4 shadow-[0_4px_20px_-8px_rgba(49,35,45,.1)]" data-testid={`killer-feature-gift-${i}`}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{item.label}</p>
-                  <div className="mb-2">{item.icon}</div>
-                  <p className="font-semibold text-sm text-slate-800 mb-1">{item.title}</p>
-                  <p className="text-xs text-[#5F626B] leading-snug">{item.desc}</p>
+
+            <div className="max-w-4xl mx-auto space-y-8">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 mb-3 text-center md:text-left">Что получает мама</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { icon: <Send className="w-5 h-5 text-emerald-600" />, title: "Пишет первым каждый день", desc: "Лекарства, давление, настроение — без напоминаний от вас" },
+                    { icon: <Heart className="w-5 h-5 text-rose-400" />, title: "Не будет одиноко", desc: "Поговорит, развлечёт, подберёт фильм, рецепт, стихи" },
+                    { icon: <Brain className="w-5 h-5 text-violet-500" />, title: "Помнит и адаптируется", desc: "Запоминает важное и подстраивается под характер" },
+                  ].map((item, i) => (
+                    <div key={i} className="flex sm:flex-col items-start gap-3 sm:gap-0 rounded-2xl bg-white/70 backdrop-blur-sm border border-white/60 p-4 shadow-[0_4px_20px_-8px_rgba(49,35,45,.1)]" data-testid={`killer-feature-gift-mom-${i}`}>
+                      <div className="shrink-0 sm:mb-2">{item.icon}</div>
+                      <div>
+                        <p className="font-semibold text-sm text-slate-800 mb-1">{item.title}</p>
+                        <p className="text-xs text-[#5F626B] leading-snug">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 mb-3 text-center md:text-left">Что получаете вы</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { icon: <Mail className="w-5 h-5 text-blue-500" />, title: "Вечерний отчёт", desc: "Каждый день в 21:00 — давление, лекарства, настроение" },
+                    { icon: <ShieldAlert className="w-5 h-5 text-rose-500" />, title: "Сигнал, если что-то не так", desc: "Опасность, мошенники, плохое самочувствие — вы узнаете сразу" },
+                    { icon: <BookOpen className="w-5 h-5 text-violet-500" />, title: "Книга жизни мамы", desc: "Бережно собирает воспоминания — истории, которые не расскажет по телефону" },
+                  ].map((item, i) => (
+                    <div key={i} className="flex sm:flex-col items-start gap-3 sm:gap-0 rounded-2xl bg-white/70 backdrop-blur-sm border border-blue-100/60 p-4 shadow-[0_4px_20px_-8px_rgba(49,35,45,.1)]" data-testid={`killer-feature-gift-you-${i}`}>
+                      <div className="shrink-0 sm:mb-2">{item.icon}</div>
+                      <div>
+                        <p className="font-semibold text-sm text-slate-800 mb-1">{item.title}</p>
+                        <p className="text-xs text-[#5F626B] leading-snug">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="relative max-w-4xl mx-auto mt-10 rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-300/40">
@@ -861,7 +884,7 @@ function DialogCard({
   messages: { from: "bot" | "user"; text: string }[];
 }) {
   return (
-    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden" data-testid={`dialog-card-${title}`}>
+    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden min-w-[80vw] snap-center shrink-0 md:min-w-0 md:shrink" data-testid={`dialog-card-${title}`}>
       <div className="bg-[#517DA2] px-5 py-3">
         <p className="text-white font-semibold text-sm">{title}</p>
       </div>
