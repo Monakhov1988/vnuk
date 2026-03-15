@@ -255,7 +255,7 @@ export default function GiftLanding() {
                 </div>
               </div>
 
-              <div className="relative hidden md:block">
+              <div className="relative">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-slate-100 to-slate-50 rounded-full blur-3xl -z-10" />
 
                 <div className="relative mx-auto max-w-md">
@@ -266,7 +266,7 @@ export default function GiftLanding() {
                     data-testid="img-hero-mom-gift"
                   />
 
-                  <div className="absolute -bottom-4 -left-4 bg-white/90 backdrop-blur-md rounded-2xl p-3 border border-white/40 shadow-xl shadow-slate-200/50 animate-in slide-in-from-bottom-4 duration-700 max-w-[240px]">
+                  <div className="absolute -bottom-4 -left-4 bg-white/90 backdrop-blur-md rounded-2xl p-3 border border-white/40 shadow-xl shadow-slate-200/50 animate-in slide-in-from-bottom-4 duration-700 max-w-[240px] hidden md:block">
                     <div className="bg-[#517DA2] rounded-xl px-3 py-2 mb-2">
                       <p className="text-[10px] text-white/70 mb-0.5">Внучок</p>
                       <p className="text-xs text-white">Доброе утро! Не забудьте выпить эналаприл 💊</p>
@@ -277,7 +277,7 @@ export default function GiftLanding() {
                   </div>
                 </div>
 
-                <div className="flex justify-end mt-4 mr-2 animate-in slide-in-from-bottom-4 duration-700 delay-300">
+                <div className="hidden md:flex justify-end mt-4 mr-2 animate-in slide-in-from-bottom-4 duration-700 delay-300">
                   <div className="bg-white/90 backdrop-blur-md rounded-2xl p-3 flex items-center gap-3 border border-white/40 shadow-xl shadow-slate-200/50 max-w-[200px]">
                     <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                       <Gift className="w-5 h-5 text-green-600" />
