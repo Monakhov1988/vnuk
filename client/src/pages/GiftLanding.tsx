@@ -875,14 +875,14 @@ function DialogCard({
   messages: { from: "bot" | "user"; text: string }[];
 }) {
   return (
-    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] min-w-[75vw] snap-center shrink-0 md:min-w-0 md:shrink" data-testid={`dialog-card-${title}`}>
-      <div className="bg-[#517DA2] px-4 py-3 rounded-t-[28px]">
+    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] w-[85vw] max-w-[85vw] md:max-w-none md:w-auto snap-center shrink-0 md:shrink overflow-hidden flex flex-col" data-testid={`dialog-card-${title}`}>
+      <div className="bg-[#517DA2] px-4 py-3">
         <p className="text-white font-semibold text-sm">{title}</p>
       </div>
-      <div className="p-3 space-y-2 bg-gradient-to-b from-slate-50/50 to-white rounded-b-[28px]">
+      <div className="flex-1 p-3 space-y-2 bg-gradient-to-b from-slate-50/50 to-white">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`rounded-2xl px-3 py-2 text-xs leading-relaxed ${
+            <div className={`rounded-2xl px-3 py-2 text-xs leading-relaxed max-w-[85%] ${
               msg.from === "bot"
                 ? "bg-white text-slate-800 rounded-bl-md shadow-sm border border-slate-100"
                 : "bg-green-200 text-slate-800 rounded-br-md"
@@ -917,7 +917,7 @@ function TestimonialCard({
   const hasHalf = rating % 1 !== 0;
 
   return (
-    <div className="p-5 md:p-8 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300 min-w-[80vw] snap-center shrink-0 md:min-w-0 md:shrink" data-testid={`testimonial-card-gift-${name}`}>
+    <div className="p-5 md:p-8 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300 w-[85vw] max-w-[85vw] md:max-w-none md:w-auto snap-center shrink-0 md:shrink" data-testid={`testimonial-card-gift-${name}`}>
       <div className="flex gap-1 mb-4">
         {Array.from({ length: fullStars }).map((_, i) => (
           <Star key={i} className="w-4 h-4 fill-[#143A2E] text-[#143A2E]" />
