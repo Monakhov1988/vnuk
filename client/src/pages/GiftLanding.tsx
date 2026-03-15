@@ -875,18 +875,18 @@ function DialogCard({
   messages: { from: "bot" | "user"; text: string }[];
 }) {
   return (
-    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden min-w-[85vw] snap-center shrink-0 md:min-w-0 md:shrink" data-testid={`dialog-card-${title}`}>
-      <div className="bg-[#517DA2] px-5 py-3">
+    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] min-w-[75vw] snap-center shrink-0 md:min-w-0 md:shrink" data-testid={`dialog-card-${title}`}>
+      <div className="bg-[#517DA2] px-4 py-3 rounded-t-[28px]">
         <p className="text-white font-semibold text-sm">{title}</p>
       </div>
-      <div className="p-4 space-y-2.5 bg-gradient-to-b from-slate-50/50 to-white">
+      <div className="p-3 space-y-2 bg-gradient-to-b from-slate-50/50 to-white rounded-b-[28px]">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed break-words ${
+            <div className={`rounded-2xl px-3 py-2 text-xs leading-relaxed ${
               msg.from === "bot"
                 ? "bg-white text-slate-800 rounded-bl-md shadow-sm border border-slate-100"
                 : "bg-green-200 text-slate-800 rounded-br-md"
-            }`}>
+            }`} style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
               {msg.text}
             </div>
           </div>
