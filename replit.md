@@ -18,7 +18,8 @@ I highlight:
 The system uses a React (TypeScript, Tailwind v4) frontend, an Express (TypeScript) backend, and a PostgreSQL database with Drizzle ORM. User interaction primarily occurs via a Telegram bot supporting text and voice.
 
 **Frontend:**
--   **Landing Page**: Sales-oriented, targeting adult children.
+-   **Landing Page**: Sales-oriented, targeting adult children. Routes: `/` and `/c` → LandingC (main), `/a` → LandingA, `/b` → LandingB, `/d` → LandingD.
+-   **Gift Landing Page** (`/gift`, `/podarok`): SEO-optimized page for gift-related search traffic ("подарок маме", "что подарить пожилой маме", "подарок на 60/65/70 лет"). Gift-specific framing, comparison (flowers vs tech vs Внучок), age-segmented cards, demo dialogs, gift-framed pricing. Analytics variant: "gift".
 -   **Auth Page**: Login/registration for parent and child roles.
 -   **Dashboard**: Role-dependent interface. Parents see linking codes, AI chat, health logging, memoirs, and utility meter readings. Children view parent status, engagement metrics, event feed, and manage reminders.
 -   **Pricing Page**: Displays four subscription tiers with feature details.

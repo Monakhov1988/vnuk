@@ -14,6 +14,7 @@ import PricingPage from "@/pages/PricingPage";
 import TopicSettings from "@/pages/TopicSettings";
 import NotFound from "@/pages/not-found";
 import PrivacyPage from "@/pages/PrivacyPage";
+import GiftLanding from "@/pages/GiftLanding";
 
 function getSessionId(): string {
   let sid = localStorage.getItem("vnuchok_session_id");
@@ -98,6 +99,14 @@ function LandingDPage() {
   return <LandingD />;
 }
 
+function GiftPage() {
+  useEffect(() => {
+    localStorage.setItem("vnuchok_ab_variant", "gift");
+    trackEvent("gift", "landing_view");
+  }, []);
+  return <GiftLanding />;
+}
+
 function Router() {
   return (
     <Switch>
@@ -106,6 +115,8 @@ function Router() {
       <Route path="/b" component={LandingBPage} />
       <Route path="/c" component={LandingCPage} />
       <Route path="/d" component={LandingDPage} />
+      <Route path="/gift" component={GiftPage} />
+      <Route path="/podarok" component={GiftPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/pricing" component={PricingPage} />
