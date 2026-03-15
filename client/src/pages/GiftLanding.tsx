@@ -215,18 +215,24 @@ export default function GiftLanding() {
                   </Button>
                 </div>
 
-                <p className="text-xs text-[#5F626B] mb-3" data-testid="badge-risk-reversal-gift">
-                  <Zap className="w-3 h-3 text-emerald-500 inline -mt-0.5" /> 7 дней бесплатно <span className="text-slate-300 mx-1">·</span>
-                  Без установки <span className="text-slate-300 mx-1">·</span>
-                  Голосовые <span className="text-slate-300 mx-1">·</span>
-                  Запоминает <span className="text-slate-300 mx-1">·</span>
-                  Сам обучит маму
-                </p>
+                <div className="flex flex-wrap gap-1.5 mb-3" data-testid="badge-risk-reversal-gift">
+                  {[
+                    { icon: <Zap className="w-3 h-3 text-emerald-500" />, text: "7 дней бесплатно" },
+                    { icon: <Mic className="w-3 h-3 text-emerald-500" />, text: "Голосовые" },
+                    { icon: <CheckCircle2 className="w-3 h-3 text-emerald-500" />, text: "Без установки" },
+                    { icon: <Brain className="w-3 h-3 text-violet-500" />, text: "Запоминает" },
+                    { icon: <MessageCircle className="w-3 h-3 text-blue-500" />, text: "Сам обучит" },
+                  ].map((b) => (
+                    <span key={b.text} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/80 border border-white/60 text-[11px] font-medium text-slate-600 shadow-sm">
+                      {b.icon} {b.text}
+                    </span>
+                  ))}
+                </div>
 
                 <div className="flex items-center gap-2">
-                  <div className="flex -space-x-2">
+                  <div className="flex -space-x-1.5">
                     {["/images/testimonial-olga.png", "/images/testimonial-dmitry.png", "/images/testimonial-anna.png"].map((src, i) => (
-                      <img key={i} src={src} alt="" className="w-6 h-6 rounded-full border-2 border-white object-cover" />
+                      <img key={i} src={src} alt="" className="w-6 h-6 rounded-full border-[1.5px] border-white object-cover" />
                     ))}
                   </div>
                   <p className="text-xs text-slate-600">
