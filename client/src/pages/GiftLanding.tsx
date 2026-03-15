@@ -197,6 +197,10 @@ export default function GiftLanding() {
                     <Brain className="w-3 h-3 text-violet-500" />
                     Запоминает
                   </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-white/50 text-xs text-[#5F626B]">
+                    <MessageCircle className="w-3 h-3 text-blue-500" />
+                    Бот сам познакомится и обучит
+                  </span>
                 </div>
               </div>
 
