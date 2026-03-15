@@ -310,7 +310,7 @@ export default function GiftLanding() {
               Для каждого возраста — своя забота
             </h2>
 
-            <div className="flex md:grid md:grid-cols-3 gap-5 max-w-5xl mx-auto overflow-x-auto snap-x snap-mandatory pb-4 -mx-6 px-6 md:mx-auto md:px-0 md:overflow-visible md:pb-0 scrollbar-hide">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
               <AgeCard
                 age="55–60 лет"
                 image="/images/active-parent-50.png"
@@ -352,7 +352,7 @@ export default function GiftLanding() {
 
             <TopicBadges />
 
-            <div className="flex md:grid md:grid-cols-2 gap-6 max-w-4xl mx-auto overflow-x-auto snap-x snap-mandatory pb-4 -mx-6 px-6 md:mx-auto md:px-0 md:overflow-visible md:pb-0 scrollbar-hide">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
               <DialogCard
                 title="Утро: забота о здоровье"
                 messages={[
@@ -872,7 +872,7 @@ function AgeCard({
   gradient: string;
 }) {
   return (
-    <div className={`rounded-[24px] bg-gradient-to-b ${gradient} backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.3)] transition-all duration-300 min-w-[260px] snap-center shrink-0 md:min-w-0 md:shrink`} data-testid={`age-card-${age}`}>
+    <div className={`rounded-[24px] bg-gradient-to-b ${gradient} backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.3)] transition-all duration-300`} data-testid={`age-card-${age}`}>
       <img src={image} alt={alt || title} className="w-full h-40 object-cover" loading="lazy" />
       <div className="p-4">
         <Badge variant="secondary" className="mb-2 bg-white/70 text-[#5F626B] border border-white/50 text-xs">
@@ -893,7 +893,7 @@ function DialogCard({
   messages: { from: "bot" | "user"; text: string }[];
 }) {
   return (
-    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden min-w-[80vw] snap-center shrink-0 md:min-w-0 md:shrink" data-testid={`dialog-card-${title}`}>
+    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden" data-testid={`dialog-card-${title}`}>
       <div className="bg-[#517DA2] px-5 py-3">
         <p className="text-white font-semibold text-sm">{title}</p>
       </div>
