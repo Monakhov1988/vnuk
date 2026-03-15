@@ -336,6 +336,40 @@ export default function GiftLanding() {
           </div>
         </section>
 
+        <section className="py-10 md:py-16 px-6">
+          <div className="container mx-auto">
+            <div className="bg-gradient-to-br from-[#143A2E] to-[#0A1F17] rounded-[3rem] p-7 md:p-12 text-center text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+              <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
+
+              <div className="relative z-10 max-w-2xl mx-auto">
+                <Gift className="w-12 h-12 mx-auto mb-6 text-emerald-300/60" />
+                <h2 className="text-3xl md:text-5xl font-serif font-medium tracking-[-0.02em] mb-4 text-white">
+                  Подарите маме заботу,<br />а&nbsp;не&nbsp;очередную вещь
+                </h2>
+                <p className="text-emerald-100/70 text-lg mb-8">
+                  7 дней бесплатно. Маме нужен только Telegram — остальное сделает Внучок.
+                </p>
+                <div className="flex justify-center">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="rounded-xl h-14 px-10 bg-white text-[#143A2E] hover:bg-white/90 font-semibold text-base transition-all duration-300 shadow-[0_12px_30px_-16px_rgba(255,255,255,.3)]"
+                    data-testid="button-cta-app-gift"
+                  >
+                    <Link href="/auth">
+                      Подарить маме Внучка <ArrowRight className="ml-2 w-5 h-5" />
+                    </Link>
+                  </Button>
+                </div>
+                <p className="mt-6 text-sm text-emerald-200/50">
+                  Лучший подарок маме — не вещь, а ваша забота каждый день
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section id="dialog" className="py-16 md:py-20 bg-gradient-to-b from-[#F4F1EE] to-[#F3F0F4]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-10">
@@ -659,39 +693,6 @@ export default function GiftLanding() {
           </div>
         </section>
 
-        <section className="py-16 md:py-20 px-6">
-          <div className="container mx-auto">
-            <div className="bg-gradient-to-br from-[#143A2E] to-[#0A1F17] rounded-[3rem] p-7 md:p-12 text-center text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-              <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
-
-              <div className="relative z-10 max-w-2xl mx-auto">
-                <Gift className="w-12 h-12 mx-auto mb-6 text-emerald-300/60" />
-                <h2 className="text-3xl md:text-5xl font-serif font-medium tracking-[-0.02em] mb-4 text-white">
-                  Подарите маме заботу,<br />а&nbsp;не&nbsp;очередную вещь
-                </h2>
-                <p className="text-emerald-100/70 text-lg mb-8">
-                  7 дней бесплатно. Маме нужен только Telegram — остальное сделает Внучок.
-                </p>
-                <div className="flex justify-center">
-                  <Button
-                    asChild
-                    size="lg"
-                    className="rounded-xl h-14 px-10 bg-white text-[#143A2E] hover:bg-white/90 font-semibold text-base transition-all duration-300 shadow-[0_12px_30px_-16px_rgba(255,255,255,.3)]"
-                    data-testid="button-cta-app-gift"
-                  >
-                    <Link href="/auth">
-                      Подарить маме Внучка <ArrowRight className="ml-2 w-5 h-5" />
-                    </Link>
-                  </Button>
-                </div>
-                <p className="mt-6 text-sm text-emerald-200/50">
-                  Лучший подарок маме — не вещь, а ваша забота каждый день
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
 
       <footer className="bg-slate-900 py-12 pb-24 md:pb-12 text-slate-400 text-sm">
