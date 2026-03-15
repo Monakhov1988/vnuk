@@ -263,80 +263,6 @@ export default function GiftLanding() {
           </div>
         </section>
 
-        <section id="comparison" className="py-16 md:py-20 bg-gradient-to-b from-[#F8F5F2] to-[#F8F5F2]">
-          <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
-                Почему Внучок лучше обычного подарка
-              </h2>
-              <p className="text-[#5F626B] text-lg">
-                Сравните: что получит мама через неделю, месяц, год
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              <ComparisonCard
-                icon={<Flower2 className="w-8 h-8 text-rose-400" />}
-                title="Цветы и конфеты"
-                price="2 000–5 000₽"
-                duration="Завянут через 5 дней"
-                items={[
-                  { text: "Красиво, но на один раз", positive: false },
-                  { text: "Не помогут с лекарствами", positive: false },
-                  { text: "Не развеют одиночество", positive: false },
-                  { text: "Нет связи с вами", positive: false },
-                ]}
-                verdict="Приятно, но ненадолго"
-                muted
-              />
-              <ComparisonCard
-                icon={<Tv className="w-8 h-8 text-blue-400" />}
-                title="Техника / гаджеты"
-                price="5 000–30 000₽"
-                duration="Будет пылиться"
-                items={[
-                  { text: "Сложно разобраться", positive: false },
-                  { text: "Нужна помощь с настройкой", positive: false },
-                  { text: "Не решает проблему одиночества", positive: false },
-                  { text: "Дорого", positive: false },
-                ]}
-                verdict="Хорошая мысль, но не для 65+"
-                muted
-              />
-              <ComparisonCard
-                icon={<Heart className="w-8 h-8 text-[#143A2E]" fill="#143A2E" />}
-                title="Внучок"
-                price="990₽/мес"
-                duration="Работает каждый день"
-                items={[
-                  { text: "Ежедневное общение голосом", positive: true },
-                  { text: "Напоминание лекарств", positive: true },
-                  { text: "Помощь с ЖКХ и Госуслугами", positive: true },
-                  { text: "Вы в курсе — алерты и отчёты", positive: true },
-                ]}
-                verdict="Забота, которая не кончается"
-                highlighted
-              />
-            </div>
-
-            <div className="text-center mt-10">
-              <p className="text-[#5F626B] text-sm italic mb-6">
-                990₽/мес — это 33₽ в день. Дешевле чашки кофе, но мама получает заботу каждый день
-              </p>
-              <Button
-                asChild
-                size="lg"
-                className="rounded-xl text-base h-14 px-10 bg-[#143A2E] hover:bg-[#0F2F25] text-white shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)] transition-all duration-300"
-                data-testid="button-comparison-cta-gift"
-              >
-                <Link href="/auth">
-                  Подарить маме Внучка <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-
         <section className="py-12 md:py-16 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-10">
@@ -540,7 +466,81 @@ export default function GiftLanding() {
           </div>
         </section>
 
-        <section className="py-14 md:py-20 bg-gradient-to-b from-[#F4F1EE] to-[#F3F0F4]">
+        <section id="comparison" className="py-16 md:py-20 bg-gradient-to-b from-[#F4F1EE] to-[#F3F0F4]">
+          <div className="container mx-auto px-6">
+            <div className="text-center max-w-3xl mx-auto mb-12">
+              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
+                Почему Внучок лучше обычного подарка
+              </h2>
+              <p className="text-[#5F626B] text-lg">
+                Сравните: что получит мама через неделю, месяц, год
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              <ComparisonCard
+                icon={<Flower2 className="w-8 h-8 text-rose-400" />}
+                title="Цветы и конфеты"
+                price="2 000–5 000₽"
+                duration="Завянут через 5 дней"
+                items={[
+                  { text: "Красиво, но на один раз", positive: false },
+                  { text: "Не помогут с лекарствами", positive: false },
+                  { text: "Не развеют одиночество", positive: false },
+                  { text: "Нет связи с вами", positive: false },
+                ]}
+                verdict="Приятно, но ненадолго"
+                muted
+              />
+              <ComparisonCard
+                icon={<Tv className="w-8 h-8 text-blue-400" />}
+                title="Техника / гаджеты"
+                price="5 000–30 000₽"
+                duration="Будет пылиться"
+                items={[
+                  { text: "Сложно разобраться", positive: false },
+                  { text: "Нужна помощь с настройкой", positive: false },
+                  { text: "Не решает проблему одиночества", positive: false },
+                  { text: "Дорого", positive: false },
+                ]}
+                verdict="Хорошая мысль, но не для 65+"
+                muted
+              />
+              <ComparisonCard
+                icon={<Heart className="w-8 h-8 text-[#143A2E]" fill="#143A2E" />}
+                title="Внучок"
+                price="990₽/мес"
+                duration="Работает каждый день"
+                items={[
+                  { text: "Ежедневное общение голосом", positive: true },
+                  { text: "Напоминание лекарств", positive: true },
+                  { text: "Помощь с ЖКХ и Госуслугами", positive: true },
+                  { text: "Вы в курсе — алерты и отчёты", positive: true },
+                ]}
+                verdict="Забота, которая не кончается"
+                highlighted
+              />
+            </div>
+
+            <div className="text-center mt-10">
+              <p className="text-[#5F626B] text-sm italic mb-6">
+                990₽/мес — это 33₽ в день. Дешевле чашки кофе, но мама получает заботу каждый день
+              </p>
+              <Button
+                asChild
+                size="lg"
+                className="rounded-xl text-base h-14 px-10 bg-[#143A2E] hover:bg-[#0F2F25] text-white shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)] transition-all duration-300"
+                data-testid="button-comparison-cta-gift"
+              >
+                <Link href="/auth">
+                  Подарить маме Внучка <ArrowRight className="ml-2 w-5 h-5" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-14 md:py-20 bg-gradient-to-b from-[#F3F0F4] to-[#F3F0F4]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-10">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
