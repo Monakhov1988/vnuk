@@ -338,6 +338,35 @@ export default function GiftLanding() {
           </div>
         </section>
 
+        <section className="py-14 md:py-20 bg-gradient-to-b from-[#F4F1EE] to-[#F4F1EE]">
+          <div className="container mx-auto px-6">
+            <div className="text-center max-w-3xl mx-auto mb-10">
+              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
+                Что получаете вы
+              </h2>
+              <p className="text-[#5F626B] text-lg">
+                Мама общается с&nbsp;Внучком — вы получаете спокойствие
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto" data-testid="child-benefits-gift">
+              {[
+                { id: "report", icon: <Mail className="w-6 h-6 text-blue-500" />, title: "Вечерний отчёт", text: "Каждый день в 21:00 — сколько общалась, давление, лекарства, настроение. Всё в Telegram." },
+                { id: "alerts", icon: <ShieldAlert className="w-6 h-6 text-rose-500" />, title: "Мгновенные алерты", text: "Если мама упомянет опасность, мошенников или плохое самочувствие — вы узнаете сразу." },
+                { id: "dashboard", icon: <LayoutDashboard className="w-6 h-6 text-emerald-600" />, title: "Личный кабинет", text: "События, давление, лекарства, воспоминания — всё в одной ленте. Доступ с телефона." },
+                { id: "memoir", icon: <BookOpen className="w-6 h-6 text-violet-500" />, title: "Книга жизни мамы", text: "Внучок бережно собирает воспоминания мамы. Истории, которые она никогда не расскажет по телефону." },
+              ].map((item) => (
+                <div key={item.id} className="flex gap-4 p-5 rounded-[20px] bg-white/90 border border-emerald-100/60 shadow-[0_8px_30px_-16px_rgba(20,58,46,.12)] hover:-translate-y-0.5 transition-all duration-300" data-testid={`child-benefit-gift-${item.id}`}>
+                  <div className="shrink-0 mt-0.5">{item.icon}</div>
+                  <div>
+                    <p className="font-semibold text-slate-800 text-sm mb-1">{item.title}</p>
+                    <p className="text-[#5F626B] text-sm leading-relaxed">{item.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section id="dialog" className="py-16 md:py-20 bg-gradient-to-b from-[#F4F1EE] to-[#F3F0F4]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-10">
@@ -610,35 +639,6 @@ export default function GiftLanding() {
                   Подарить маме Внучка <ArrowRight className="ml-2 w-5 h-5" />
                 </Link>
               </Button>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-14 md:py-20 bg-gradient-to-b from-[#F3F0F4] to-[#F3F0F4]">
-          <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-10">
-              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
-                Что получаете вы
-              </h2>
-              <p className="text-[#5F626B] text-lg">
-                Мама общается с&nbsp;Внучком — вы получаете спокойствие
-              </p>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto" data-testid="child-benefits-gift">
-              {[
-                { id: "report", icon: <Mail className="w-6 h-6 text-blue-500" />, title: "Вечерний отчёт", text: "Каждый день в 21:00 — сколько общалась, давление, лекарства, настроение. Всё в Telegram." },
-                { id: "alerts", icon: <ShieldAlert className="w-6 h-6 text-rose-500" />, title: "Мгновенные алерты", text: "Если мама упомянет опасность, мошенников или плохое самочувствие — вы узнаете сразу." },
-                { id: "dashboard", icon: <LayoutDashboard className="w-6 h-6 text-emerald-600" />, title: "Личный кабинет", text: "События, давление, лекарства, воспоминания — всё в одной ленте. Доступ с телефона." },
-                { id: "memoir", icon: <BookOpen className="w-6 h-6 text-violet-500" />, title: "Книга жизни мамы", text: "Внучок бережно собирает воспоминания мамы. Истории, которые она никогда не расскажет по телефону." },
-              ].map((item) => (
-                <div key={item.id} className="flex gap-4 p-5 rounded-[20px] bg-white/90 border border-emerald-100/60 shadow-[0_8px_30px_-16px_rgba(20,58,46,.12)] hover:-translate-y-0.5 transition-all duration-300" data-testid={`child-benefit-gift-${item.id}`}>
-                  <div className="shrink-0 mt-0.5">{item.icon}</div>
-                  <div>
-                    <p className="font-semibold text-slate-800 text-sm mb-1">{item.title}</p>
-                    <p className="text-[#5F626B] text-sm leading-relaxed">{item.text}</p>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </section>
