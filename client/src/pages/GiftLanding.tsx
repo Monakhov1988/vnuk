@@ -343,7 +343,7 @@ export default function GiftLanding() {
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
               <AgeCard
                 age="55–60 лет"
-                emoji="🎬"
+                image="/images/active-parent-50.png"
                 title="Активный помощник"
                 description="Рецепты, афиша кино, транспорт, путешествия. Тёплый собеседник когда скучно. Помощь с техникой и приложениями."
                 features={["Рецепты и фильмы", "Расписание транспорта", "Помощь с телефоном"]}
@@ -351,7 +351,7 @@ export default function GiftLanding() {
               />
               <AgeCard
                 age="60–70 лет"
-                emoji="💊"
+                image="/images/tech-parent-60.png"
                 title="Заботливый спутник"
                 description="Напоминания о лекарствах, дневник давления, помощь с Госуслугами и ЖКХ. Голосовое общение без кнопок."
                 features={["Лекарства и давление", "ЖКХ и Госуслуги", "Голосом, без кнопок"]}
@@ -359,7 +359,7 @@ export default function GiftLanding() {
               />
               <AgeCard
                 age="70+ лет"
-                emoji="🛡️"
+                image="/images/care-parent-70.png"
                 title="Надёжная опора"
                 description="Бот пишет первым каждый день. Следит за самочувствием. Сообщит вам если что-то не так. Ведёт Книгу жизни — воспоминания мамы."
                 features={["Пишет первым", "Алерты для вас", "Книга жизни"]}
@@ -859,35 +859,37 @@ function ComparisonCard({
 
 function AgeCard({
   age,
-  emoji,
+  image,
   title,
   description,
   features,
   gradient,
 }: {
   age: string;
-  emoji: string;
+  image: string;
   title: string;
   description: string;
   features: string[];
   gradient: string;
 }) {
   return (
-    <div className={`rounded-[28px] bg-gradient-to-b ${gradient} backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] p-6 hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.3)] transition-all duration-300`} data-testid={`age-card-${age}`}>
-      <div className="text-5xl mb-4">{emoji}</div>
-      <Badge variant="secondary" className="mb-4 bg-white/70 text-[#5F626B] border border-white/50 text-xs">
-        {age}
-      </Badge>
-      <h3 className="text-lg font-serif font-medium mb-2 text-slate-900">{title}</h3>
-      <p className="text-[#5F626B] text-sm leading-relaxed mb-4">{description}</p>
-      <ul className="space-y-2">
-        {features.map((f) => (
-          <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
-            <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-            {f}
-          </li>
-        ))}
-      </ul>
+    <div className={`rounded-[28px] bg-gradient-to-b ${gradient} backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.3)] transition-all duration-300`} data-testid={`age-card-${age}`}>
+      <img src={image} alt={title} className="w-full h-48 object-cover" />
+      <div className="p-6">
+        <Badge variant="secondary" className="mb-4 bg-white/70 text-[#5F626B] border border-white/50 text-xs">
+          {age}
+        </Badge>
+        <h3 className="text-lg font-serif font-medium mb-2 text-slate-900">{title}</h3>
+        <p className="text-[#5F626B] text-sm leading-relaxed mb-4">{description}</p>
+        <ul className="space-y-2">
+          {features.map((f) => (
+            <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
+              <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+              {f}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
