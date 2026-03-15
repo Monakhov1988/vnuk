@@ -621,31 +621,6 @@ export default function GiftLanding() {
               />
             </div>
 
-            <div className="flex flex-wrap justify-center gap-6 mt-8 text-sm text-slate-500" data-testid="text-risk-reversal-gift">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                7 дней бесплатно
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-emerald-500" />
-                Данные под защитой
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Zap className="w-3.5 h-3.5 text-emerald-500" />
-                Отмена в 1 клик
-              </span>
-            </div>
-
-            <div className="text-center mt-4">
-              <Button
-                asChild
-                variant="link"
-                className="text-slate-700"
-                data-testid="link-pricing-details-gift"
-              >
-                <Link href="/pricing">Подробнее о тарифах</Link>
-              </Button>
-            </div>
           </div>
         </section>
 
