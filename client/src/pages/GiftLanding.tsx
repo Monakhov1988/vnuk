@@ -15,13 +15,9 @@ import {
   Mail,
   Mic,
   Gift,
-  Clock,
-  BellRing,
   ShieldAlert,
   MessageCircle,
   BookOpen,
-  Users,
-  LayoutDashboard,
   Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,7 +36,7 @@ export default function GiftLanding() {
 
   useEffect(() => {
     const prevTitle = document.title;
-    document.title = "Необычный подарок маме — бот-помощник Внучок в Telegram | от 990₽/мес";
+    document.title = "Необычный подарок маме — помощник Внучок в Telegram | от 990₽/мес";
 
     const prevMeta: Record<string, string> = {};
     const setMeta = (name: string, content: string, attr = "name") => {
@@ -50,10 +46,10 @@ export default function GiftLanding() {
       el.content = content;
     };
     setMeta("description", "Что подарить пожилой маме у которой всё есть? Внучок — умный помощник в Telegram: напоминает лекарства, общается голосом, сообщает вам если что-то не так. 7 дней бесплатно.");
-    setMeta("og:title", "Необычный подарок маме — бот-помощник Внучок в Telegram", "property");
+    setMeta("og:title", "Необычный подарок маме — помощник Внучок в Telegram", "property");
     setMeta("og:description", "Ежедневная забота вместо очередной вещи. Помощник напоминает лекарства, общается голосом, помогает с бытом. От 990₽/мес.", "property");
     setMeta("og:url", "https://vnuchok.online/gift", "property");
-    setMeta("twitter:title", "Необычный подарок маме — бот-помощник Внучок в Telegram", "name");
+    setMeta("twitter:title", "Необычный подарок маме — помощник Внучок в Telegram", "name");
     setMeta("twitter:description", "Ежедневная забота вместо очередной вещи. Помощник напоминает лекарства, общается голосом, помогает с бытом. От 990₽/мес.", "name");
 
     let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
@@ -147,8 +143,11 @@ export default function GiftLanding() {
             </Link>
           </div>
           <div className="hidden md:flex gap-8 items-center text-sm font-medium text-slate-600/80 tracking-wide">
-            <a href="#how" className="hover:text-slate-900 transition-all duration-300" data-testid="link-nav-how-gift">
+            <a href="#dialog" className="hover:text-slate-900 transition-all duration-300" data-testid="link-nav-how-gift">
               Как работает
+            </a>
+            <a href="#testimonials" className="hover:text-slate-900 transition-all duration-300" data-testid="link-nav-testimonials-gift">
+              Отзывы
             </a>
             <a href="#pricing" className="hover:text-slate-900 transition-all duration-300" data-testid="link-nav-pricing-gift">
               Тарифы
@@ -316,52 +315,6 @@ export default function GiftLanding() {
           </div>
         </section>
 
-        <section className="py-14 md:py-20 bg-gradient-to-b from-[#F4F1EE] to-[#F4F1EE]">
-          <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-10">
-              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
-                Что получаете вы
-              </h2>
-              <p className="text-[#5F626B] text-lg">
-                Мама общается с&nbsp;Внучком — вы получаете спокойствие
-              </p>
-            </div>
-
-            <div className="relative max-w-3xl mx-auto mb-8 rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-300/40">
-              <img
-                src="/images/gift-family-bond.png"
-                alt="Дочь обнимает пожилую маму — связь поколений"
-                className="w-full h-44 md:h-56 object-cover"
-                loading="lazy"
-                data-testid="img-family-bond-gift"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#143A2E]/70 via-transparent to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6 text-white">
-                <p className="text-lg md:text-xl font-serif font-medium max-w-xl">
-                  Вы далеко, но забота — рядом. Каждый день.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto" data-testid="child-benefits-gift">
-              {[
-                { id: "report", icon: <Mail className="w-6 h-6 text-blue-500" />, title: "Вечерний отчёт", text: "Каждый день в 21:00 — сколько общалась, давление, лекарства, настроение. Всё в Telegram." },
-                { id: "alerts", icon: <ShieldAlert className="w-6 h-6 text-rose-500" />, title: "Мгновенные алерты", text: "Если мама упомянет опасность, мошенников или плохое самочувствие — вы узнаете сразу." },
-                { id: "dashboard", icon: <LayoutDashboard className="w-6 h-6 text-emerald-600" />, title: "Личный кабинет", text: "События, давление, лекарства, воспоминания — всё в одной ленте. Доступ с телефона." },
-                { id: "memoir", icon: <BookOpen className="w-6 h-6 text-violet-500" />, title: "Книга жизни мамы", text: "Внучок бережно собирает воспоминания мамы. Истории, которые она никогда не расскажет по телефону." },
-              ].map((item) => (
-                <div key={item.id} className="flex gap-4 p-5 rounded-[20px] bg-white/90 border border-emerald-100/60 shadow-[0_8px_30px_-16px_rgba(20,58,46,.12)] hover:-translate-y-0.5 transition-all duration-300" data-testid={`child-benefit-gift-${item.id}`}>
-                  <div className="shrink-0 mt-0.5">{item.icon}</div>
-                  <div>
-                    <p className="font-semibold text-slate-800 text-sm mb-1">{item.title}</p>
-                    <p className="text-[#5F626B] text-sm leading-relaxed">{item.text}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section id="dialog" className="py-16 md:py-20 bg-gradient-to-b from-[#F4F1EE] to-[#F3F0F4]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-10">
@@ -393,6 +346,8 @@ export default function GiftLanding() {
                   { from: "bot", text: "Курица по-грузински с орехами! Нужно: филе 500г, грецкие орехи, чеснок, кинза, хмели-сунели. Есть всё?" },
                   { from: "user", text: "Кинзы нет, можно без неё?" },
                   { from: "bot", text: "Конечно! Замените петрушкой или укропом. Итак, шаг 1: нарежьте филе кусочками и обжарьте 7 минут..." },
+                  { from: "user", text: "Ой, а сколько орехов класть? Я ж на глазок сыплю 😄" },
+                  { from: "bot", text: "100 грамм — это примерно горсть. На глазок тоже можно, это же не аптека! 😊" },
                 ]}
               />
             </div>
@@ -400,19 +355,38 @@ export default function GiftLanding() {
             <h3 className="text-2xl md:text-3xl font-serif font-medium tracking-[-0.02em] text-slate-900 text-center mt-12 mb-6">
               Забота, которая работает без&nbsp;вас
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
               {[
-                { icon: <Send className="w-5 h-5 text-emerald-600" />, title: "Пишет первым каждый день", desc: "Лекарства, давление, настроение — без напоминаний от вас" },
-                { icon: <Heart className="w-5 h-5 text-rose-400" />, title: "Не будет одиноко", desc: "Поговорит, развлечёт, подберёт фильм, рецепт, стихи по настроению" },
-                { icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />, title: "Вы всегда в курсе", desc: "Статус, события, давление, лекарства — всё в одной ленте" },
-                { icon: <Brain className="w-5 h-5 text-violet-500" />, title: "Помнит и адаптируется", desc: "Запоминает важное, ведёт воспоминания и подстраивается под маму" },
+                { icon: <Send className="w-5 h-5 text-emerald-600" />, label: "Для мамы", title: "Пишет первым каждый день", desc: "Лекарства, давление, настроение — без напоминаний от вас" },
+                { icon: <Heart className="w-5 h-5 text-rose-400" />, label: "Для мамы", title: "Не будет одиноко", desc: "Поговорит, развлечёт, подберёт фильм, рецепт, стихи" },
+                { icon: <Brain className="w-5 h-5 text-violet-500" />, label: "Для мамы", title: "Помнит и адаптируется", desc: "Запоминает важное и подстраивается под характер" },
+                { icon: <Mail className="w-5 h-5 text-blue-500" />, label: "Для вас", title: "Вечерний отчёт", desc: "Каждый день в 21:00 — давление, лекарства, настроение" },
+                { icon: <ShieldAlert className="w-5 h-5 text-rose-500" />, label: "Для вас", title: "Сигнал, если что-то не так", desc: "Опасность, мошенники, плохое самочувствие — вы узнаете сразу" },
+                { icon: <BookOpen className="w-5 h-5 text-violet-500" />, label: "Для вас", title: "Книга жизни мамы", desc: "Бережно собирает воспоминания — истории, которые не расскажет по телефону" },
               ].map((item, i) => (
                 <div key={i} className="rounded-2xl bg-white/70 backdrop-blur-sm border border-white/60 p-4 shadow-[0_4px_20px_-8px_rgba(49,35,45,.1)]" data-testid={`killer-feature-gift-${i}`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{item.label}</p>
                   <div className="mb-2">{item.icon}</div>
                   <p className="font-semibold text-sm text-slate-800 mb-1">{item.title}</p>
                   <p className="text-xs text-[#5F626B] leading-snug">{item.desc}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="relative max-w-4xl mx-auto mt-10 rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-300/40">
+              <img
+                src="/images/gift-family-bond.png"
+                alt="Дочь обнимает пожилую маму — связь поколений"
+                className="w-full h-44 md:h-56 object-cover"
+                loading="lazy"
+                data-testid="img-family-bond-gift"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#143A2E]/70 via-transparent to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6 text-white">
+                <p className="text-lg md:text-xl font-serif font-medium max-w-xl">
+                  Вы далеко, но забота — рядом. Каждый день.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -471,7 +445,7 @@ export default function GiftLanding() {
           </div>
         </section>
 
-        <section className="py-12 md:py-16 bg-gradient-to-b from-[#EEF2F6] to-[#F4F1EE]">
+        <section id="testimonials" className="py-12 md:py-16 bg-gradient-to-b from-[#EEF2F6] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-10">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
@@ -578,7 +552,7 @@ export default function GiftLanding() {
                 features={[
                   "100 вопросов в день",
                   "Напоминания о лекарствах",
-                  "Бот пишет первым каждый день",
+                  "Пишет первым каждый день",
                   "Помощь с Госуслугами и ЖКХ",
                   "Вечерний отчёт для вас",
                 ]}
@@ -757,7 +731,7 @@ export default function GiftLanding() {
 const giftFaqItems = [
   {
     q: "Что подарить маме, у которой всё есть?",
-    a: "Внучок — это не вещь, а ежедневная забота. Бот общается с мамой каждый день: напоминает лекарства, помогает с бытом, развлекает. Это подарок, который работает 365 дней в году.",
+    a: "Внучок — это не вещь, а ежедневная забота. Общается с мамой каждый день: напоминает лекарства, помогает с бытом, развлекает. Это подарок, который работает 365 дней в году.",
   },
   {
     q: "Подойдёт ли это как подарок на день рождения или юбилей?",
@@ -976,8 +950,14 @@ function GiftPricingCard({
           {subtitle}
         </CardDescription>
         <div className="mt-3">
-          <span className="text-3xl font-serif font-medium">{price}₽</span>
-          {!isFree && <span className="text-muted-foreground">/мес</span>}
+          {isFree ? (
+            <span className="text-3xl font-serif font-medium text-emerald-600">Бесплатно</span>
+          ) : (
+            <>
+              <span className="text-3xl font-serif font-medium">{price}₽</span>
+              <span className="text-muted-foreground">/мес</span>
+            </>
+          )}
         </div>
         <div className="mt-3 bg-gradient-to-r from-[#F3E9F0] to-[#EDF2F8] rounded-lg px-3 py-2" data-testid={`pricing-result-gift-${name}`}>
           <p className="text-xs font-medium text-slate-600">{result}</p>
