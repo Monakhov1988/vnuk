@@ -438,18 +438,18 @@ export default function GiftLanding() {
           </div>
         </section>
 
-        <section id="how" className="py-16 md:py-20 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
+        <section id="how" className="py-10 md:py-20 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
+            <div className="text-center max-w-3xl mx-auto mb-6 md:mb-12">
+              <h2 className="text-2xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-2 md:mb-4 text-slate-900">
                 Как подарить Внучка за&nbsp;3&nbsp;минуты
               </h2>
-              <p className="text-[#5F626B] text-lg">
+              <p className="text-[#5F626B] text-sm md:text-lg">
                 Вы настраиваете — мама просто открывает Telegram
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <div className="flex flex-col md:grid md:grid-cols-3 gap-2 md:gap-6 max-w-4xl mx-auto">
               {[
                 {
                   step: "1",
@@ -467,12 +467,14 @@ export default function GiftLanding() {
                   description: "Представится, спросит имя и город. Начнёт помогать с первого дня. Вы получите доступ к кабинету.",
                 },
               ].map((item) => (
-                <div key={item.step} className="text-center p-8" data-testid={`step-gift-${item.step}`}>
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#143A2E] to-[#0F2F25] flex items-center justify-center mb-5 mx-auto text-white font-serif font-medium text-xl shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)]">
+                <div key={item.step} className="flex md:flex-col items-center md:text-center gap-4 md:gap-0 p-3 md:p-8" data-testid={`step-gift-${item.step}`}>
+                  <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-[#143A2E] to-[#0F2F25] flex items-center justify-center md:mb-5 text-white font-serif font-medium text-base md:text-xl shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)] shrink-0">
                     {item.step}
                   </div>
-                  <h3 className="text-xl font-serif font-medium mb-3 text-slate-900">{item.title}</h3>
-                  <p className="text-[#5F626B] text-sm leading-relaxed">{item.description}</p>
+                  <div>
+                    <h3 className="text-base md:text-xl font-serif font-medium mb-1 md:mb-3 text-slate-900">{item.title}</h3>
+                    <p className="text-[#5F626B] text-xs md:text-sm leading-relaxed">{item.description}</p>
+                  </div>
                 </div>
               ))}
             </div>
