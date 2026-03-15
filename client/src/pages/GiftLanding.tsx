@@ -294,25 +294,19 @@ export default function GiftLanding() {
           </div>
         </section>
 
-        <section className="py-12 md:py-16 bg-gradient-to-b from-[#F3F1EE] to-[#F4F1EE]">
+        <section className="py-10 md:py-14 bg-gradient-to-b from-[#F3F1EE] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-10">
-              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
-                Что подарить маме на&nbsp;60, 65 или 70&nbsp;лет?
-              </h2>
-              <p className="text-[#5F626B] text-lg">
-                Не вещь — а&nbsp;ежедневную заботу. Внучок подстраивается под возраст
-              </p>
-            </div>
+            <h2 className="text-2xl md:text-3xl font-serif font-medium tracking-[-0.02em] mb-6 text-slate-900 text-center">
+              Внучок подстраивается под возраст мамы
+            </h2>
 
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
               <AgeCard
                 age="55–60 лет"
                 image="/images/active-parent-50.png"
                 alt="Подарок маме на 60 лет — помощник Внучок"
                 title="Активный помощник"
-                description="Рецепты, афиша кино, транспорт, путешествия. Тёплый собеседник когда скучно. Помощь с техникой и приложениями."
-                features={["Рецепты и фильмы", "Расписание транспорта", "Помощь с телефоном"]}
+                description="Рецепты, кино, транспорт. Тёплый собеседник и помощь с техникой."
                 gradient="from-emerald-50 to-white"
               />
               <AgeCard
@@ -320,8 +314,7 @@ export default function GiftLanding() {
                 image="/images/tech-parent-60.png"
                 alt="Подарок маме на 65 лет — заботливый помощник"
                 title="Заботливый спутник"
-                description="Напоминания о лекарствах, дневник давления, помощь с Госуслугами и ЖКХ. Голосовое общение без кнопок."
-                features={["Лекарства и давление", "ЖКХ и Госуслуги", "Голосом, без кнопок"]}
+                description="Лекарства, давление, Госуслуги и ЖКХ. Голосом, без кнопок."
                 gradient="from-violet-50 to-white"
               />
               <AgeCard
@@ -329,8 +322,7 @@ export default function GiftLanding() {
                 image="/images/care-parent-70.png"
                 alt="Подарок маме на 70 лет — надёжная опора"
                 title="Надёжная опора"
-                description="Внучок пишет первым каждый день. Следит за самочувствием. Сообщит вам если что-то не так. Ведёт Книгу жизни — воспоминания мамы."
-                features={["Пишет первым", "Алерты для вас", "Книга жизни"]}
+                description="Пишет первым каждый день. Следит за здоровьем. Алерты для вас."
                 gradient="from-rose-50 to-white"
               />
             </div>
@@ -865,7 +857,6 @@ function AgeCard({
   alt,
   title,
   description,
-  features,
   gradient,
 }: {
   age: string;
@@ -873,26 +864,17 @@ function AgeCard({
   alt?: string;
   title: string;
   description: string;
-  features: string[];
   gradient: string;
 }) {
   return (
-    <div className={`rounded-[28px] bg-gradient-to-b ${gradient} backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.3)] transition-all duration-300`} data-testid={`age-card-${age}`}>
-      <img src={image} alt={alt || title} className="w-full h-48 object-cover" loading="lazy" />
-      <div className="p-6">
-        <Badge variant="secondary" className="mb-4 bg-white/70 text-[#5F626B] border border-white/50 text-xs">
+    <div className={`rounded-[24px] bg-gradient-to-b ${gradient} backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.3)] transition-all duration-300`} data-testid={`age-card-${age}`}>
+      <img src={image} alt={alt || title} className="w-full h-40 object-cover" loading="lazy" />
+      <div className="p-4">
+        <Badge variant="secondary" className="mb-2 bg-white/70 text-[#5F626B] border border-white/50 text-xs">
           {age}
         </Badge>
-        <h3 className="text-lg font-serif font-medium mb-2 text-slate-900">{title}</h3>
-        <p className="text-[#5F626B] text-sm leading-relaxed mb-4">{description}</p>
-        <ul className="space-y-2">
-          {features.map((f) => (
-            <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
-              <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-              {f}
-            </li>
-          ))}
-        </ul>
+        <h3 className="text-base font-serif font-medium mb-1 text-slate-900">{title}</h3>
+        <p className="text-[#5F626B] text-sm leading-relaxed">{description}</p>
       </div>
     </div>
   );
