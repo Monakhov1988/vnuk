@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Heart,
   ArrowRight,
@@ -36,6 +36,58 @@ import { Link } from "wouter";
 
 export default function GiftLanding() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    const prevTitle = document.title;
+    document.title = "Необычный подарок маме — бот-помощник Внучок в Telegram | от 990₽/мес";
+
+    const prevMeta: Record<string, string> = {};
+    const setMeta = (name: string, content: string, attr = "name") => {
+      let el = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
+      if (!el) { el = document.createElement("meta"); el.setAttribute(attr, name); document.head.appendChild(el); prevMeta[`${attr}:${name}`] = ""; }
+      else { prevMeta[`${attr}:${name}`] = el.content; }
+      el.content = content;
+    };
+    setMeta("description", "Что подарить пожилой маме у которой всё есть? Внучок — бот-помощник в Telegram: напоминает лекарства, общается голосом, сообщает вам если что-то не так. 7 дней бесплатно.");
+    setMeta("og:title", "Необычный подарок маме — бот-помощник Внучок в Telegram", "property");
+    setMeta("og:description", "Ежедневная забота вместо очередной вещи. Бот напоминает лекарства, общается голосом, помогает с бытом. От 990₽/мес.", "property");
+    setMeta("og:url", "https://vnuchok.online/gift", "property");
+    setMeta("twitter:title", "Необычный подарок маме — бот-помощник Внучок в Telegram", "name");
+    setMeta("twitter:description", "Ежедневная забота вместо очередной вещи. Бот напоминает лекарства, общается голосом, помогает с бытом. От 990₽/мес.", "name");
+
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    const prevCanonical = canonical?.href || "";
+    const createdCanonical = !canonical;
+    if (!canonical) { canonical = document.createElement("link"); canonical.rel = "canonical"; document.head.appendChild(canonical); }
+    canonical.href = "https://vnuchok.online/gift";
+
+    const faqSchema = document.createElement("script");
+    faqSchema.type = "application/ld+json";
+    faqSchema.id = "gift-faq-schema";
+    faqSchema.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": giftFaqItems.map(item => ({
+        "@type": "Question",
+        "name": item.q,
+        "acceptedAnswer": { "@type": "Answer", "text": item.a }
+      }))
+    });
+    document.head.appendChild(faqSchema);
+
+    return () => {
+      document.title = prevTitle;
+      Object.entries(prevMeta).forEach(([key, val]) => {
+        const [attr, name] = key.split(":");
+        const el = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
+        if (el) { if (val) el.content = val; else el.remove(); }
+      });
+      const schema = document.getElementById("gift-faq-schema");
+      if (schema) schema.remove();
+      if (createdCanonical && canonical) canonical.remove();
+      else if (canonical) canonical.href = prevCanonical;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F6F4F2] selection:bg-[#EADDE4]/60 text-slate-900">
@@ -89,21 +141,18 @@ export default function GiftLanding() {
                 </Badge>
                 <h1 className="text-4xl md:text-6xl font-serif font-medium leading-[1.08] tracking-[-0.02em] mb-6 text-slate-900">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#143A2E] to-[#2D6A4F]">
-                    Подарок маме,
+                    Необычный подарок
                   </span>
                   <br />
                   <span className="text-slate-900">
-                    который не&nbsp;пылится
+                    пожилой маме
                   </span>
                 </h1>
-                <p className="text-xl md:text-2xl text-slate-700 mb-3 font-serif leading-snug">
-                  Что подарить пожилой маме, у&nbsp;которой всё есть? Ежедневную заботу и&nbsp;внимание
-                </p>
-                <p className="text-sm text-[#5F626B]/80 mb-4 italic">
-                  Цветы завянут через неделю. Техника будет пылиться. А&nbsp;Внучок каждый день рядом — поговорит, поможет, напомнит лекарства и&nbsp;сообщит вам, если что-то не&nbsp;так.
+                <p className="text-lg md:text-xl text-slate-700 mb-3 font-medium leading-snug">
+                  Вы далеко. Мама одна. Но забота возможна каждый день.
                 </p>
                 <p className="text-base text-[#5F626B] mb-8 leading-relaxed">
-                  Внучок — AI-спутник в&nbsp;Telegram для пожилых родителей. Работает голосом, понимает как внук. Напоминает лекарства, записывает давление, помогает с&nbsp;Госуслугами и&nbsp;ЖКХ. Идеальный подарок маме на&nbsp;юбилей, день рождения или просто так.
+                  Внучок — бот-помощник в&nbsp;Telegram. Каждый день общается с&nbsp;мамой голосом, напоминает лекарства, помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;алерты, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 990₽/мес</span> — дешевле букета, но&nbsp;работает каждый день.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -264,9 +313,19 @@ export default function GiftLanding() {
             </div>
 
             <div className="text-center mt-10">
-              <p className="text-[#5F626B] text-sm italic">
+              <p className="text-[#5F626B] text-sm italic mb-6">
                 990₽/мес — это 33₽ в день. Дешевле чашки кофе, но мама получает заботу каждый день
               </p>
+              <Button
+                asChild
+                size="lg"
+                className="rounded-xl text-base h-14 px-10 bg-[#143A2E] hover:bg-[#0F2F25] text-white shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)] transition-all duration-300"
+                data-testid="button-comparison-cta-gift"
+              >
+                <Link href="/auth">
+                  Подарить маме Внучка <ArrowRight className="ml-2 w-5 h-5" />
+                </Link>
+              </Button>
             </div>
           </div>
         </section>
@@ -358,8 +417,8 @@ export default function GiftLanding() {
               {[
                 {
                   step: "1",
-                  title: "Зарегистрируйтесь",
-                  description: "Создайте аккаунт и выберите тариф. Укажите имя мамы и её город — бот будет обращаться по имени.",
+                  title: "Оформите подарок",
+                  description: "Выберите тариф и укажите имя мамы и её город — бот будет обращаться по имени.",
                 },
                 {
                   step: "2",
@@ -430,6 +489,19 @@ export default function GiftLanding() {
                 quote="Мама не скучает — каждый день болтает с Внучком. Рецепты, фильмы, стихи. А я получаю вечерний отчёт и знаю, что всё хорошо. За 990₽ — бесценно."
                 rating={4.5}
               />
+            </div>
+
+            <div className="text-center mt-10">
+              <Button
+                asChild
+                size="lg"
+                className="rounded-xl text-base h-14 px-10 bg-[#143A2E] hover:bg-[#0F2F25] text-white shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)] transition-all duration-300"
+                data-testid="button-testimonials-cta-gift"
+              >
+                <Link href="/auth">
+                  Подарить маме Внучка <ArrowRight className="ml-2 w-5 h-5" />
+                </Link>
+              </Button>
             </div>
           </div>
         </section>
@@ -597,27 +669,16 @@ export default function GiftLanding() {
                 <p className="text-emerald-100/70 text-lg mb-8">
                   7 дней бесплатно. Маме нужен только Telegram — остальное сделает Внучок.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="flex justify-center">
                   <Button
                     asChild
                     size="lg"
-                    className="rounded-xl h-14 px-8 bg-white text-[#143A2E] hover:bg-white/90 font-semibold text-base transition-all duration-300 shadow-[0_12px_30px_-16px_rgba(255,255,255,.3)]"
+                    className="rounded-xl h-14 px-10 bg-white text-[#143A2E] hover:bg-white/90 font-semibold text-base transition-all duration-300 shadow-[0_12px_30px_-16px_rgba(255,255,255,.3)]"
                     data-testid="button-cta-app-gift"
                   >
                     <Link href="/auth">
                       Подарить маме Внучка <ArrowRight className="ml-2 w-5 h-5" />
                     </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    size="lg"
-                    className="rounded-xl h-14 px-8 bg-white/10 text-white hover:bg-white/20 font-semibold text-base border border-white/20 backdrop-blur-sm transition-all duration-300"
-                    data-testid="button-cta-telegram-gift"
-                  >
-                    <a href="https://t.me/GrandSonGleb_bot" target="_blank" rel="noopener noreferrer">
-                      <Send className="w-5 h-5 mr-2" />
-                      Открыть бот в Telegram
-                    </a>
                   </Button>
                 </div>
                 <p className="mt-6 text-sm text-emerald-200/50">
