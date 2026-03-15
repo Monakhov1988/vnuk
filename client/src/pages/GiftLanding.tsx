@@ -309,22 +309,25 @@ export default function GiftLanding() {
                 ]}
               />
               <DialogCard
-                title="День: помощь с бытом"
+                title="День: рецепты и кулинария"
                 messages={[
-                  { from: "user", text: "🎤 «Как передать показания за воду?»" },
-                  { from: "bot", text: "Через Госуслуги — откройте приложение. На главной нажмите «ЖКХ». Там «Передать показания». Какой у вас счётчик — холодная или горячая?" },
-                  { from: "user", text: "Обе. Холодная 245, горячая 118" },
-                  { from: "bot", text: "Отлично! Вводите: холодная — 245, горячая — 118. Нажмите «Отправить». Готово! В следующем месяце напомню ✓" },
+                  { from: "user", text: "🎤 «Хочу приготовить что-нибудь вкусненькое из курицы»" },
+                  { from: "bot", text: "Курица по-грузински с орехами! Нужно: филе 500г, грецкие орехи, чеснок, кинза, хмели-сунели. Есть всё?" },
+                  { from: "user", text: "Кинзы нет, можно без неё?" },
+                  { from: "bot", text: "Конечно! Замените петрушкой или укропом. Итак, шаг 1: нарежьте филе кусочками и обжарьте 7 минут..." },
                 ]}
               />
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-10">
+            <h3 className="text-2xl md:text-3xl font-serif font-medium tracking-[-0.02em] text-slate-900 text-center mt-12 mb-6">
+              Забота, которая работает без&nbsp;вас
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
               {[
                 { icon: <Send className="w-5 h-5 text-emerald-600" />, title: "Пишет первым каждый день", desc: "Лекарства, давление, настроение — без напоминаний от вас" },
                 { icon: <Heart className="w-5 h-5 text-rose-400" />, title: "Не будет одиноко", desc: "Поговорит, развлечёт, подберёт фильм, рецепт, стихи по настроению" },
-                { icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />, title: "Кабинет для ребёнка", desc: "Статус, события, давление, лекарства — всё в одной ленте" },
-                { icon: <Brain className="w-5 h-5 text-violet-500" />, title: "Память и «Книга жизни»", desc: "Помнит важное, ведёт воспоминания и адаптируется" },
+                { icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />, title: "Вы всегда в курсе", desc: "Статус, события, давление, лекарства — всё в одной ленте" },
+                { icon: <Brain className="w-5 h-5 text-violet-500" />, title: "Знает маму лично", desc: "Помнит важное, ведёт воспоминания и адаптируется" },
               ].map((item, i) => (
                 <div key={i} className="rounded-2xl bg-white/70 backdrop-blur-sm border border-white/60 p-4 shadow-[0_4px_20px_-8px_rgba(49,35,45,.1)]" data-testid={`killer-feature-gift-${i}`}>
                   <div className="mb-2">{item.icon}</div>
