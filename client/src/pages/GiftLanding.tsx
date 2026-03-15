@@ -273,7 +273,7 @@ export default function GiftLanding() {
                   <div className="absolute -bottom-4 -left-4 bg-white/90 backdrop-blur-md rounded-2xl p-3 border border-white/40 shadow-xl shadow-slate-200/50 animate-in slide-in-from-bottom-4 duration-700 max-w-[240px] hidden md:block">
                     <div className="bg-[#517DA2] rounded-xl px-3 py-2 mb-2">
                       <p className="text-[10px] text-white/70 mb-0.5">Внучок</p>
-                      <p className="text-xs text-white">Доброе утро! Не забудьте выпить эналаприл 💊</p>
+                      <p className="text-xs text-white">Доброе утро! Не забудь выпить эналаприл 💊</p>
                     </div>
                     <div className="bg-green-200 rounded-xl px-3 py-2 ml-auto max-w-[80%]">
                       <p className="text-xs text-slate-800">Выпила! Спасибо ☺️</p>
