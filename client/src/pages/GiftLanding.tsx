@@ -937,7 +937,7 @@ function TestimonialCard({
   const hasHalf = rating % 1 !== 0;
 
   return (
-    <div className="p-6 md:p-8 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300 min-w-[75vw] snap-center shrink-0 md:min-w-0 md:shrink" data-testid={`testimonial-card-gift-${name}`}>
+    <div className="p-5 md:p-8 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300 min-w-[80vw] snap-center shrink-0 md:min-w-0 md:shrink" data-testid={`testimonial-card-gift-${name}`}>
       <div className="flex gap-1 mb-4">
         {Array.from({ length: fullStars }).map((_, i) => (
           <Star key={i} className="w-4 h-4 fill-[#143A2E] text-[#143A2E]" />
@@ -946,7 +946,7 @@ function TestimonialCard({
       </div>
       <div className="relative mb-5">
         <Quote className="w-6 h-6 text-slate-200 absolute -top-1 -left-1" />
-        <p className="text-slate-700 text-sm leading-relaxed pl-6">{quote}</p>
+        <p className="text-slate-700 text-sm leading-relaxed pl-6 break-words">{quote}</p>
       </div>
       <div className="flex items-center gap-3 pt-4 border-t border-white/40">
         {photo ? (
