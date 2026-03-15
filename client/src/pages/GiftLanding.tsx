@@ -23,8 +23,6 @@ import {
   MessageCircle,
   BookOpen,
   Users,
-  TrendingUp,
-  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -310,28 +308,7 @@ export default function GiftLanding() {
           </div>
         </section>
 
-        <section className="py-14 md:py-20 bg-gradient-to-b from-[#F8F5F2] to-[#F3F0F4]">
-          <div className="container mx-auto px-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto" data-testid="stats-block-gift">
-              {[
-                { id: "users", value: "1 200+", label: "мам уже с Внучком", icon: <Users className="w-7 h-7" />, color: "text-emerald-600" },
-                { id: "retention", value: "98%", label: "продляют подписку", icon: <TrendingUp className="w-7 h-7" />, color: "text-[#143A2E]" },
-                { id: "price", value: "33₽", label: "в день — цена заботы", icon: <Gift className="w-7 h-7" />, color: "text-violet-600" },
-                { id: "days", value: "365", label: "дней в году рядом", icon: <Calendar className="w-7 h-7" />, color: "text-rose-500" },
-              ].map((stat) => (
-                <div key={stat.id} className="text-center p-5 rounded-[24px] bg-white/60 backdrop-blur-sm border border-white/50 shadow-[0_12px_40px_-20px_rgba(49,35,45,.15)]" data-testid={`stat-gift-${stat.id}`}>
-                  <div className={`mx-auto mb-3 w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-white/80 shadow-sm flex items-center justify-center ${stat.color}`}>
-                    {stat.icon}
-                  </div>
-                  <p className={`text-3xl md:text-4xl font-serif font-bold tracking-tight ${stat.color}`}>{stat.value}</p>
-                  <p className="text-xs md:text-sm text-[#5F626B] mt-1">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-12 md:py-16 bg-gradient-to-b from-[#F3F0F4] to-[#F4F1EE]">
+        <section className="py-12 md:py-16 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-10">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
