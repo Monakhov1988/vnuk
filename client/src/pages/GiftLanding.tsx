@@ -22,6 +22,9 @@ import {
   ShieldAlert,
   MessageCircle,
   BookOpen,
+  Users,
+  TrendingUp,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -330,7 +333,28 @@ export default function GiftLanding() {
           </div>
         </section>
 
-        <section className="py-12 md:py-16 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
+        <section className="py-14 md:py-20 bg-gradient-to-b from-[#F8F5F2] to-[#F3F0F4]">
+          <div className="container mx-auto px-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto" data-testid="stats-block-gift">
+              {[
+                { id: "users", value: "1 200+", label: "мам уже с Внучком", icon: <Users className="w-7 h-7" />, color: "text-emerald-600" },
+                { id: "retention", value: "98%", label: "продляют подписку", icon: <TrendingUp className="w-7 h-7" />, color: "text-[#143A2E]" },
+                { id: "price", value: "33₽", label: "в день — цена заботы", icon: <Gift className="w-7 h-7" />, color: "text-violet-600" },
+                { id: "days", value: "365", label: "дней в году рядом", icon: <Calendar className="w-7 h-7" />, color: "text-rose-500" },
+              ].map((stat) => (
+                <div key={stat.id} className="text-center p-5 rounded-[24px] bg-white/60 backdrop-blur-sm border border-white/50 shadow-[0_12px_40px_-20px_rgba(49,35,45,.15)]" data-testid={`stat-gift-${stat.id}`}>
+                  <div className={`mx-auto mb-3 w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-white/80 shadow-sm flex items-center justify-center ${stat.color}`}>
+                    {stat.icon}
+                  </div>
+                  <p className={`text-3xl md:text-4xl font-serif font-bold tracking-tight ${stat.color}`}>{stat.value}</p>
+                  <p className="text-xs md:text-sm text-[#5F626B] mt-1">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-12 md:py-16 bg-gradient-to-b from-[#F3F0F4] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-10">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
@@ -344,6 +368,7 @@ export default function GiftLanding() {
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
               <AgeCard
                 age="55–60 лет"
+                emoji="🎬"
                 title="Активный помощник"
                 description="Рецепты, афиша кино, транспорт, путешествия. Тёплый собеседник когда скучно. Помощь с техникой и приложениями."
                 features={["Рецепты и фильмы", "Расписание транспорта", "Помощь с телефоном"]}
@@ -351,6 +376,7 @@ export default function GiftLanding() {
               />
               <AgeCard
                 age="60–70 лет"
+                emoji="💊"
                 title="Заботливый спутник"
                 description="Напоминания о лекарствах, дневник давления, помощь с Госуслугами и ЖКХ. Голосовое общение без кнопок."
                 features={["Лекарства и давление", "ЖКХ и Госуслуги", "Голосом, без кнопок"]}
@@ -358,6 +384,7 @@ export default function GiftLanding() {
               />
               <AgeCard
                 age="70+ лет"
+                emoji="🛡️"
                 title="Надёжная опора"
                 description="Бот пишет первым каждый день. Следит за самочувствием. Сообщит вам если что-то не так. Ведёт Книгу жизни — воспоминания мамы."
                 features={["Пишет первым", "Алерты для вас", "Книга жизни"]}
@@ -506,32 +533,31 @@ export default function GiftLanding() {
           </div>
         </section>
 
-        <section className="py-12 md:py-16 bg-gradient-to-b from-[#F4F1EE] to-[#F3F0F4]">
+        <section className="py-14 md:py-20 bg-gradient-to-b from-[#F4F1EE] to-[#F3F0F4]">
           <div className="container mx-auto px-6">
-            <div className="max-w-3xl mx-auto">
-              <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] p-6 md:p-8">
-                <h3 className="text-xl md:text-2xl font-serif font-medium text-slate-900 mb-4">
-                  «А&nbsp;мама справится с&nbsp;этим подарком?»
-                </h3>
-                <div className="space-y-3 text-[#5F626B] text-sm leading-relaxed">
-                  <div className="flex gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <p><strong className="text-slate-700">Обычный Telegram</strong> — не нужно скачивать новое приложение. Если мама пишет в WhatsApp, справится и тут.</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <p><strong className="text-slate-700">Голосом, без кнопок</strong> — мама говорит как по телефону, бот отвечает. Печатать не нужно.</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <p><strong className="text-slate-700">Бот знакомится сам</strong> — не нужно ничего настраивать. Внучок представится, спросит имя и начнёт помогать.</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <p><strong className="text-slate-700">7 дней бесплатно</strong> — попробуйте без риска. Не понравится — ничего не платите.</p>
+            <div className="text-center max-w-3xl mx-auto mb-10">
+              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
+                А&nbsp;мама справится?
+              </h2>
+              <p className="text-[#5F626B] text-lg">
+                Да. Вот почему:
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto" data-testid="mama-checklist-gift">
+              {[
+                { id: "telegram", emoji: "📱", title: "Обычный Telegram", text: "Не нужно скачивать новое приложение. Если мама пишет в WhatsApp — справится и тут." },
+                { id: "voice", emoji: "🎤", title: "Голосом, без кнопок", text: "Мама говорит как по телефону, бот отвечает. Печатать не нужно." },
+                { id: "auto-setup", emoji: "🤖", title: "Бот знакомится сам", text: "Не нужно ничего настраивать. Внучок представится, спросит имя и начнёт помогать." },
+                { id: "free-trial", emoji: "🎁", title: "7 дней бесплатно", text: "Попробуйте без риска. Не понравится — ничего не платите." },
+              ].map((item) => (
+                <div key={item.id} className="flex gap-4 p-5 rounded-[20px] bg-white/90 border border-emerald-100/60 shadow-[0_8px_30px_-16px_rgba(20,58,46,.12)] hover:-translate-y-0.5 transition-all duration-300" data-testid={`checklist-item-gift-${item.id}`}>
+                  <div className="text-3xl shrink-0">{item.emoji}</div>
+                  <div>
+                    <p className="font-semibold text-slate-800 text-sm mb-1">{item.title}</p>
+                    <p className="text-[#5F626B] text-sm leading-relaxed">{item.text}</p>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         </section>
@@ -836,12 +862,14 @@ function ComparisonCard({
 
 function AgeCard({
   age,
+  emoji,
   title,
   description,
   features,
   gradient,
 }: {
   age: string;
+  emoji: string;
   title: string;
   description: string;
   features: string[];
@@ -849,6 +877,7 @@ function AgeCard({
 }) {
   return (
     <div className={`rounded-[28px] bg-gradient-to-b ${gradient} backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] p-6 hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.3)] transition-all duration-300`} data-testid={`age-card-${age}`}>
+      <div className="text-5xl mb-4">{emoji}</div>
       <Badge variant="secondary" className="mb-4 bg-white/70 text-[#5F626B] border border-white/50 text-xs">
         {age}
       </Badge>
@@ -958,15 +987,15 @@ function GiftPricingCard({
 }) {
   return (
     <Card
-      className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] ${popular ? "scale-105 border-[#143A2E]/30" : ""}`}
+      className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-1 rounded-[28px] backdrop-blur-sm shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] ${popular ? "scale-105 bg-gradient-to-b from-white to-emerald-50/40 border-2 border-[#143A2E]/40 ring-1 ring-[#143A2E]/10" : "bg-white/78 border border-white/65"}`}
       data-testid={`pricing-card-gift-${name}`}
     >
       {popular && (
-        <div className="absolute top-0 right-0 bg-[#143A2E] text-white text-xs font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
-          <Gift className="w-3 h-3" /> Лучший подарок
+        <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-[#143A2E] to-[#1D5640] text-white text-xs font-bold py-2 text-center flex items-center justify-center gap-1.5">
+          <Gift className="w-3.5 h-3.5" /> Самый популярный подарок
         </div>
       )}
-      <CardHeader className="text-center pb-2">
+      <CardHeader className={`text-center pb-2 ${popular ? "pt-12" : ""}`}>
         <CardTitle className="text-xl font-serif font-medium">{name}</CardTitle>
         <CardDescription className="text-[#5F626B] font-medium">
           {subtitle}
