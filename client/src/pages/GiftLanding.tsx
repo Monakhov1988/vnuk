@@ -215,37 +215,18 @@ export default function GiftLanding() {
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#5F626B]" data-testid="badge-risk-reversal-gift">
-                  <span className="inline-flex items-center gap-1">
-                    <Zap className="w-3 h-3 text-emerald-500" />
-                    7 дней бесплатно
-                  </span>
-                  <span className="text-slate-300">·</span>
-                  <span className="inline-flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    Без установки
-                  </span>
-                  <span className="text-slate-300">·</span>
-                  <span className="inline-flex items-center gap-1">
-                    <Mic className="w-3 h-3 text-emerald-500" />
-                    Голосовые
-                  </span>
-                  <span className="text-slate-300">·</span>
-                  <span className="inline-flex items-center gap-1">
-                    <Brain className="w-3 h-3 text-violet-500" />
-                    Запоминает
-                  </span>
-                  <span className="text-slate-300">·</span>
-                  <span className="inline-flex items-center gap-1">
-                    <MessageCircle className="w-3 h-3 text-blue-500" />
-                    Сам обучит маму
-                  </span>
-                </div>
+                <p className="text-xs text-[#5F626B] mb-3" data-testid="badge-risk-reversal-gift">
+                  <Zap className="w-3 h-3 text-emerald-500 inline -mt-0.5" /> 7 дней бесплатно <span className="text-slate-300 mx-1">·</span>
+                  Без установки <span className="text-slate-300 mx-1">·</span>
+                  Голосовые <span className="text-slate-300 mx-1">·</span>
+                  Запоминает <span className="text-slate-300 mx-1">·</span>
+                  Сам обучит маму
+                </p>
 
-                <div className="flex items-center gap-2.5 mt-4">
+                <div className="flex items-center gap-2">
                   <div className="flex -space-x-2">
                     {["/images/testimonial-olga.png", "/images/testimonial-dmitry.png", "/images/testimonial-anna.png"].map((src, i) => (
-                      <img key={i} src={src} alt="" className="w-7 h-7 rounded-full border-2 border-white object-cover" />
+                      <img key={i} src={src} alt="" className="w-6 h-6 rounded-full border-2 border-white object-cover" />
                     ))}
                   </div>
                   <p className="text-xs text-slate-600">
