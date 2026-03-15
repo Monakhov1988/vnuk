@@ -200,9 +200,9 @@ export default function GiftLanding() {
                     пожилой маме
                   </span>
                 </h1>
-                <div className="md:hidden my-4 mx-auto max-w-[280px]">
+                <div className="md:hidden my-4 mx-auto max-w-[300px]">
                   <img
-                    src="/images/gift-hero-mom.webp"
+                    src="/images/gift-hero-mom-mobile.png"
                     alt="Подарок пожилой маме — мама общается с помощником Внучок в Telegram"
                     className="rounded-[1.5rem] shadow-xl shadow-slate-300/40 w-full object-cover"
                   />
