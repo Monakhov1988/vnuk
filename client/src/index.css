@@ -104,3 +104,11 @@
 .text-gradient-warm {
   @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-amber-500;
 }
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

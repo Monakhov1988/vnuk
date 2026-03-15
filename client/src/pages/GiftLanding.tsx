@@ -143,7 +143,7 @@ export default function GiftLanding() {
 
   return (
     <div className="min-h-screen bg-[#F6F4F2] selection:bg-[#EADDE4]/60 text-slate-900">
-      <nav className="fixed top-0 w-full z-50 bg-[#F6F4F2]/70 backdrop-blur-xl border-b border-white/40 py-5">
+      <nav className="fixed top-0 w-full z-50 bg-[#F6F4F2]/70 backdrop-blur-xl border-b border-white/40 py-3 md:py-5">
         <div className="container mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <Link href="/">
@@ -179,7 +179,7 @@ export default function GiftLanding() {
       </nav>
 
       <main>
-        <section className="pt-24 pb-10 md:pt-32 md:pb-14 px-6 overflow-hidden bg-gradient-to-br from-[#F3E7ED] via-[#F7F2EC] to-[#F3F1EE]">
+        <section className="pt-20 pb-8 md:pt-32 md:pb-14 px-6 overflow-hidden bg-gradient-to-br from-[#F3E7ED] via-[#F7F2EC] to-[#F3F1EE]">
           <div className="container mx-auto">
             <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
               <div className="max-w-2xl relative z-10">
@@ -191,7 +191,7 @@ export default function GiftLanding() {
                   <Gift className="w-3.5 h-3.5" />
                   Подарок, который работает каждый день
                 </Badge>
-                <h1 className="text-4xl md:text-6xl font-serif font-medium leading-[1.08] tracking-[-0.02em] mb-4 text-slate-900">
+                <h1 className="text-3xl md:text-6xl font-serif font-medium leading-[1.08] tracking-[-0.02em] mb-3 text-slate-900">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#143A2E] to-[#2D6A4F]">
                     Необычный подарок
                   </span>
@@ -203,7 +203,7 @@ export default function GiftLanding() {
                 <p className="text-lg md:text-xl text-slate-700 mb-2 font-medium leading-snug">
                   Вы далеко. Мама одна. Но забота возможна каждый день.
                 </p>
-                <p className="text-base text-[#5F626B] mb-5 leading-relaxed">
+                <p className="text-sm md:text-base text-[#5F626B] mb-4 leading-relaxed">
                   Внучок — умный помощник в&nbsp;Telegram. Каждый день общается с&nbsp;мамой голосом, напоминает лекарства, помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;алерты, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 990₽/мес</span> — дешевле букета.
                 </p>
 
@@ -255,7 +255,7 @@ export default function GiftLanding() {
                 </div>
               </div>
 
-              <div className="relative">
+              <div className="relative hidden md:block">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-slate-100 to-slate-50 rounded-full blur-3xl -z-10" />
 
                 <div className="relative mx-auto max-w-md">
@@ -301,7 +301,7 @@ export default function GiftLanding() {
               Для каждого возраста — своя забота
             </h2>
 
-            <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+            <div className="flex md:grid md:grid-cols-3 gap-5 max-w-5xl mx-auto overflow-x-auto snap-x snap-mandatory pb-4 -mx-6 px-6 md:mx-auto md:px-0 md:overflow-visible md:pb-0 scrollbar-hide">
               <AgeCard
                 age="55–60 лет"
                 image="/images/active-parent-50.png"
@@ -343,7 +343,7 @@ export default function GiftLanding() {
 
             <TopicBadges />
 
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="flex md:grid md:grid-cols-2 gap-6 max-w-4xl mx-auto overflow-x-auto snap-x snap-mandatory pb-4 -mx-6 px-6 md:mx-auto md:px-0 md:overflow-visible md:pb-0 scrollbar-hide">
               <DialogCard
                 title="Утро: забота о здоровье"
                 messages={[
@@ -370,7 +370,7 @@ export default function GiftLanding() {
             <h3 className="text-2xl md:text-3xl font-serif font-medium tracking-[-0.02em] text-slate-900 text-center mt-12 mb-6">
               Забота, которая работает без&nbsp;вас
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+            <div className="flex md:grid md:grid-cols-3 gap-4 max-w-4xl mx-auto overflow-x-auto snap-x snap-mandatory pb-4 -mx-6 px-6 md:mx-auto md:px-0 md:overflow-visible md:pb-0 scrollbar-hide">
               {[
                 { icon: <Send className="w-5 h-5 text-emerald-600" />, label: "Для мамы", title: "Пишет первым каждый день", desc: "Лекарства, давление, настроение — без напоминаний от вас" },
                 { icon: <Heart className="w-5 h-5 text-rose-400" />, label: "Для мамы", title: "Не будет одиноко", desc: "Поговорит, развлечёт, подберёт фильм, рецепт, стихи" },
@@ -379,7 +379,7 @@ export default function GiftLanding() {
                 { icon: <ShieldAlert className="w-5 h-5 text-rose-500" />, label: "Для вас", title: "Сигнал, если что-то не так", desc: "Опасность, мошенники, плохое самочувствие — вы узнаете сразу" },
                 { icon: <BookOpen className="w-5 h-5 text-violet-500" />, label: "Для вас", title: "Книга жизни мамы", desc: "Бережно собирает воспоминания — истории, которые не расскажет по телефону" },
               ].map((item, i) => (
-                <div key={i} className="rounded-2xl bg-white/70 backdrop-blur-sm border border-white/60 p-4 shadow-[0_4px_20px_-8px_rgba(49,35,45,.1)]" data-testid={`killer-feature-gift-${i}`}>
+                <div key={i} className="rounded-2xl bg-white/70 backdrop-blur-sm border border-white/60 p-4 shadow-[0_4px_20px_-8px_rgba(49,35,45,.1)] min-w-[200px] snap-center shrink-0 md:min-w-0 md:shrink" data-testid={`killer-feature-gift-${i}`}>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{item.label}</p>
                   <div className="mb-2">{item.icon}</div>
                   <p className="font-semibold text-sm text-slate-800 mb-1">{item.title}</p>
@@ -468,7 +468,7 @@ export default function GiftLanding() {
               </h2>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div className="flex md:grid md:grid-cols-3 gap-6 max-w-5xl mx-auto overflow-x-auto snap-x snap-mandatory pb-4 -mx-6 px-6 md:mx-auto md:px-0 md:overflow-visible md:pb-0 scrollbar-hide">
               <TestimonialCard
                 name="Ольга"
                 age={42}
@@ -544,7 +544,7 @@ export default function GiftLanding() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mt-8">
+            <div className="flex md:grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mt-8 overflow-x-auto snap-x snap-mandatory pb-4 -mx-6 px-6 md:mx-auto md:px-0 md:overflow-visible md:pb-0 scrollbar-hide">
               <GiftPricingCard
                 name="Попробовать"
                 price="0"
@@ -799,11 +799,11 @@ function TopicBadges() {
 
   return (
     <div className="max-w-4xl mx-auto mb-8">
-      <div className="flex flex-wrap justify-center gap-2" data-testid="topic-badges-gift">
+      <div className="flex overflow-x-auto snap-x snap-mandatory gap-2 pb-2 -mx-6 px-6 md:mx-0 md:px-0 md:flex-wrap md:justify-center md:overflow-visible md:pb-0 scrollbar-hide" data-testid="topic-badges-gift">
         {visible.map((t) => (
           <span
             key={t.label}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/80 border border-white/60 text-sm text-slate-700 shadow-sm"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/80 border border-white/60 text-sm text-slate-700 shadow-sm whitespace-nowrap snap-center shrink-0 md:shrink"
           >
             <span>{t.emoji}</span>
             {t.label}
@@ -840,7 +840,7 @@ function AgeCard({
   gradient: string;
 }) {
   return (
-    <div className={`rounded-[24px] bg-gradient-to-b ${gradient} backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.3)] transition-all duration-300`} data-testid={`age-card-${age}`}>
+    <div className={`rounded-[24px] bg-gradient-to-b ${gradient} backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.3)] transition-all duration-300 min-w-[260px] snap-center shrink-0 md:min-w-0 md:shrink`} data-testid={`age-card-${age}`}>
       <img src={image} alt={alt || title} className="w-full h-40 object-cover" loading="lazy" />
       <div className="p-4">
         <Badge variant="secondary" className="mb-2 bg-white/70 text-[#5F626B] border border-white/50 text-xs">
@@ -861,7 +861,7 @@ function DialogCard({
   messages: { from: "bot" | "user"; text: string }[];
 }) {
   return (
-    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden" data-testid={`dialog-card-${title}`}>
+    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden min-w-[85vw] snap-center shrink-0 md:min-w-0 md:shrink" data-testid={`dialog-card-${title}`}>
       <div className="bg-[#517DA2] px-5 py-3">
         <p className="text-white font-semibold text-sm">{title}</p>
       </div>
@@ -903,7 +903,7 @@ function TestimonialCard({
   const hasHalf = rating % 1 !== 0;
 
   return (
-    <div className="p-8 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300" data-testid={`testimonial-card-gift-${name}`}>
+    <div className="p-6 md:p-8 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300 min-w-[80vw] snap-center shrink-0 md:min-w-0 md:shrink" data-testid={`testimonial-card-gift-${name}`}>
       <div className="flex gap-1 mb-4">
         {Array.from({ length: fullStars }).map((_, i) => (
           <Star key={i} className="w-4 h-4 fill-[#143A2E] text-[#143A2E]" />
@@ -951,7 +951,7 @@ function GiftPricingCard({
 }) {
   return (
     <Card
-      className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-1 rounded-[28px] backdrop-blur-sm shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] ${popular ? "scale-105 bg-gradient-to-b from-white to-emerald-50/40 border-2 border-[#143A2E]/40 ring-1 ring-[#143A2E]/10" : "bg-white/78 border border-white/65"}`}
+      className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-1 rounded-[28px] backdrop-blur-sm shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] min-w-[75vw] snap-center shrink-0 md:min-w-0 md:shrink ${popular ? "md:scale-105 bg-gradient-to-b from-white to-emerald-50/40 border-2 border-[#143A2E]/40 ring-1 ring-[#143A2E]/10" : "bg-white/78 border border-white/65"}`}
       data-testid={`pricing-card-gift-${name}`}
     >
       {popular && (
