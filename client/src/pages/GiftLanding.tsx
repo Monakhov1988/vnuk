@@ -110,6 +110,19 @@ export default function GiftLanding() {
     });
     document.head.appendChild(productSchema);
 
+    const breadcrumbSchema = document.createElement("script");
+    breadcrumbSchema.type = "application/ld+json";
+    breadcrumbSchema.id = "gift-breadcrumb-schema";
+    breadcrumbSchema.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Главная", "item": "https://vnuchok.online/" },
+        { "@type": "ListItem", "position": 2, "name": "Подарок маме", "item": "https://vnuchok.online/gift" }
+      ]
+    });
+    document.head.appendChild(breadcrumbSchema);
+
     return () => {
       document.title = prevTitle;
       Object.entries(prevMeta).forEach(([key, val]) => {
@@ -123,6 +136,8 @@ export default function GiftLanding() {
       else if (canonical) canonical.href = prevCanonical;
       const prodSchema = document.getElementById("gift-product-schema");
       if (prodSchema) prodSchema.remove();
+      const bcSchema = document.getElementById("gift-breadcrumb-schema");
+      if (bcSchema) bcSchema.remove();
     };
   }, []);
 
@@ -230,7 +245,7 @@ export default function GiftLanding() {
 
                 <div className="flex items-center gap-2">
                   <div className="flex -space-x-1.5">
-                    {["/images/testimonial-olga.png", "/images/testimonial-dmitry.png", "/images/testimonial-anna.png"].map((src, i) => (
+                    {["/images/testimonial-olga.webp", "/images/testimonial-dmitry.webp", "/images/testimonial-anna.webp"].map((src, i) => (
                       <img key={i} src={src} alt="" className="w-6 h-6 rounded-full border-[1.5px] border-white object-cover" />
                     ))}
                   </div>
@@ -245,7 +260,7 @@ export default function GiftLanding() {
 
                 <div className="relative mx-auto max-w-md">
                   <img
-                    src="/images/gift-hero-mom.png"
+                    src="/images/gift-hero-mom.webp"
                     alt="Подарок пожилой маме — мама общается с помощником Внучок в Telegram"
                     className="rounded-[2rem] shadow-2xl shadow-slate-300/50 w-full object-cover"
                     data-testid="img-hero-mom-gift"
@@ -375,7 +390,7 @@ export default function GiftLanding() {
 
             <div className="relative max-w-4xl mx-auto mt-10 rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-300/40">
               <img
-                src="/images/gift-family-bond.png"
+                src="/images/gift-family-bond.webp"
                 alt="Дочь обнимает пожилую маму — связь поколений"
                 className="w-full h-44 md:h-56 object-cover"
                 loading="lazy"
@@ -459,7 +474,7 @@ export default function GiftLanding() {
                 age={42}
                 city="Москва"
                 parentType="Мама, 68 лет"
-                photo="/images/testimonial-olga.png"
+                photo="/images/testimonial-olga.webp"
                 quote="Подарила маме на день рождения вместо очередной сковородки. Через неделю мама сказала: «Лучший подарок за 10 лет». Теперь сама напоминает подругам про Внучка."
                 rating={5}
               />
@@ -468,7 +483,7 @@ export default function GiftLanding() {
                 age={38}
                 city="Казань"
                 parentType="Папа, 72 года"
-                photo="/images/testimonial-dmitry.png"
+                photo="/images/testimonial-dmitry.webp"
                 quote="Папа живёт один, я далеко. Переживал каждый день. Теперь вижу в кабинете: лекарства принял, давление в норме, даже рецепт борща нашёл. Спокойнее стало в разы."
                 rating={5}
               />
@@ -477,7 +492,7 @@ export default function GiftLanding() {
                 age={45}
                 city="Екатеринбург"
                 parentType="Мама, 64 года"
-                photo="/images/testimonial-anna.png"
+                photo="/images/testimonial-anna.webp"
                 quote="Мама не скучает — каждый день болтает с Внучком. Рецепты, фильмы, стихи. А я получаю вечерний отчёт и знаю, что всё хорошо. За 990₽ — бесценно."
                 rating={4.5}
               />
