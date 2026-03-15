@@ -15,8 +15,6 @@ import {
   Mail,
   Mic,
   Gift,
-  Flower2,
-  Tv,
   Clock,
   BellRing,
   ShieldAlert,
@@ -149,9 +147,6 @@ export default function GiftLanding() {
             </Link>
           </div>
           <div className="hidden md:flex gap-8 items-center text-sm font-medium text-slate-600/80 tracking-wide">
-            <a href="#comparison" className="hover:text-slate-900 transition-all duration-300" data-testid="link-nav-comparison-gift">
-              Почему Внучок
-            </a>
             <a href="#how" className="hover:text-slate-900 transition-all duration-300" data-testid="link-nav-how-gift">
               Как работает
             </a>
@@ -569,80 +564,6 @@ export default function GiftLanding() {
           </div>
         </section>
 
-        <section id="comparison" className="py-16 md:py-20 bg-gradient-to-b from-[#F4F1EE] to-[#F3F0F4]">
-          <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
-                Почему Внучок лучше обычного подарка
-              </h2>
-              <p className="text-[#5F626B] text-lg">
-                Сравните: что получит мама через неделю, месяц, год
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              <ComparisonCard
-                icon={<Flower2 className="w-8 h-8 text-rose-400" />}
-                title="Цветы и конфеты"
-                price="2 000–5 000₽"
-                duration="Завянут через 5 дней"
-                items={[
-                  { text: "Красиво, но на один раз", positive: false },
-                  { text: "Не помогут с лекарствами", positive: false },
-                  { text: "Не развеют одиночество", positive: false },
-                  { text: "Нет связи с вами", positive: false },
-                ]}
-                verdict="Приятно, но ненадолго"
-                muted
-              />
-              <ComparisonCard
-                icon={<Tv className="w-8 h-8 text-blue-400" />}
-                title="Техника / гаджеты"
-                price="5 000–30 000₽"
-                duration="Будет пылиться"
-                items={[
-                  { text: "Сложно разобраться", positive: false },
-                  { text: "Нужна помощь с настройкой", positive: false },
-                  { text: "Не решает проблему одиночества", positive: false },
-                  { text: "Дорого", positive: false },
-                ]}
-                verdict="Хорошая мысль, но не для 65+"
-                muted
-              />
-              <ComparisonCard
-                icon={<Heart className="w-8 h-8 text-[#143A2E]" fill="#143A2E" />}
-                title="Внучок"
-                price="990₽/мес"
-                duration="Работает каждый день"
-                items={[
-                  { text: "Ежедневное общение голосом", positive: true },
-                  { text: "Напоминание лекарств", positive: true },
-                  { text: "Помощь с ЖКХ и Госуслугами", positive: true },
-                  { text: "Вы в курсе — алерты и отчёты", positive: true },
-                ]}
-                verdict="Забота, которая не кончается"
-                highlighted
-              />
-            </div>
-
-            <div className="text-center mt-10">
-              <p className="text-[#5F626B] text-sm italic mb-6">
-                990₽/мес — это 33₽ в день. Дешевле чашки кофе, но мама получает заботу каждый день
-              </p>
-              <Button
-                asChild
-                size="lg"
-                className="rounded-xl text-base h-14 px-10 bg-[#143A2E] hover:bg-[#0F2F25] text-white shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)] transition-all duration-300"
-                data-testid="button-comparison-cta-gift"
-              >
-                <Link href="/auth">
-                  Подарить маме Внучка <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-
         <section id="pricing" className="py-16 md:py-20 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-4">
@@ -887,59 +808,6 @@ const giftFaqItems = [
     a: "Только вы в личном кабинете. Данные надёжно защищены и не используются для обучения моделей.",
   },
 ];
-
-function ComparisonCard({
-  icon,
-  title,
-  price,
-  duration,
-  items,
-  verdict,
-  highlighted,
-  muted,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  price: string;
-  duration: string;
-  items: { text: string; positive: boolean }[];
-  verdict: string;
-  highlighted?: boolean;
-  muted?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-[28px] backdrop-blur-sm border shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] p-6 transition-all duration-300 ${
-        highlighted
-          ? "bg-white border-[#143A2E]/30 scale-105 hover:-translate-y-1 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)]"
-          : "bg-white/60 border-white/65 opacity-80"
-      }`}
-      data-testid={`comparison-card-${title}`}
-    >
-      <div className="text-center mb-4">
-        <div className="mx-auto mb-3">{icon}</div>
-        <h3 className="text-lg font-serif font-medium text-slate-900">{title}</h3>
-        <p className="text-sm font-semibold text-[#143A2E] mt-1">{price}</p>
-        <p className={`text-xs mt-1 ${highlighted ? "text-emerald-600" : "text-slate-400"}`}>{duration}</p>
-      </div>
-      <ul className="space-y-2.5 mb-4">
-        {items.map((item, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm">
-            {item.positive ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-            ) : (
-              <span className="w-4 h-4 text-slate-300 shrink-0 mt-0.5 text-center">—</span>
-            )}
-            <span className={item.positive ? "text-slate-700" : "text-slate-400"}>{item.text}</span>
-          </li>
-        ))}
-      </ul>
-      <div className={`text-center text-xs font-medium pt-3 border-t ${highlighted ? "border-[#143A2E]/10 text-[#143A2E]" : "border-slate-200 text-slate-400"}`}>
-        {verdict}
-      </div>
-    </div>
-  );
-}
 
 const allTopics = [
   { emoji: "💊", label: "Лекарства и здоровье" },
