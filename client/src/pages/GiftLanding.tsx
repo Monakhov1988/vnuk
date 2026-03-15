@@ -275,8 +275,10 @@ export default function GiftLanding() {
                       <p className="text-xs text-slate-800">Выпила! Спасибо ☺️</p>
                     </div>
                   </div>
+                </div>
 
-                  <div className="absolute -top-3 -right-3 bg-white/90 backdrop-blur-md rounded-2xl p-3 flex items-center gap-3 border border-white/40 shadow-xl shadow-slate-200/50 animate-in slide-in-from-top-4 duration-700 delay-300 max-w-[200px]">
+                <div className="flex justify-end mt-4 mr-2 animate-in slide-in-from-bottom-4 duration-700 delay-300">
+                  <div className="bg-white/90 backdrop-blur-md rounded-2xl p-3 flex items-center gap-3 border border-white/40 shadow-xl shadow-slate-200/50 max-w-[200px]">
                     <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                       <Gift className="w-5 h-5 text-green-600" />
                     </div>
