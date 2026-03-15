@@ -244,26 +244,7 @@ export default function GiftLanding() {
           </div>
         </section>
 
-        <section className="py-8 bg-gradient-to-b from-[#F3F1EE] to-[#F8F5F2]" data-testid="killer-features-strip-gift">
-          <div className="container mx-auto px-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-              {[
-                { icon: <Send className="w-5 h-5 text-emerald-600" />, title: "Пишет первым каждый день", desc: "Лекарства, давление, настроение — без напоминаний от вас" },
-                { icon: <Heart className="w-5 h-5 text-rose-400" />, title: "Не будет одиноко", desc: "Поговорит, развлечёт, подберёт фильм, рецепт, стихи по настроению" },
-                { icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />, title: "Кабинет для ребёнка", desc: "Статус, события, давление, лекарства — всё в одной ленте" },
-                { icon: <Brain className="w-5 h-5 text-violet-500" />, title: "Память и «Книга жизни»", desc: "Помнит важное, ведёт воспоминания и адаптируется" },
-              ].map((item, i) => (
-                <div key={i} className="rounded-2xl bg-white/70 backdrop-blur-sm border border-white/60 p-4 shadow-[0_4px_20px_-8px_rgba(49,35,45,.1)]" data-testid={`killer-feature-gift-${i}`}>
-                  <div className="mb-2">{item.icon}</div>
-                  <p className="font-semibold text-sm text-slate-800 mb-1">{item.title}</p>
-                  <p className="text-xs text-[#5F626B] leading-snug">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-12 md:py-16 bg-gradient-to-b from-[#F8F5F2] to-[#F4F1EE]">
+        <section className="py-12 md:py-16 bg-gradient-to-b from-[#F3F1EE] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-10">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
@@ -336,6 +317,21 @@ export default function GiftLanding() {
                   { from: "bot", text: "Отлично! Вводите: холодная — 245, горячая — 118. Нажмите «Отправить». Готово! В следующем месяце напомню ✓" },
                 ]}
               />
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-10">
+              {[
+                { icon: <Send className="w-5 h-5 text-emerald-600" />, title: "Пишет первым каждый день", desc: "Лекарства, давление, настроение — без напоминаний от вас" },
+                { icon: <Heart className="w-5 h-5 text-rose-400" />, title: "Не будет одиноко", desc: "Поговорит, развлечёт, подберёт фильм, рецепт, стихи по настроению" },
+                { icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />, title: "Кабинет для ребёнка", desc: "Статус, события, давление, лекарства — всё в одной ленте" },
+                { icon: <Brain className="w-5 h-5 text-violet-500" />, title: "Память и «Книга жизни»", desc: "Помнит важное, ведёт воспоминания и адаптируется" },
+              ].map((item, i) => (
+                <div key={i} className="rounded-2xl bg-white/70 backdrop-blur-sm border border-white/60 p-4 shadow-[0_4px_20px_-8px_rgba(49,35,45,.1)]" data-testid={`killer-feature-gift-${i}`}>
+                  <div className="mb-2">{item.icon}</div>
+                  <p className="font-semibold text-sm text-slate-800 mb-1">{item.title}</p>
+                  <p className="text-xs text-[#5F626B] leading-snug">{item.desc}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
