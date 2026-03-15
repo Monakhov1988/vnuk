@@ -189,7 +189,7 @@ export default function GiftLanding() {
                   data-testid="badge-hero-gift"
                 >
                   <Gift className="w-3.5 h-3.5" />
-                  Подарок, который работает каждый день
+                  Забота о родителях с помощью ИИ
                 </Badge>
                 <h1 className="text-3xl md:text-6xl font-serif font-medium leading-[1.08] tracking-[-0.02em] mb-3 text-slate-900">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#143A2E] to-[#2D6A4F]">
