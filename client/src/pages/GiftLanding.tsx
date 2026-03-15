@@ -199,48 +199,25 @@ export default function GiftLanding() {
               <div className="relative">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-slate-100 to-slate-50 rounded-full blur-3xl -z-10" />
 
-                <div className="relative mx-auto" style={{ maxWidth: "320px" }}>
-                  <div className="bg-slate-800 rounded-[2.5rem] p-3 shadow-2xl shadow-slate-300/50 border-4 border-slate-700">
-                    <div className="bg-slate-800 rounded-full w-24 h-5 mx-auto mb-2 flex items-center justify-center">
-                      <div className="w-12 h-3 bg-slate-900 rounded-full" />
+                <div className="relative mx-auto max-w-md">
+                  <img
+                    src="/images/gift-hero-mom.png"
+                    alt="Пожилая мама с телефоном — общается с ботом Внучок"
+                    className="rounded-[2rem] shadow-2xl shadow-slate-300/50 w-full object-cover"
+                    data-testid="img-hero-mom-gift"
+                  />
+
+                  <div className="absolute -bottom-4 -left-4 bg-white/90 backdrop-blur-md rounded-2xl p-3 border border-white/40 shadow-xl shadow-slate-200/50 animate-in slide-in-from-bottom-4 duration-700 max-w-[240px]">
+                    <div className="bg-[#517DA2] rounded-xl px-3 py-2 mb-2">
+                      <p className="text-[10px] text-white/70 mb-0.5">Внучок</p>
+                      <p className="text-xs text-white">Доброе утро! Не забудьте выпить эналаприл 💊</p>
                     </div>
-
-                    <div className="bg-slate-50 rounded-[1.5rem] overflow-hidden">
-                      <div className="bg-[#517DA2] px-4 py-3 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-violet-400 flex items-center justify-center text-white font-bold text-xs">В</div>
-                        <div>
-                          <p className="font-semibold text-xs text-white">Внучок</p>
-                          <p className="text-[10px] text-white/60">онлайн</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 p-3 min-h-[200px]">
-                        {[
-                          { side: "left", text: "Доброе утро, Мария Игоревна! Не забудьте выпить эналаприл 💊", delay: "0ms" },
-                          { side: "right", text: "Выпила! Спасибо, Внучок ☺️", delay: "600ms" },
-                          { side: "left", text: "Молодец! А давление мерили сегодня?", delay: "1200ms" },
-                          { side: "right", text: "🎤 «Сто двадцать на восемьдесят»", delay: "1800ms" },
-                          { side: "left", text: "120/80 — отлично! Записал ✓ Дочке отправлю отчёт вечером.", delay: "2400ms" },
-                        ].map((msg, i) => (
-                          <div key={i} className={`flex ${msg.side === "right" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-500`} style={{ animationDelay: msg.delay, animationFillMode: "backwards" }}>
-                            <div className={`rounded-2xl px-3 py-2 text-xs text-slate-800 max-w-[85%] ${msg.side === "left" ? "bg-white rounded-bl-md shadow-sm" : "bg-green-200 rounded-br-md"}`}>
-                              {msg.text}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="px-3 pb-3">
-                        <div className="flex gap-1.5 justify-center">
-                          {["💊", "🏠", "🎭", "📋"].map((emoji, i) => (
-                            <div key={i} className="bg-slate-200 rounded-lg px-3 py-1.5 text-sm">{emoji}</div>
-                          ))}
-                        </div>
-                      </div>
+                    <div className="bg-green-200 rounded-xl px-3 py-2 ml-auto max-w-[80%]">
+                      <p className="text-xs text-slate-800">Выпила! Спасибо ☺️</p>
                     </div>
                   </div>
 
-                  <div className="absolute -bottom-4 -right-4 bg-white/90 backdrop-blur-md rounded-2xl p-3 flex items-center gap-3 border border-white/40 shadow-xl shadow-slate-200/50 animate-in slide-in-from-bottom-4 duration-700 delay-300 max-w-[220px]">
+                  <div className="absolute -top-3 -right-3 bg-white/90 backdrop-blur-md rounded-2xl p-3 flex items-center gap-3 border border-white/40 shadow-xl shadow-slate-200/50 animate-in slide-in-from-top-4 duration-700 delay-300 max-w-[200px]">
                     <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                       <Gift className="w-5 h-5 text-green-600" />
                     </div>
@@ -249,7 +226,7 @@ export default function GiftLanding() {
                         Подарок активирован ✓
                       </p>
                       <p className="text-[10px] text-slate-500">
-                        Мама уже общается с Внучком
+                        Мама уже общается
                       </p>
                     </div>
                   </div>
@@ -429,6 +406,25 @@ export default function GiftLanding() {
           </div>
         </section>
 
+        <section className="py-0 overflow-hidden">
+          <div className="container mx-auto px-6">
+            <div className="relative max-w-5xl mx-auto rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-300/40">
+              <img
+                src="/images/gift-family-bond.png"
+                alt="Дочь обнимает пожилую маму — связь поколений"
+                className="w-full h-48 md:h-72 object-cover"
+                data-testid="img-family-bond-gift"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#143A2E]/70 via-transparent to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-white">
+                <p className="text-xl md:text-2xl font-serif font-medium max-w-xl">
+                  Вы далеко, но забота — рядом. Каждый день.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section id="how" className="py-16 md:py-20 bg-gradient-to-b from-[#F3F0F4] to-[#EEF2F6]">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-12">
@@ -497,6 +493,7 @@ export default function GiftLanding() {
                 age={42}
                 city="Москва"
                 parentType="Мама, 68 лет"
+                photo="/images/testimonial-olga.png"
                 quote="Подарила маме на день рождения вместо очередной сковородки. Через неделю мама сказала: «Лучший подарок за 10 лет». Теперь сама напоминает подругам про Внучка."
                 rating={5}
               />
@@ -505,6 +502,7 @@ export default function GiftLanding() {
                 age={38}
                 city="Казань"
                 parentType="Папа, 72 года"
+                photo="/images/testimonial-dmitry.png"
                 quote="Папа живёт один, я далеко. Переживал каждый день. Теперь вижу в кабинете: лекарства принял, давление в норме, даже рецепт борща нашёл. Спокойнее стало в разы."
                 rating={5}
               />
@@ -513,6 +511,7 @@ export default function GiftLanding() {
                 age={45}
                 city="Екатеринбург"
                 parentType="Мама, 64 года"
+                photo="/images/testimonial-anna.png"
                 quote="Мама не скучает — каждый день болтает с Внучком. Рецепты, фильмы, стихи. А я получаю вечерний отчёт и знаю, что всё хорошо. За 990₽ — бесценно."
                 rating={4.5}
               />
@@ -929,6 +928,7 @@ function TestimonialCard({
   age,
   city,
   parentType,
+  photo,
   quote,
   rating,
 }: {
@@ -936,6 +936,7 @@ function TestimonialCard({
   age: number;
   city: string;
   parentType: string;
+  photo?: string;
   quote: string;
   rating: number;
 }) {
@@ -955,9 +956,13 @@ function TestimonialCard({
         <p className="text-slate-700 text-sm leading-relaxed pl-6">{quote}</p>
       </div>
       <div className="flex items-center gap-3 pt-4 border-t border-white/40">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E8E2E6] to-[#D5CED4] flex items-center justify-center text-slate-700 font-bold text-sm">
-          {name.charAt(0)}
-        </div>
+        {photo ? (
+          <img src={photo} alt={name} className="w-12 h-12 rounded-full object-cover shadow-sm" />
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#E8E2E6] to-[#D5CED4] flex items-center justify-center text-slate-700 font-bold text-sm">
+            {name.charAt(0)}
+          </div>
+        )}
         <div>
           <p className="font-semibold text-sm text-slate-800">{name}</p>
           <p className="text-xs text-slate-500">{age} лет, {city}</p>
