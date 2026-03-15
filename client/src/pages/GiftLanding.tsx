@@ -327,7 +327,7 @@ export default function GiftLanding() {
                 { icon: <Send className="w-5 h-5 text-emerald-600" />, title: "Пишет первым каждый день", desc: "Лекарства, давление, настроение — без напоминаний от вас" },
                 { icon: <Heart className="w-5 h-5 text-rose-400" />, title: "Не будет одиноко", desc: "Поговорит, развлечёт, подберёт фильм, рецепт, стихи по настроению" },
                 { icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />, title: "Вы всегда в курсе", desc: "Статус, события, давление, лекарства — всё в одной ленте" },
-                { icon: <Brain className="w-5 h-5 text-violet-500" />, title: "Знает маму лично", desc: "Помнит важное, ведёт воспоминания и адаптируется" },
+                { icon: <Brain className="w-5 h-5 text-violet-500" />, title: "Помнит и адаптируется", desc: "Запоминает важное, ведёт воспоминания и подстраивается под маму" },
               ].map((item, i) => (
                 <div key={i} className="rounded-2xl bg-white/70 backdrop-blur-sm border border-white/60 p-4 shadow-[0_4px_20px_-8px_rgba(49,35,45,.1)]" data-testid={`killer-feature-gift-${i}`}>
                   <div className="mb-2">{item.icon}</div>
