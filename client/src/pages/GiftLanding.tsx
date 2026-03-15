@@ -882,7 +882,7 @@ function DialogCard({
       <div className="p-4 space-y-2.5 bg-gradient-to-b from-slate-50/50 to-white">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
+            <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed break-words ${
               msg.from === "bot"
                 ? "bg-white text-slate-800 rounded-bl-md shadow-sm border border-slate-100"
                 : "bg-green-200 text-slate-800 rounded-br-md"
