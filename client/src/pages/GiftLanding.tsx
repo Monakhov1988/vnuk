@@ -130,7 +130,7 @@ export default function GiftLanding() {
       </nav>
 
       <main>
-        <section className="pt-28 pb-16 md:pt-36 md:pb-20 px-6 overflow-hidden bg-gradient-to-br from-[#F3E7ED] via-[#F7F2EC] to-[#F3F1EE]">
+        <section className="pt-24 pb-10 md:pt-32 md:pb-14 px-6 overflow-hidden bg-gradient-to-br from-[#F3E7ED] via-[#F7F2EC] to-[#F3F1EE]">
           <div className="container mx-auto">
             <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
               <div className="max-w-2xl relative z-10">
@@ -158,7 +158,7 @@ export default function GiftLanding() {
                   Внучок — бот-помощник в&nbsp;Telegram. Каждый день общается с&nbsp;мамой голосом, напоминает лекарства, помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;алерты, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 990₽/мес</span> — дешевле букета, но&nbsp;работает каждый день.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex flex-col sm:flex-row gap-4 mb-4">
                   <Button
                     asChild
                     size="lg"
@@ -180,18 +180,22 @@ export default function GiftLanding() {
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4 text-sm text-[#5F626B]" data-testid="badge-risk-reversal-gift">
-                  <span className="flex items-center gap-1.5">
-                    <Zap className="w-3.5 h-3.5 text-emerald-500" />
+                <div className="flex flex-wrap items-center gap-2" data-testid="badge-risk-reversal-gift">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-white/50 text-xs text-[#5F626B]">
+                    <Zap className="w-3 h-3 text-emerald-500" />
                     7 дней бесплатно
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                    Не нужно ничего устанавливать
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-white/50 text-xs text-[#5F626B]">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                    Не нужно устанавливать
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <Mic className="w-3.5 h-3.5 text-emerald-500" />
-                    Понимает голосовые
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-white/50 text-xs text-[#5F626B]">
+                    <Mic className="w-3 h-3 text-emerald-500" />
+                    Голосовые
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-white/50 text-xs text-[#5F626B]">
+                    <Brain className="w-3 h-3 text-violet-500" />
+                    Запоминает
                   </span>
                 </div>
               </div>
