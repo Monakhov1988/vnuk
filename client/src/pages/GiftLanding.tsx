@@ -200,6 +200,13 @@ export default function GiftLanding() {
                     пожилой маме
                   </span>
                 </h1>
+                <div className="md:hidden my-4 mx-auto max-w-[280px]">
+                  <img
+                    src="/images/gift-hero-mom.webp"
+                    alt="Подарок пожилой маме — мама общается с помощником Внучок в Telegram"
+                    className="rounded-[1.5rem] shadow-xl shadow-slate-300/40 w-full object-cover"
+                  />
+                </div>
                 <p className="text-lg md:text-xl text-slate-700 mb-2 font-medium leading-snug">
                   Вы далеко. Мама одна. Но забота возможна каждый день.
                 </p>
@@ -255,7 +262,7 @@ export default function GiftLanding() {
                 </div>
               </div>
 
-              <div className="relative">
+              <div className="relative hidden md:block">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-slate-100 to-slate-50 rounded-full blur-3xl -z-10" />
 
                 <div className="relative mx-auto max-w-md">
