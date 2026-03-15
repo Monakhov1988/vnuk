@@ -239,9 +239,6 @@ export default function GiftLanding() {
                 <div className="flex flex-wrap gap-1.5 mb-3" data-testid="badge-risk-reversal-gift">
                   {[
                     { icon: <Zap className="w-3 h-3 text-emerald-500" />, text: "7 дней бесплатно" },
-                    { icon: <Mic className="w-3 h-3 text-emerald-500" />, text: "Голосовые" },
-                    { icon: <CheckCircle2 className="w-3 h-3 text-emerald-500" />, text: "Без установки" },
-                    { icon: <Brain className="w-3 h-3 text-violet-500" />, text: "Запоминает" },
                     { icon: <MessageCircle className="w-3 h-3 text-blue-500" />, text: "Сам обучит" },
                   ].map((b) => (
                     <span key={b.text} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/80 border border-white/60 text-[11px] font-medium text-slate-600 shadow-sm">
