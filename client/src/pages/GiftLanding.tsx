@@ -211,7 +211,7 @@ export default function GiftLanding() {
                   Вы далеко. Мама одна. Но забота возможна каждый день.
                 </p>
                 <p className="text-sm md:text-base text-[#5F626B] mb-4 leading-relaxed">
-                  Внучок — помощник в&nbsp;Telegram, который каждый день общается с&nbsp;мамой голосом, напоминает лекарства и&nbsp;помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;сигнал, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 990₽/мес.</span>
+                  Внучок — ИИ-помощник в&nbsp;Telegram, который каждый день общается с&nbsp;мамой голосом, напоминает лекарства и&nbsp;помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;сигнал, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 990₽/мес.</span>
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3 mb-3">
