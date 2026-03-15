@@ -189,7 +189,7 @@ export default function GiftLanding() {
                   data-testid="badge-hero-gift"
                 >
                   <Gift className="w-3.5 h-3.5" />
-                  Забота о родителях с помощью ИИ
+                  Подарок, который заботится каждый день
                 </Badge>
                 <h1 className="text-3xl md:text-6xl font-serif font-medium leading-[1.08] tracking-[-0.02em] mb-3 text-slate-900">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#143A2E] to-[#2D6A4F]">
@@ -211,7 +211,7 @@ export default function GiftLanding() {
                   Вы далеко. Мама одна. Но забота возможна каждый день.
                 </p>
                 <p className="text-sm md:text-base text-[#5F626B] mb-4 leading-relaxed">
-                  Внучок — умный помощник в&nbsp;Telegram. Каждый день общается с&nbsp;мамой голосом, напоминает лекарства, помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;алерты, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 990₽/мес</span> — дешевле букета.
+                  Внучок — помощник в&nbsp;Telegram, который каждый день общается с&nbsp;мамой голосом, напоминает лекарства и&nbsp;помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;сигнал, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 990₽/мес.</span>
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3 mb-3">
@@ -348,7 +348,7 @@ export default function GiftLanding() {
                   Подарите маме заботу,<br />а&nbsp;не&nbsp;очередную вещь
                 </h2>
                 <p className="text-emerald-100/70 text-lg mb-8">
-                  7 дней бесплатно. Маме нужен только Telegram — остальное сделает Внучок.
+                  7 дней бесплатно. Без установки, без настроек — просто пришлите маме ссылку.
                 </p>
                 <div className="flex justify-center">
                   <Button
@@ -363,7 +363,7 @@ export default function GiftLanding() {
                   </Button>
                 </div>
                 <p className="mt-6 text-sm text-emerald-200/50">
-                  Лучший подарок маме — не вещь, а ваша забота каждый день
+                  Маме нужен только Telegram — остальное сделает Внучок
                 </p>
               </div>
             </div>
@@ -428,7 +428,7 @@ export default function GiftLanding() {
               <div className="absolute inset-0 bg-gradient-to-t from-[#143A2E]/70 via-transparent to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6 text-white">
                 <p className="text-lg md:text-xl font-serif font-medium max-w-xl">
-                  Вы далеко, но забота — рядом. Каждый день.
+                  Каждый день с мамой — даже на расстоянии
                 </p>
               </div>
             </div>
@@ -565,7 +565,7 @@ export default function GiftLanding() {
                 city="Екатеринбург"
                 parentType="Мама, 64 года"
                 photo="/images/testimonial-anna.webp"
-                quote="Мама не скучает — каждый день болтает с Внучком. Рецепты, фильмы, стихи. А я получаю вечерний отчёт и знаю, что всё хорошо. За 990₽ — бесценно."
+                quote="Мама не скучает — каждый день болтает с Внучком. Рецепты, фильмы, стихи. А я получаю вечерний отчёт и знаю, что всё хорошо. Дешевле букета, но работает каждый день."
                 rating={4.5}
               />
             </div>
@@ -609,10 +609,10 @@ export default function GiftLanding() {
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-4">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
-                Подарок дешевле букета — но&nbsp;каждый день
+                Выберите подарок для мамы
               </h2>
               <p className="text-[#5F626B] text-lg">
-                7 дней бесплатно, затем от 990₽/мес — это 33₽ в день заботы
+                Попробуйте бесплатно 7 дней. Отмена в любой момент
               </p>
             </div>
 
@@ -780,7 +780,7 @@ const giftFaqItems = [
   },
   {
     q: "Мама живёт далеко — это сработает?",
-    a: "Именно для этого Внучок и создан. Каждый день на связи с мамой, а вы получаете вечерний отчёт и мгновенные алерты если что-то не так. Забота на расстоянии — это реально.",
+    a: "Именно для этого Внучок и создан. Каждый день на связи с мамой, а вы получаете вечерний отчёт и сигнал, если что-то не так. Забота на расстоянии — это реально.",
   },
   {
     q: "Сколько стоит? Это дорого?",
