@@ -171,13 +171,13 @@ export default function GiftLanding() {
               <div className="max-w-2xl relative z-10">
                 <Badge
                   variant="secondary"
-                  className="mb-5 bg-white/60 text-[#5F626B] hover:bg-white/80 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/50 flex items-center gap-2 w-fit"
+                  className="mb-4 bg-white/60 text-[#5F626B] hover:bg-white/80 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/50 flex items-center gap-2 w-fit"
                   data-testid="badge-hero-gift"
                 >
                   <Gift className="w-3.5 h-3.5" />
                   Подарок, который работает каждый день
                 </Badge>
-                <h1 className="text-4xl md:text-6xl font-serif font-medium leading-[1.08] tracking-[-0.02em] mb-6 text-slate-900">
+                <h1 className="text-4xl md:text-6xl font-serif font-medium leading-[1.08] tracking-[-0.02em] mb-4 text-slate-900">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#143A2E] to-[#2D6A4F]">
                     Необычный подарок
                   </span>
@@ -186,18 +186,18 @@ export default function GiftLanding() {
                     пожилой маме
                   </span>
                 </h1>
-                <p className="text-lg md:text-xl text-slate-700 mb-3 font-medium leading-snug">
+                <p className="text-lg md:text-xl text-slate-700 mb-2 font-medium leading-snug">
                   Вы далеко. Мама одна. Но забота возможна каждый день.
                 </p>
-                <p className="text-base text-[#5F626B] mb-8 leading-relaxed">
-                  Внучок — умный помощник в&nbsp;Telegram. Каждый день общается с&nbsp;мамой голосом, напоминает лекарства, помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;алерты, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 990₽/мес</span> — дешевле букета, но&nbsp;работает каждый день.
+                <p className="text-base text-[#5F626B] mb-5 leading-relaxed">
+                  Внучок — умный помощник в&nbsp;Telegram. Каждый день общается с&nbsp;мамой голосом, напоминает лекарства, помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;алерты, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 990₽/мес</span> — дешевле букета.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row gap-3 mb-3">
                   <Button
                     asChild
                     size="lg"
-                    className="rounded-xl text-base h-14 px-8 bg-[#143A2E] hover:bg-[#0F2F25] text-white shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)] transition-all duration-300"
+                    className="rounded-xl text-base h-12 px-7 bg-[#143A2E] hover:bg-[#0F2F25] text-white shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)] transition-all duration-300"
                     data-testid="button-hero-gift"
                   >
                     <Link href="/auth">
@@ -208,44 +208,48 @@ export default function GiftLanding() {
                     asChild
                     size="lg"
                     variant="outline"
-                    className="rounded-xl text-base h-14 px-8 bg-white/70 border-white/60 backdrop-blur hover:bg-white/90 text-slate-700 transition-all duration-300"
+                    className="rounded-xl text-base h-12 px-7 bg-white/70 border-white/60 backdrop-blur hover:bg-white/90 text-slate-700 transition-all duration-300"
                     data-testid="button-hero-demo-gift"
                   >
                     <a href="#dialog">Что умеет?</a>
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2" data-testid="badge-risk-reversal-gift">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-white/50 text-xs text-[#5F626B]">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#5F626B]" data-testid="badge-risk-reversal-gift">
+                  <span className="inline-flex items-center gap-1">
                     <Zap className="w-3 h-3 text-emerald-500" />
                     7 дней бесплатно
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-white/50 text-xs text-[#5F626B]">
+                  <span className="text-slate-300">·</span>
+                  <span className="inline-flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    Не нужно устанавливать
+                    Без установки
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-white/50 text-xs text-[#5F626B]">
+                  <span className="text-slate-300">·</span>
+                  <span className="inline-flex items-center gap-1">
                     <Mic className="w-3 h-3 text-emerald-500" />
                     Голосовые
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-white/50 text-xs text-[#5F626B]">
+                  <span className="text-slate-300">·</span>
+                  <span className="inline-flex items-center gap-1">
                     <Brain className="w-3 h-3 text-violet-500" />
                     Запоминает
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-white/50 text-xs text-[#5F626B]">
+                  <span className="text-slate-300">·</span>
+                  <span className="inline-flex items-center gap-1">
                     <MessageCircle className="w-3 h-3 text-blue-500" />
-                    Сам познакомится и обучит
+                    Сам обучит маму
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3 mt-5 pt-4 border-t border-slate-200/40">
+                <div className="flex items-center gap-2.5 mt-4">
                   <div className="flex -space-x-2">
                     {["/images/testimonial-olga.png", "/images/testimonial-dmitry.png", "/images/testimonial-anna.png"].map((src, i) => (
-                      <img key={i} src={src} alt="" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                      <img key={i} src={src} alt="" className="w-7 h-7 rounded-full border-2 border-white object-cover" />
                     ))}
                   </div>
-                  <p className="text-sm text-slate-600">
-                    <span className="font-semibold text-slate-800">1 200+ семей</span> уже подключили Внучка
+                  <p className="text-xs text-slate-600">
+                    <span className="font-semibold text-slate-800">1 200+ семей</span> уже подключили
                   </p>
                 </div>
               </div>
