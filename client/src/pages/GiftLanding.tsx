@@ -352,7 +352,7 @@ export default function GiftLanding() {
 
             <TopicBadges />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            <div className="flex md:grid md:grid-cols-2 gap-6 max-w-4xl mx-auto overflow-x-auto snap-x snap-mandatory -mx-6 px-6 md:mx-auto md:px-0 md:overflow-visible scrollbar-hide">
               <DialogCard
                 title="Утро: забота о здоровье"
                 messages={[
@@ -893,7 +893,7 @@ function DialogCard({
   messages: { from: "bot" | "user"; text: string }[];
 }) {
   return (
-    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden" data-testid={`dialog-card-${title}`}>
+    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden min-w-[85vw] snap-center shrink-0 md:min-w-0 md:shrink" data-testid={`dialog-card-${title}`}>
       <div className="bg-[#517DA2] px-5 py-3">
         <p className="text-white font-semibold text-sm">{title}</p>
       </div>
