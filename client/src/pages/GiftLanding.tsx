@@ -875,7 +875,7 @@ function DialogCard({
   messages: { from: "bot" | "user"; text: string }[];
 }) {
   return (
-    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] w-[85vw] max-w-[85vw] md:max-w-none md:w-auto snap-center shrink-0 md:shrink overflow-hidden flex flex-col" data-testid={`dialog-card-${title}`}>
+    <div className="rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] w-[72vw] max-w-[72vw] md:max-w-none md:w-auto snap-center shrink-0 md:shrink overflow-hidden flex flex-col" data-testid={`dialog-card-${title}`}>
       <div className="bg-[#517DA2] px-4 py-3">
         <p className="text-white font-semibold text-sm">{title}</p>
       </div>
@@ -917,7 +917,7 @@ function TestimonialCard({
   const hasHalf = rating % 1 !== 0;
 
   return (
-    <div className="p-5 md:p-8 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300 w-[85vw] max-w-[85vw] md:max-w-none md:w-auto snap-center shrink-0 md:shrink" data-testid={`testimonial-card-gift-${name}`}>
+    <div className="p-5 md:p-8 rounded-[28px] bg-white/78 backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.35)] hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.4)] transition-all duration-300 w-[72vw] max-w-[72vw] md:max-w-none md:w-auto snap-center shrink-0 md:shrink" data-testid={`testimonial-card-gift-${name}`}>
       <div className="flex gap-1 mb-4">
         {Array.from({ length: fullStars }).map((_, i) => (
           <Star key={i} className="w-4 h-4 fill-[#143A2E] text-[#143A2E]" />
