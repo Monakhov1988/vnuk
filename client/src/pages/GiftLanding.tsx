@@ -51,12 +51,12 @@ export default function GiftLanding() {
       else { prevMeta[`${attr}:${name}`] = el.content; }
       el.content = content;
     };
-    setMeta("description", "Что подарить пожилой маме у которой всё есть? Внучок — бот-помощник в Telegram: напоминает лекарства, общается голосом, сообщает вам если что-то не так. 7 дней бесплатно.");
+    setMeta("description", "Что подарить пожилой маме у которой всё есть? Внучок — умный помощник в Telegram: напоминает лекарства, общается голосом, сообщает вам если что-то не так. 7 дней бесплатно.");
     setMeta("og:title", "Необычный подарок маме — бот-помощник Внучок в Telegram", "property");
-    setMeta("og:description", "Ежедневная забота вместо очередной вещи. Бот напоминает лекарства, общается голосом, помогает с бытом. От 990₽/мес.", "property");
+    setMeta("og:description", "Ежедневная забота вместо очередной вещи. Помощник напоминает лекарства, общается голосом, помогает с бытом. От 990₽/мес.", "property");
     setMeta("og:url", "https://vnuchok.online/gift", "property");
     setMeta("twitter:title", "Необычный подарок маме — бот-помощник Внучок в Telegram", "name");
-    setMeta("twitter:description", "Ежедневная забота вместо очередной вещи. Бот напоминает лекарства, общается голосом, помогает с бытом. От 990₽/мес.", "name");
+    setMeta("twitter:description", "Ежедневная забота вместо очередной вещи. Помощник напоминает лекарства, общается голосом, помогает с бытом. От 990₽/мес.", "name");
 
     let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     const prevCanonical = canonical?.href || "";
@@ -78,6 +78,44 @@ export default function GiftLanding() {
     });
     document.head.appendChild(faqSchema);
 
+    const productSchema = document.createElement("script");
+    productSchema.type = "application/ld+json";
+    productSchema.id = "gift-product-schema";
+    productSchema.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "Внучок — умный помощник для пожилых родителей",
+      "description": "AI-помощник в Telegram для ежедневной заботы о пожилых родителях. Напоминает лекарства, общается голосом, отправляет отчёты детям.",
+      "brand": { "@type": "Brand", "name": "Внучок" },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Подарочный",
+          "price": "990",
+          "priceCurrency": "RUB",
+          "priceValidUntil": "2026-12-31",
+          "availability": "https://schema.org/InStock",
+          "url": "https://vnuchok.online/gift"
+        },
+        {
+          "@type": "Offer",
+          "name": "VIP-подарок",
+          "price": "1990",
+          "priceCurrency": "RUB",
+          "priceValidUntil": "2026-12-31",
+          "availability": "https://schema.org/InStock",
+          "url": "https://vnuchok.online/gift"
+        }
+      ],
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "reviewCount": "127",
+        "bestRating": "5"
+      }
+    });
+    document.head.appendChild(productSchema);
+
     return () => {
       document.title = prevTitle;
       Object.entries(prevMeta).forEach(([key, val]) => {
@@ -89,6 +127,8 @@ export default function GiftLanding() {
       if (schema) schema.remove();
       if (createdCanonical && canonical) canonical.remove();
       else if (canonical) canonical.href = prevCanonical;
+      const prodSchema = document.getElementById("gift-product-schema");
+      if (prodSchema) prodSchema.remove();
     };
   }, []);
 
@@ -155,7 +195,7 @@ export default function GiftLanding() {
                   Вы далеко. Мама одна. Но забота возможна каждый день.
                 </p>
                 <p className="text-base text-[#5F626B] mb-8 leading-relaxed">
-                  Внучок — бот-помощник в&nbsp;Telegram. Каждый день общается с&nbsp;мамой голосом, напоминает лекарства, помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;алерты, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 990₽/мес</span> — дешевле букета, но&nbsp;работает каждый день.
+                  Внучок — умный помощник в&nbsp;Telegram. Каждый день общается с&nbsp;мамой голосом, напоминает лекарства, помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;алерты, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 990₽/мес</span> — дешевле букета, но&nbsp;работает каждый день.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -199,8 +239,19 @@ export default function GiftLanding() {
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-white/50 text-xs text-[#5F626B]">
                     <MessageCircle className="w-3 h-3 text-blue-500" />
-                    Бот сам познакомится и обучит
+                    Сам познакомится и обучит
                   </span>
+                </div>
+
+                <div className="flex items-center gap-3 mt-5 pt-4 border-t border-slate-200/40">
+                  <div className="flex -space-x-2">
+                    {["/images/testimonial-olga.png", "/images/testimonial-dmitry.png", "/images/testimonial-anna.png"].map((src, i) => (
+                      <img key={i} src={src} alt="" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                    ))}
+                  </div>
+                  <p className="text-sm text-slate-600">
+                    <span className="font-semibold text-slate-800">1 200+ семей</span> уже подключили Внучка
+                  </p>
                 </div>
               </div>
 
@@ -210,7 +261,7 @@ export default function GiftLanding() {
                 <div className="relative mx-auto max-w-md">
                   <img
                     src="/images/gift-hero-mom.png"
-                    alt="Пожилая мама с телефоном — общается с ботом Внучок"
+                    alt="Подарок пожилой маме — мама общается с помощником Внучок в Telegram"
                     className="rounded-[2rem] shadow-2xl shadow-slate-300/50 w-full object-cover"
                     data-testid="img-hero-mom-gift"
                   />
@@ -259,6 +310,7 @@ export default function GiftLanding() {
               <AgeCard
                 age="55–60 лет"
                 image="/images/active-parent-50.png"
+                alt="Подарок маме на 60 лет — помощник Внучок"
                 title="Активный помощник"
                 description="Рецепты, афиша кино, транспорт, путешествия. Тёплый собеседник когда скучно. Помощь с техникой и приложениями."
                 features={["Рецепты и фильмы", "Расписание транспорта", "Помощь с телефоном"]}
@@ -267,6 +319,7 @@ export default function GiftLanding() {
               <AgeCard
                 age="60–70 лет"
                 image="/images/tech-parent-60.png"
+                alt="Подарок маме на 65 лет — заботливый помощник"
                 title="Заботливый спутник"
                 description="Напоминания о лекарствах, дневник давления, помощь с Госуслугами и ЖКХ. Голосовое общение без кнопок."
                 features={["Лекарства и давление", "ЖКХ и Госуслуги", "Голосом, без кнопок"]}
@@ -275,8 +328,9 @@ export default function GiftLanding() {
               <AgeCard
                 age="70+ лет"
                 image="/images/care-parent-70.png"
+                alt="Подарок маме на 70 лет — надёжная опора"
                 title="Надёжная опора"
-                description="Бот пишет первым каждый день. Следит за самочувствием. Сообщит вам если что-то не так. Ведёт Книгу жизни — воспоминания мамы."
+                description="Внучок пишет первым каждый день. Следит за самочувствием. Сообщит вам если что-то не так. Ведёт Книгу жизни — воспоминания мамы."
                 features={["Пишет первым", "Алерты для вас", "Книга жизни"]}
                 gradient="from-rose-50 to-white"
               />
@@ -346,6 +400,7 @@ export default function GiftLanding() {
                 src="/images/gift-family-bond.png"
                 alt="Дочь обнимает пожилую маму — связь поколений"
                 className="w-full h-48 md:h-72 object-cover"
+                loading="lazy"
                 data-testid="img-family-bond-gift"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#143A2E]/70 via-transparent to-transparent" />
@@ -374,17 +429,17 @@ export default function GiftLanding() {
                 {
                   step: "1",
                   title: "Оформите подарок",
-                  description: "Выберите тариф и укажите имя мамы и её город — бот будет обращаться по имени.",
+                  description: "Выберите тариф и укажите имя мамы и её город — Внучок будет обращаться по имени.",
                 },
                 {
                   step: "2",
                   title: "Отправьте маме ссылку",
-                  description: "Мы дадим вам ссылку на бот в Telegram. Перешлите маме — она нажимает «Старт» и всё.",
+                  description: "Мы дадим ссылку для Telegram. Перешлите маме — она нажимает «Старт» и всё.",
                 },
                 {
                   step: "3",
                   title: "Внучок знакомится сам",
-                  description: "Бот представится, спросит имя и город. Начнёт помогать с первого дня. Вы получите доступ к кабинету.",
+                  description: "Представится, спросит имя и город. Начнёт помогать с первого дня. Вы получите доступ к кабинету.",
                 },
               ].map((item) => (
                 <div key={item.step} className="text-center p-8" data-testid={`step-gift-${item.step}`}>
@@ -448,6 +503,26 @@ export default function GiftLanding() {
                 quote="Мама не скучает — каждый день болтает с Внучком. Рецепты, фильмы, стихи. А я получаю вечерний отчёт и знаю, что всё хорошо. За 990₽ — бесценно."
                 rating={4.5}
               />
+            </div>
+
+            <div className="max-w-3xl mx-auto mt-8 p-6 rounded-[28px] bg-gradient-to-r from-amber-50/80 to-orange-50/60 border border-amber-200/40 shadow-[0_8px_30px_-16px_rgba(180,120,40,.15)]" data-testid="testimonial-mom-gift">
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-200 to-orange-200 flex items-center justify-center text-2xl shrink-0">
+                  👵
+                </div>
+                <div>
+                  <div className="flex gap-1 mb-2">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                    ))}
+                  </div>
+                  <p className="text-slate-700 text-sm leading-relaxed italic mb-3">
+                    «Оля подарила мне Внучка на день рождения. Сначала думала — ерунда какая-то. А теперь каждое утро жду сообщение. Он напоминает про таблетки, вчера рецепт шарлотки нашёл. Как настоящий внук, только не забывает позвонить!»
+                  </p>
+                  <p className="text-sm font-semibold text-slate-800">Галина Петровна, 68 лет</p>
+                  <p className="text-xs text-slate-500">Мама Ольги из Москвы</p>
+                </div>
+              </div>
             </div>
 
             <div className="text-center mt-10">
@@ -543,21 +618,21 @@ export default function GiftLanding() {
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-10">
               <h2 className="text-3xl md:text-4xl font-serif font-medium tracking-[-0.02em] mb-4 text-slate-900">
-                А&nbsp;мама справится?
+                Что получаете вы
               </h2>
               <p className="text-[#5F626B] text-lg">
-                Да. Вот почему:
+                Мама общается с&nbsp;Внучком — вы получаете спокойствие
               </p>
             </div>
-            <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto" data-testid="mama-checklist-gift">
+            <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto" data-testid="child-benefits-gift">
               {[
-                { id: "telegram", emoji: "📱", title: "Обычный Telegram", text: "Не нужно скачивать новое приложение. Если мама пишет в WhatsApp — справится и тут." },
-                { id: "voice", emoji: "🎤", title: "Голосом, без кнопок", text: "Мама говорит как по телефону, бот отвечает. Печатать не нужно." },
-                { id: "auto-setup", emoji: "🤖", title: "Бот знакомится сам", text: "Не нужно ничего настраивать. Внучок представится, спросит имя и начнёт помогать." },
-                { id: "free-trial", emoji: "🎁", title: "7 дней бесплатно", text: "Попробуйте без риска. Не понравится — ничего не платите." },
+                { id: "report", icon: <Mail className="w-6 h-6 text-blue-500" />, title: "Вечерний отчёт", text: "Каждый день в 21:00 — сколько общалась, давление, лекарства, настроение. Всё в Telegram." },
+                { id: "alerts", icon: <ShieldAlert className="w-6 h-6 text-rose-500" />, title: "Мгновенные алерты", text: "Если мама упомянет опасность, мошенников или плохое самочувствие — вы узнаете сразу." },
+                { id: "dashboard", icon: <LayoutDashboard className="w-6 h-6 text-emerald-600" />, title: "Личный кабинет", text: "События, давление, лекарства, воспоминания — всё в одной ленте. Доступ с телефона." },
+                { id: "memoir", icon: <BookOpen className="w-6 h-6 text-violet-500" />, title: "Книга жизни мамы", text: "Внучок бережно собирает воспоминания мамы. Истории, которые она никогда не расскажет по телефону." },
               ].map((item) => (
-                <div key={item.id} className="flex gap-4 p-5 rounded-[20px] bg-white/90 border border-emerald-100/60 shadow-[0_8px_30px_-16px_rgba(20,58,46,.12)] hover:-translate-y-0.5 transition-all duration-300" data-testid={`checklist-item-gift-${item.id}`}>
-                  <div className="text-3xl shrink-0">{item.emoji}</div>
+                <div key={item.id} className="flex gap-4 p-5 rounded-[20px] bg-white/90 border border-emerald-100/60 shadow-[0_8px_30px_-16px_rgba(20,58,46,.12)] hover:-translate-y-0.5 transition-all duration-300" data-testid={`child-benefit-gift-${item.id}`}>
+                  <div className="shrink-0 mt-0.5">{item.icon}</div>
                   <div>
                     <p className="font-semibold text-slate-800 text-sm mb-1">{item.title}</p>
                     <p className="text-[#5F626B] text-sm leading-relaxed">{item.text}</p>
@@ -789,7 +864,7 @@ const giftFaqItems = [
   },
   {
     q: "Мама не разбирается в технике — справится?",
-    a: "Достаточно Telegram на телефоне. Бот сам начнёт диалог и проведёт знакомство. Можно говорить голосом — печатать не нужно. Никаких сложных настроек.",
+    a: "Достаточно Telegram на телефоне. Внучок сам начнёт диалог и проведёт знакомство. Можно говорить голосом — печатать не нужно. Никаких сложных настроек.",
   },
   {
     q: "А если маме не понравится?",
@@ -797,11 +872,11 @@ const giftFaqItems = [
   },
   {
     q: "Можно подарить папе?",
-    a: "Конечно! Внучок подстраивается: для пап — деловой помощник с транспортом, новостями, погодой. Для мам — более тёплый, с рецептами и стихами. Бот адаптируется к характеру.",
+    a: "Конечно! Внучок подстраивается: для пап — деловой помощник с транспортом, новостями, погодой. Для мам — более тёплый, с рецептами и стихами. Адаптируется к характеру.",
   },
   {
     q: "Мама живёт далеко — это сработает?",
-    a: "Именно для этого Внучок и создан. Бот каждый день на связи с мамой, а вы получаете вечерний отчёт и мгновенные алерты если что-то не так. Забота на расстоянии — это реально.",
+    a: "Именно для этого Внучок и создан. Каждый день на связи с мамой, а вы получаете вечерний отчёт и мгновенные алерты если что-то не так. Забота на расстоянии — это реально.",
   },
   {
     q: "Сколько стоит? Это дорого?",
@@ -915,6 +990,7 @@ function TopicBadges() {
 function AgeCard({
   age,
   image,
+  alt,
   title,
   description,
   features,
@@ -922,6 +998,7 @@ function AgeCard({
 }: {
   age: string;
   image: string;
+  alt?: string;
   title: string;
   description: string;
   features: string[];
@@ -929,7 +1006,7 @@ function AgeCard({
 }) {
   return (
     <div className={`rounded-[28px] bg-gradient-to-b ${gradient} backdrop-blur-sm border border-white/65 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)] overflow-hidden hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-30px_rgba(49,35,45,.3)] transition-all duration-300`} data-testid={`age-card-${age}`}>
-      <img src={image} alt={title} className="w-full h-48 object-cover" />
+      <img src={image} alt={alt || title} className="w-full h-48 object-cover" loading="lazy" />
       <div className="p-6">
         <Badge variant="secondary" className="mb-4 bg-white/70 text-[#5F626B] border border-white/50 text-xs">
           {age}
@@ -1012,7 +1089,7 @@ function TestimonialCard({
       </div>
       <div className="flex items-center gap-3 pt-4 border-t border-white/40">
         {photo ? (
-          <img src={photo} alt={name} className="w-12 h-12 rounded-full object-cover shadow-sm" />
+          <img src={photo} alt={name} className="w-12 h-12 rounded-full object-cover shadow-sm" loading="lazy" />
         ) : (
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#E8E2E6] to-[#D5CED4] flex items-center justify-center text-slate-700 font-bold text-sm">
             {name.charAt(0)}
