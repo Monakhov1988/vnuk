@@ -621,7 +621,7 @@ export default function GiftLanding() {
                 name="Попробовать"
                 price="0"
                 isFree
-                subtitle="7 дней бесплатно"
+                subtitle=""
                 result="Убедитесь, что маме нравится"
                 features={[
                   "Полный доступ на 7 дней",
