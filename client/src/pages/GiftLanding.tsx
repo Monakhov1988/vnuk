@@ -355,6 +355,22 @@ export default function GiftLanding() {
                 </div>
               ))}
             </div>
+
+            <div className="relative max-w-3xl mx-auto mt-10 rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-300/40">
+              <img
+                src="/images/gift-family-bond.png"
+                alt="Дочь обнимает пожилую маму — связь поколений"
+                className="w-full h-48 md:h-64 object-cover"
+                loading="lazy"
+                data-testid="img-family-bond-gift"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#143A2E]/70 via-transparent to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-white">
+                <p className="text-xl md:text-2xl font-serif font-medium max-w-xl">
+                  Вы далеко, но забота — рядом. Каждый день.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -409,26 +425,6 @@ export default function GiftLanding() {
                   <p className="text-xs text-[#5F626B] leading-snug">{item.desc}</p>
                 </div>
               ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-0 overflow-hidden">
-          <div className="container mx-auto px-6">
-            <div className="relative max-w-5xl mx-auto rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-300/40">
-              <img
-                src="/images/gift-family-bond.png"
-                alt="Дочь обнимает пожилую маму — связь поколений"
-                className="w-full h-48 md:h-72 object-cover"
-                loading="lazy"
-                data-testid="img-family-bond-gift"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#143A2E]/70 via-transparent to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-white">
-                <p className="text-xl md:text-2xl font-serif font-medium max-w-xl">
-                  Вы далеко, но забота — рядом. Каждый день.
-                </p>
-              </div>
             </div>
           </div>
         </section>
