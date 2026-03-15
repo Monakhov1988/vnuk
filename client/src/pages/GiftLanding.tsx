@@ -297,7 +297,7 @@ export default function GiftLanding() {
         <section className="py-10 md:py-14 bg-gradient-to-b from-[#F3F1EE] to-[#F4F1EE]">
           <div className="container mx-auto px-6">
             <h2 className="text-2xl md:text-3xl font-serif font-medium tracking-[-0.02em] mb-6 text-slate-900 text-center">
-              Внучок подстраивается под возраст мамы
+              Для каждого возраста — своя забота
             </h2>
 
             <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
