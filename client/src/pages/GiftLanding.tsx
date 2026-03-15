@@ -373,9 +373,25 @@ export default function GiftLanding() {
               />
             </div>
 
-            <h3 className="text-2xl md:text-3xl font-serif font-medium tracking-[-0.02em] text-slate-900 text-center mt-12 mb-8">
+            <h3 className="text-2xl md:text-3xl font-serif font-medium tracking-[-0.02em] text-slate-900 text-center mt-12 mb-6">
               Забота, которая работает без&nbsp;вас
             </h3>
+
+            <div className="relative max-w-4xl mx-auto mb-8 rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-300/40">
+              <img
+                src="/images/gift-family-bond.webp"
+                alt="Дочь обнимает пожилую маму — связь поколений"
+                className="w-full h-44 md:h-56 object-cover"
+                loading="lazy"
+                data-testid="img-family-bond-gift"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#143A2E]/70 via-transparent to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6 text-white">
+                <p className="text-lg md:text-xl font-serif font-medium max-w-xl">
+                  Вы далеко, но забота — рядом. Каждый день.
+                </p>
+              </div>
+            </div>
 
             <div className="max-w-4xl mx-auto space-y-8">
               <div>
@@ -417,21 +433,6 @@ export default function GiftLanding() {
               </div>
             </div>
 
-            <div className="relative max-w-4xl mx-auto mt-10 rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-300/40">
-              <img
-                src="/images/gift-family-bond.webp"
-                alt="Дочь обнимает пожилую маму — связь поколений"
-                className="w-full h-44 md:h-56 object-cover"
-                loading="lazy"
-                data-testid="img-family-bond-gift"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#143A2E]/70 via-transparent to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6 text-white">
-                <p className="text-lg md:text-xl font-serif font-medium max-w-xl">
-                  Вы далеко, но забота — рядом. Каждый день.
-                </p>
-              </div>
-            </div>
           </div>
         </section>
 
