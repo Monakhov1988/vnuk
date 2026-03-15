@@ -176,7 +176,7 @@ export default function GiftLanding() {
                     className="rounded-xl text-base h-14 px-8 bg-white/70 border-white/60 backdrop-blur hover:bg-white/90 text-slate-700 transition-all duration-300"
                     data-testid="button-hero-demo-gift"
                   >
-                    <a href="#dialog">Послушать диалог</a>
+                    <a href="#dialog">Что умеет?</a>
                   </Button>
                 </div>
 
@@ -387,6 +387,8 @@ export default function GiftLanding() {
                 Реальные диалоги — голосом или текстом в&nbsp;обычном Telegram
               </p>
             </div>
+
+            <TopicBadges />
 
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               <DialogCard
@@ -861,6 +863,52 @@ function ComparisonCard({
       <div className={`text-center text-xs font-medium pt-3 border-t ${highlighted ? "border-[#143A2E]/10 text-[#143A2E]" : "border-slate-200 text-slate-400"}`}>
         {verdict}
       </div>
+    </div>
+  );
+}
+
+const allTopics = [
+  { emoji: "💊", label: "Лекарства и здоровье" },
+  { emoji: "🍲", label: "Рецепты и кулинария" },
+  { emoji: "🎬", label: "Фильмы и сериалы" },
+  { emoji: "📋", label: "ЖКХ и Госуслуги" },
+  { emoji: "🌤️", label: "Погода на сегодня" },
+  { emoji: "🚌", label: "Транспорт и маршруты" },
+  { emoji: "📖", label: "Стихи и книги" },
+  { emoji: "🏥", label: "Запись к врачу" },
+  { emoji: "🛒", label: "Где купить дешевле" },
+  { emoji: "📱", label: "Помощь с телефоном" },
+  { emoji: "🧠", label: "Книга жизни" },
+  { emoji: "🎂", label: "Дни рождения и праздники" },
+];
+
+function TopicBadges() {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? allTopics : allTopics.slice(0, 6);
+
+  return (
+    <div className="max-w-4xl mx-auto mb-8">
+      <div className="flex flex-wrap justify-center gap-2" data-testid="topic-badges-gift">
+        {visible.map((t) => (
+          <span
+            key={t.label}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/80 border border-white/60 text-sm text-slate-700 shadow-sm"
+          >
+            <span>{t.emoji}</span>
+            {t.label}
+          </span>
+        ))}
+      </div>
+      {!expanded && (
+        <button
+          onClick={() => setExpanded(true)}
+          className="mt-3 mx-auto flex items-center gap-1 text-sm text-[#143A2E] hover:text-[#0F2F25] transition-colors font-medium"
+          data-testid="button-show-more-topics"
+        >
+          Ещё {allTopics.length - 6} тем
+          <ChevronDown className="w-4 h-4" />
+        </button>
+      )}
     </div>
   );
 }
