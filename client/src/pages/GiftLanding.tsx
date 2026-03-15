@@ -407,7 +407,13 @@ export default function GiftLanding() {
               />
             </div>
 
-            <h3 className="text-2xl md:text-3xl font-serif font-medium tracking-[-0.02em] text-slate-900 text-center mt-12 mb-6">
+            <div className="flex justify-center mt-12 mb-4">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 border border-emerald-200 text-sm font-medium text-emerald-800 shadow-sm">
+                <Gift className="w-4 h-4" />
+                Подарок, который работает каждый день
+              </span>
+            </div>
+            <h3 className="text-2xl md:text-3xl font-serif font-medium tracking-[-0.02em] text-slate-900 text-center mb-6">
               Забота, которая работает без&nbsp;вас
             </h3>
 
