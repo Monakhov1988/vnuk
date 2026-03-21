@@ -13,6 +13,15 @@ I highlight:
 - UX solutions that are complex for a 65+ audience.
 - Architectural decisions that do not scale.
 
+## Agent Economy Rules
+- Before every task, state its size: small (1-2 files, 1 edit), medium (3-5 files), or large (architecture change, many files). Wait for user approval on medium/large tasks.
+- Answer concisely. No lengthy explanations unless asked. Max 5-7 sentences for simple questions.
+- Do not read files you have already seen in this session unless they may have changed.
+- Group all independent tool calls into a single parallel batch.
+- Do not run exploratory searches unless directly needed for the current task.
+- If the user asks a general knowledge question (not about the codebase), answer from memory without reading files or running tools.
+- After pushing code to GitHub: `cd /home/runner/workspace && git push origin main`
+
 ## System Architecture
 
 The system uses a React (TypeScript, Tailwind v4) frontend, an Express (TypeScript) backend, and a PostgreSQL database with Drizzle ORM. User interaction primarily occurs via a Telegram bot supporting text and voice.
