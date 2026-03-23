@@ -78,7 +78,7 @@ export default function LandingC() {
             className="rounded-xl px-6 transition-all duration-300 bg-[#143A2E] hover:bg-[#0F2F25] text-white shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)]"
             data-testid="button-nav-cta-c"
           >
-            <Link href="/auth">7 дней бесплатно</Link>
+            <Link href="/auth">Попробовать бесплатно</Link>
           </Button>
         </div>
       </nav>
@@ -122,7 +122,7 @@ export default function LandingC() {
                     data-testid="button-hero-gift-c"
                   >
                     <Link href="/auth">
-                      Начать 7 дней бесплатно <ArrowRight className="ml-2 w-5 h-5" />
+                      Попробовать бесплатно <ArrowRight className="ml-2 w-5 h-5" />
                     </Link>
                   </Button>
                   <Button
@@ -139,7 +139,7 @@ export default function LandingC() {
                 <div className="flex flex-wrap items-center gap-4 text-sm text-[#5F626B]" data-testid="badge-risk-reversal-c">
                   <span className="flex items-center gap-1.5">
                     <Zap className="w-3.5 h-3.5 text-emerald-500" />
-                    7 дней бесплатно
+                    3 дня бесплатно
                   </span>
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
@@ -728,7 +728,7 @@ export default function LandingC() {
                   </div>
                   <div className="flex gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <p><strong className="text-slate-700">7 дней бесплатно</strong> — попробуйте без обязательств. Если не подойдёт — ничего не платите.</p>
+                    <p><strong className="text-slate-700">3 дня бесплатно</strong> — попробуйте без обязательств. Если не подойдёт — ничего не платите.</p>
                   </div>
                 </div>
               </div>
@@ -743,29 +743,16 @@ export default function LandingC() {
                 Дешевле букета цветов в месяц
               </h2>
               <p className="text-[#5F626B] text-lg">
-                7 дней бесплатно, затем от 990₽/мес — это 33₽ в день
+                3 дня бесплатно, затем от 990₽/мес — это 33₽ в день
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mt-8">
-              <PricingCard
-                name="Тест"
-                price="0"
-                isFree
-                subtitle="7 дней бесплатно"
-                result="Попробуйте все возможности"
-                features={[
-                  "Полный доступ на 7 дней",
-                  "100 вопросов в день",
-                  "Напоминания о лекарствах",
-                  "Голосовой ввод",
-                ]}
-              />
+            <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto mt-8">
               <PricingCard
                 name="Стандарт"
                 price="990"
                 popular
-                subtitle="Полная забота"
+                subtitle="3 дня бесплатно"
                 result="Родитель не одинок — и вы спокойны"
                 features={[
                   "100 вопросов в день",
@@ -778,7 +765,7 @@ export default function LandingC() {
               <PricingCard
                 name="Премиум"
                 price="1 990"
-                subtitle="Максимум"
+                subtitle="3 дня бесплатно"
                 result="Полная автоматизация заботы"
                 features={[
                   "Безлимит вопросов",
@@ -796,7 +783,6 @@ export default function LandingC() {
                 <thead>
                   <tr className="bg-gradient-to-r from-[#F3E9F0] to-[#EDF2F8]">
                     <th className="text-left px-4 py-3 font-semibold text-slate-700 border-b border-white/40">Возможность</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40">Тест</th>
                     <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40 bg-[#F5EDF3]">Стандарт</th>
                     <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40">Премиум</th>
                   </tr>
@@ -805,7 +791,6 @@ export default function LandingC() {
                   {comparisonRows.map((row, i) => (
                     <tr key={i} className={i % 2 === 0 ? "bg-white/60" : "bg-white/30"}>
                       <td className="px-4 py-3 text-slate-700 border-b border-white/40">{row.feature}</td>
-                      <td className="text-center px-3 py-3 border-b border-white/40">{renderComparisonValue(row.test)}</td>
                       <td className="text-center px-3 py-3 border-b border-white/40 bg-[#F5EDF3]/30">{renderComparisonValue(row.standard)}</td>
                       <td className="text-center px-3 py-3 border-b border-white/40">{renderComparisonValue(row.premium)}</td>
                     </tr>
@@ -819,7 +804,7 @@ export default function LandingC() {
             <div className="flex flex-wrap justify-center gap-6 mt-6 text-sm text-slate-500" data-testid="text-risk-reversal-c">
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                7 дней бесплатно
+                3 дня бесплатно
               </span>
               <span className="flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-emerald-500" />
@@ -893,7 +878,7 @@ export default function LandingC() {
                   Подарите маме заботу за&nbsp;3&nbsp;минуты
                 </h2>
                 <p className="text-emerald-100/70 text-lg mb-8">
-                  Начните сегодня — 7 дней бесплатно. Родителю нужен только Telegram.
+                  Начните сегодня — попробуйте бесплатно. Родителю нужен только Telegram.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button
@@ -903,7 +888,7 @@ export default function LandingC() {
                     data-testid="button-cta-app-c"
                   >
                     <Link href="/auth">
-                      Начать 7 дней бесплатно <ArrowRight className="ml-2 w-5 h-5" />
+                      Попробовать бесплатно <ArrowRight className="ml-2 w-5 h-5" />
                     </Link>
                   </Button>
                   <Button
@@ -940,10 +925,6 @@ export default function LandingC() {
 
             <div className="flex flex-col gap-2">
               <h4 className="text-white font-semibold text-sm mb-1">Контакты</h4>
-              <a href="mailto:support@vnuchok.ru" className="flex items-center gap-2 hover:text-slate-300 transition-colors" data-testid="link-footer-email">
-                <Mail className="w-4 h-4" />
-                support@vnuchok.ru
-              </a>
               <a href="https://t.me/vnuchok1_bot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-slate-300 transition-colors" data-testid="link-footer-telegram">
                 <Send className="w-4 h-4" />
                 @vnuchok1_bot в Telegram
@@ -976,7 +957,7 @@ export default function LandingC() {
           className="w-full rounded-xl h-12 bg-[#143A2E] hover:bg-[#0F2F25] text-white font-semibold shadow-[0_12px_30px_-16px_rgba(20,58,46,.65)] transition-all duration-300"
           data-testid="button-mobile-cta-c"
         >
-          <Link href="/auth">Начать 7 дней бесплатно</Link>
+          <Link href="/auth">Начать бесплатно</Link>
         </Button>
       </div>
     </div>
@@ -1027,17 +1008,16 @@ const chatScenarios = [
   },
 ];
 
-const comparisonRows: { feature: string; test: boolean | string; standard: boolean | string; premium: boolean | string }[] = [
-  { feature: "Вопросов в день", test: "100", standard: "100", premium: "∞" },
-  { feature: "Срок доступа", test: "7 дней", standard: "∞", premium: "∞" },
-  { feature: "Напоминания о лекарствах", test: true, standard: true, premium: true },
-  { feature: "Дневник давления", test: true, standard: true, premium: true },
-  { feature: "Помощь с Госуслугами и ЖКХ", test: true, standard: true, premium: true },
-  { feature: "Голосовой ввод", test: true, standard: true, premium: true },
-  { feature: "Бот пишет первым", test: true, standard: true, premium: true },
-  { feature: "Счётчики по фото", test: false, standard: true, premium: true },
-  { feature: "Открытки и картинки", test: false, standard: false, premium: true },
-  { feature: "Настройка личности бота", test: false, standard: false, premium: true },
+const comparisonRows: { feature: string; standard: boolean | string; premium: boolean | string }[] = [
+  { feature: "Вопросов в день", standard: "100", premium: "∞" },
+  { feature: "Напоминания о лекарствах", standard: true, premium: true },
+  { feature: "Дневник давления", standard: true, premium: true },
+  { feature: "Помощь с Госуслугами и ЖКХ", standard: true, premium: true },
+  { feature: "Голосовой ввод", standard: true, premium: true },
+  { feature: "Бот пишет первым", standard: true, premium: true },
+  { feature: "Счётчики по фото", standard: true, premium: true },
+  { feature: "Открытки и картинки", standard: false, premium: true },
+  { feature: "Настройка личности бота", standard: false, premium: true },
 ];
 
 function renderComparisonValue(val: boolean | string) {
@@ -1069,11 +1049,11 @@ const faqItems = [
   },
   {
     q: "Можно отменить подписку?",
-    a: "В любой момент, в 1 клик. Первые 7 дней — бесплатно, без обязательств.",
+    a: "В любой момент, в 1 клик. Первые 3 дня — бесплатно, без обязательств.",
   },
   {
     q: "Сколько стоит?",
-    a: "7 дней бесплатно — полный доступ. Стандарт — 990₽/мес (100 вопросов + все функции). Премиум — 1 990₽/мес (безлимит + персонализация).",
+    a: "3 дня бесплатно — полный доступ. Стандарт — 990₽/мес (100 вопросов + все функции). Премиум — 1 990₽/мес (безлимит + персонализация).",
   },
 ];
 

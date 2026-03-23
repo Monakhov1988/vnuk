@@ -45,7 +45,7 @@ export default function GiftLanding() {
       else { prevMeta[`${attr}:${name}`] = el.content; }
       el.content = content;
     };
-    setMeta("description", "Что подарить пожилой маме у которой всё есть? Внучок — умный помощник в Telegram: напоминает лекарства, общается голосом, сообщает вам если что-то не так. 7 дней бесплатно.");
+    setMeta("description", "Что подарить пожилой маме у которой всё есть? Внучок — умный помощник в Telegram: напоминает лекарства, общается голосом, сообщает вам если что-то не так. Попробуйте бесплатно.");
     setMeta("og:title", "Необычный подарок маме — помощник Внучок в Telegram", "property");
     setMeta("og:description", "Ежедневная забота вместо очередной вещи. Помощник напоминает лекарства, общается голосом, помогает с бытом. От 990₽/мес.", "property");
     setMeta("og:url", "https://vnuchok.online/gift", "property");
@@ -238,7 +238,7 @@ export default function GiftLanding() {
 
                 <div className="flex flex-wrap gap-1.5 mb-3" data-testid="badge-risk-reversal-gift">
                   {[
-                    { icon: <Zap className="w-3 h-3 text-emerald-500" />, text: "7 дней бесплатно" },
+                    { icon: <Zap className="w-3 h-3 text-emerald-500" />, text: "3 дня бесплатно" },
                     { icon: <MessageCircle className="w-3 h-3 text-blue-500" />, text: "Сам обучит" },
                   ].map((b) => (
                     <span key={b.text} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/80 border border-white/60 text-[11px] font-medium text-slate-600 shadow-sm">
@@ -348,7 +348,7 @@ export default function GiftLanding() {
                   Подарите маме заботу,<br />а&nbsp;не&nbsp;очередную вещь
                 </h2>
                 <p className="text-emerald-100/70 text-lg mb-8">
-                  7 дней бесплатно. Без установки, без настроек — просто пришлите маме ссылку.
+                  3 дня бесплатно. Без установки, без настроек — просто пришлите маме ссылку.
                 </p>
                 <div className="flex justify-center">
                   <Button
@@ -612,29 +612,16 @@ export default function GiftLanding() {
                 Выберите подарок для мамы
               </h2>
               <p className="text-[#5F626B] text-lg">
-                Попробуйте бесплатно 7 дней. Отмена в любой момент
+                3 дня бесплатно. Отмена в любой момент
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-md md:max-w-4xl mx-auto mt-8">
-              <GiftPricingCard
-                name="Попробовать"
-                price="0"
-                isFree
-                subtitle=""
-                result="Убедитесь, что маме нравится"
-                features={[
-                  "Полный доступ на 7 дней",
-                  "100 вопросов в день",
-                  "Напоминания о лекарствах",
-                  "Голосовой ввод",
-                ]}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-md md:max-w-3xl mx-auto mt-8">
               <GiftPricingCard
                 name="Подарочный"
                 price="990"
                 popular
-                subtitle="Полная забота"
+                subtitle="3 дня бесплатно"
                 result="Мама не одинока — и вы спокойны"
                 features={[
                   "100 вопросов в день",
@@ -647,7 +634,7 @@ export default function GiftLanding() {
               <GiftPricingCard
                 name="VIP-подарок"
                 price="1 990"
-                subtitle="Максимум заботы"
+                subtitle="3 дня бесплатно"
                 result="Полная автоматизация заботы"
                 features={[
                   "Безлимит вопросов",
@@ -714,10 +701,6 @@ export default function GiftLanding() {
 
             <div className="flex flex-col gap-2">
               <h4 className="text-white font-semibold text-sm mb-1">Контакты</h4>
-              <a href="mailto:support@vnuchok.ru" className="flex items-center gap-2 hover:text-slate-300 transition-colors" data-testid="link-footer-email-gift">
-                <Mail className="w-4 h-4" />
-                support@vnuchok.ru
-              </a>
               <a href="https://t.me/vnuchok1_bot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-slate-300 transition-colors" data-testid="link-footer-telegram-gift">
                 <Send className="w-4 h-4" />
                 @vnuchok1_bot в Telegram
@@ -772,7 +755,7 @@ const giftFaqItems = [
   },
   {
     q: "А если маме не понравится?",
-    a: "Первые 7 дней — бесплатно. Если не подойдёт, ничего платить не нужно. Отмена в 1 клик, без вопросов.",
+    a: "Первые 3 дня — бесплатно. Если не подойдёт, ничего платить не нужно. Отмена в 1 клик, без вопросов.",
   },
   {
     q: "Можно подарить папе?",
@@ -784,7 +767,7 @@ const giftFaqItems = [
   },
   {
     q: "Сколько стоит? Это дорого?",
-    a: "990₽/мес за Стандарт — это 33₽ в день. Дешевле букета цветов, но работает каждый день. Первые 7 дней бесплатно.",
+    a: "990₽/мес за Стандарт — это 33₽ в день. Дешевле букета цветов, но работает каждый день. Первые 3 дня бесплатно.",
   },
   {
     q: "Кто видит переписку мамы с ботом?",

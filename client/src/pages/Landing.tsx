@@ -230,7 +230,7 @@ export default function Landing() {
         <div className="container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Выберите тариф заботы</h2>
-            <p className="text-slate-600 text-lg">Первые 7 дней бесплатно. Отменить можно в любой момент.</p>
+            <p className="text-slate-600 text-lg">Первые 3 дня бесплатно. Отменить можно в любой момент.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -265,7 +265,7 @@ export default function Landing() {
                   Оформить подписку за 990₽/мес
                 </Button>
               </Link>
-              <p className="mt-4 text-sm text-blue-200 opacity-80">Первые 7 дней бесплатно. Отменить можно в любой момент.</p>
+              <p className="mt-4 text-sm text-blue-200 opacity-80">Первые 3 дня бесплатно. Отменить можно в любой момент.</p>
             </div>
           </div>
         </div>

@@ -616,10 +616,6 @@ export default function LandingD() {
             </div>
 
             <div className="flex flex-col gap-2 text-slate-500">
-              <a href="mailto:support@vnuchok.ru" className="flex items-center gap-2 hover:text-slate-800 transition-colors" data-testid="link-footer-email-d">
-                <Mail className="w-4 h-4" />
-                support@vnuchok.ru
-              </a>
               <a href="https://t.me/vnuchok1_bot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-slate-800 transition-colors" data-testid="link-footer-telegram-d">
                 <Send className="w-4 h-4" />
                 @vnuchok1_bot
