@@ -743,62 +743,38 @@ export default function LandingC() {
                 Дешевле букета цветов в месяц
               </h2>
               <p className="text-[#5F626B] text-lg">
-                3 дня бесплатно, затем от 990₽/мес — это 33₽ в день
+                3 дня бесплатно. Все функции без ограничений
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto mt-8">
               <PricingCard
-                name="Стандарт"
-                price="990"
-                popular
+                name="На 1 месяц"
+                price="1 499"
                 subtitle="3 дня бесплатно"
-                result="Родитель не одинок — и вы спокойны"
+                result="Попробуйте — родитель оценит"
                 features={[
-                  "100 вопросов в день",
+                  "Безлимит вопросов",
                   "Напоминания о лекарствах",
-                  "Бот пишет первым",
+                  "Голос, фото, открытки",
                   "Помощь с Госуслугами и ЖКХ",
-                  "Распознавание счётчиков",
+                  "Вечерний отчёт для вас",
                 ]}
               />
               <PricingCard
-                name="Премиум"
-                price="1 990"
-                subtitle="3 дня бесплатно"
-                result="Полная автоматизация заботы"
+                name="На 3 месяца"
+                price="2 499"
+                popular
+                period="3 мес"
+                subtitle="Экономия 44%"
+                result="Родитель привыкнет — и вы спокойны"
                 features={[
-                  "Безлимит вопросов",
-                  "Все из Стандарта",
-                  "Настройка личности бота",
-                  "Открытки и картинки",
-                  "Расширенная история",
+                  "Всё то же, что в месячном",
+                  "833₽/мес вместо 1 499₽",
+                  "Время на привыкание",
+                  "Идеально как подарок",
                 ]}
               />
-            </div>
-
-            <div className="max-w-4xl mx-auto mt-8 relative">
-              <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse rounded-[28px] overflow-hidden bg-white/75 backdrop-blur border border-white/60 shadow-[0_24px_60px_-32px_rgba(49,35,45,.2)]">
-                <thead>
-                  <tr className="bg-gradient-to-r from-[#F3E9F0] to-[#EDF2F8]">
-                    <th className="text-left px-4 py-3 font-semibold text-slate-700 border-b border-white/40">Возможность</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40 bg-[#F5EDF3]">Стандарт</th>
-                    <th className="text-center px-3 py-3 font-semibold text-slate-700 border-b border-white/40">Премиум</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparisonRows.map((row, i) => (
-                    <tr key={i} className={i % 2 === 0 ? "bg-white/60" : "bg-white/30"}>
-                      <td className="px-4 py-3 text-slate-700 border-b border-white/40">{row.feature}</td>
-                      <td className="text-center px-3 py-3 border-b border-white/40 bg-[#F5EDF3]/30">{renderComparisonValue(row.standard)}</td>
-                      <td className="text-center px-3 py-3 border-b border-white/40">{renderComparisonValue(row.premium)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-              <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-slate-50 to-transparent pointer-events-none md:hidden" />
             </div>
 
             <div className="flex flex-wrap justify-center gap-6 mt-6 text-sm text-slate-500" data-testid="text-risk-reversal-c">
@@ -1008,24 +984,6 @@ const chatScenarios = [
   },
 ];
 
-const comparisonRows: { feature: string; standard: boolean | string; premium: boolean | string }[] = [
-  { feature: "Вопросов в день", standard: "100", premium: "∞" },
-  { feature: "Напоминания о лекарствах", standard: true, premium: true },
-  { feature: "Дневник давления", standard: true, premium: true },
-  { feature: "Помощь с Госуслугами и ЖКХ", standard: true, premium: true },
-  { feature: "Голосовой ввод", standard: true, premium: true },
-  { feature: "Бот пишет первым", standard: true, premium: true },
-  { feature: "Счётчики по фото", standard: true, premium: true },
-  { feature: "Открытки и картинки", standard: false, premium: true },
-  { feature: "Настройка личности бота", standard: false, premium: true },
-];
-
-function renderComparisonValue(val: boolean | string) {
-  if (val === true) return <Check className="w-4 h-4 text-green-500 mx-auto" />;
-  if (val === false) return <span className="text-slate-300">—</span>;
-  return <span className="font-medium text-slate-700">{val}</span>;
-}
-
 const faqItems = [
   {
     q: "Моей маме 55, она активная. Это не для бабушек?",
@@ -1053,7 +1011,7 @@ const faqItems = [
   },
   {
     q: "Сколько стоит?",
-    a: "3 дня бесплатно — полный доступ. Стандарт — 990₽/мес (100 вопросов + все функции). Премиум — 1 990₽/мес (безлимит + персонализация).",
+    a: "3 дня бесплатно — полный доступ. 1 499₽/мес или 2 499₽ за 3 месяца (экономия 44%). Все функции без ограничений.",
   },
 ];
 
@@ -1248,6 +1206,7 @@ function PricingCard({
   features,
   popular,
   isFree,
+  period,
 }: {
   name: string;
   price: string;
@@ -1256,6 +1215,7 @@ function PricingCard({
   features: string[];
   popular?: boolean;
   isFree?: boolean;
+  period?: string;
 }) {
   return (
     <Card
@@ -1274,7 +1234,7 @@ function PricingCard({
         </CardDescription>
         <div className="mt-3">
           <span className="text-3xl font-serif font-medium">{price}₽</span>
-          {!isFree && <span className="text-muted-foreground">/мес</span>}
+          {!isFree && <span className="text-muted-foreground">{period ? `/${period}` : "/мес"}</span>}
         </div>
         <div className="mt-3 bg-gradient-to-r from-[#F3E9F0] to-[#EDF2F8] rounded-lg px-3 py-2" data-testid={`pricing-result-c-${name}`}>
           <p className="text-xs font-medium text-slate-600">{result}</p>
@@ -1295,7 +1255,7 @@ function PricingCard({
           variant={popular ? "default" : "outline"}
           data-testid={`button-pricing-c-${name}`}
         >
-          <Link href="/auth">{isFree ? "Попробовать бесплатно" : "Подарить родителю"}</Link>
+          <Link href="/auth">Попробовать бесплатно</Link>
         </Button>
       </CardContent>
     </Card>

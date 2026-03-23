@@ -233,10 +233,9 @@ export default function Landing() {
             <p className="text-slate-600 text-lg">Первые 3 дня бесплатно. Отменить можно в любой момент.</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <PricingCard name="Базовый" price="490" features={["Напоминания о лекарствах", "Дневник давления", "Лента событий", "До 5 напоминаний"]} />
-            <PricingCard name="Стандарт" price="990" popular features={["Все из Базового", "AI-чат с Внучком", "Распознавание счетчиков", "Безлимитные напоминания", "Книга жизни"]} />
-            <PricingCard name="Премиум" price="1 990" features={["Все из Стандарта", "Поддержка 24/7", "До 3 родителей", "Автозвонок при тревоге", "Персональные отчеты"]} />
+          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+            <PricingCard name="На 1 месяц" price="1 499" features={["Безлимит вопросов", "Напоминания о лекарствах", "Голос, фото, открытки", "Помощь с Госуслугами и ЖКХ", "Вечерний отчёт для вас"]} />
+            <PricingCard name="На 3 месяца" price="2 499" period="3 мес" popular features={["Всё то же, что в месячном", "833₽/мес вместо 1 499₽", "Время на привыкание", "Экономия 44%"]} />
           </div>
 
           <div className="text-center mt-8">
@@ -262,7 +261,7 @@ export default function Landing() {
               </p>
               <Link href="/auth">
                 <Button size="lg" className="rounded-full h-14 px-8 bg-white text-primary hover:bg-slate-50 font-semibold text-lg shadow-xl" data-testid="button-cta-subscribe">
-                  Оформить подписку за 990₽/мес
+                  Оформить подписку за 1 499₽/мес
                 </Button>
               </Link>
               <p className="mt-4 text-sm text-blue-200 opacity-80">Первые 3 дня бесплатно. Отменить можно в любой момент.</p>
@@ -342,7 +341,7 @@ function WaitlistForm() {
   );
 }
 
-function PricingCard({ name, price, features, popular }: { name: string; price: string; features: string[]; popular?: boolean }) {
+function PricingCard({ name, price, features, popular, period }: { name: string; price: string; features: string[]; popular?: boolean; period?: string }) {
   return (
     <Card className={`relative overflow-hidden transition-all hover:-translate-y-1 ${popular ? "border-primary shadow-lg shadow-primary/10 scale-105" : "border-slate-200"}`}>
       {popular && (
@@ -354,7 +353,7 @@ function PricingCard({ name, price, features, popular }: { name: string; price: 
         <CardTitle className="text-xl">{name}</CardTitle>
         <div className="mt-3">
           <span className="text-3xl font-bold">{price}₽</span>
-          <span className="text-muted-foreground">/мес</span>
+          <span className="text-muted-foreground">{period ? `/${period}` : "/мес"}</span>
         </div>
       </CardHeader>
       <CardContent>

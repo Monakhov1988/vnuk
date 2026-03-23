@@ -36,7 +36,7 @@ export default function GiftLanding() {
 
   useEffect(() => {
     const prevTitle = document.title;
-    document.title = "Необычный подарок маме — помощник Внучок в Telegram | от 990₽/мес";
+    document.title = "Необычный подарок маме — помощник Внучок в Telegram | от 1 499₽/мес";
 
     const prevMeta: Record<string, string> = {};
     const setMeta = (name: string, content: string, attr = "name") => {
@@ -47,10 +47,10 @@ export default function GiftLanding() {
     };
     setMeta("description", "Что подарить пожилой маме у которой всё есть? Внучок — умный помощник в Telegram: напоминает лекарства, общается голосом, сообщает вам если что-то не так. Попробуйте бесплатно.");
     setMeta("og:title", "Необычный подарок маме — помощник Внучок в Telegram", "property");
-    setMeta("og:description", "Ежедневная забота вместо очередной вещи. Помощник напоминает лекарства, общается голосом, помогает с бытом. От 990₽/мес.", "property");
+    setMeta("og:description", "Ежедневная забота вместо очередной вещи. Помощник напоминает лекарства, общается голосом, помогает с бытом. От 1 499₽/мес.", "property");
     setMeta("og:url", "https://vnuchok.online/gift", "property");
     setMeta("twitter:title", "Необычный подарок маме — помощник Внучок в Telegram", "name");
-    setMeta("twitter:description", "Ежедневная забота вместо очередной вещи. Помощник напоминает лекарства, общается голосом, помогает с бытом. От 990₽/мес.", "name");
+    setMeta("twitter:description", "Ежедневная забота вместо очередной вещи. Помощник напоминает лекарства, общается голосом, помогает с бытом. От 1 499₽/мес.", "name");
 
     let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     const prevCanonical = canonical?.href || "";
@@ -84,8 +84,8 @@ export default function GiftLanding() {
       "offers": [
         {
           "@type": "Offer",
-          "name": "Подарочный",
-          "price": "990",
+          "name": "На 1 месяц",
+          "price": "1499",
           "priceCurrency": "RUB",
           "priceValidUntil": "2026-12-31",
           "availability": "https://schema.org/InStock",
@@ -93,8 +93,8 @@ export default function GiftLanding() {
         },
         {
           "@type": "Offer",
-          "name": "VIP-подарок",
-          "price": "1990",
+          "name": "На 3 месяца",
+          "price": "2499",
           "priceCurrency": "RUB",
           "priceValidUntil": "2026-12-31",
           "availability": "https://schema.org/InStock",
@@ -211,7 +211,7 @@ export default function GiftLanding() {
                   Вы далеко. Мама одна. Но забота возможна каждый день.
                 </p>
                 <p className="text-sm md:text-base text-[#5F626B] mb-4 leading-relaxed">
-                  Внучок — ИИ-помощник в&nbsp;Telegram, который каждый день общается с&nbsp;мамой голосом, напоминает лекарства и&nbsp;помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;сигнал, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 990₽/мес.</span>
+                  Внучок — ИИ-помощник в&nbsp;Telegram, который каждый день общается с&nbsp;мамой голосом, напоминает лекарства и&nbsp;помогает с&nbsp;бытом. А&nbsp;вам — вечерний отчёт и&nbsp;сигнал, если что-то не&nbsp;так. <span className="font-medium text-slate-700">От 1 499₽/мес.</span>
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3 mb-3">
@@ -618,30 +618,30 @@ export default function GiftLanding() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-md md:max-w-3xl mx-auto mt-8">
               <GiftPricingCard
-                name="Подарочный"
-                price="990"
-                popular
+                name="На 1 месяц"
+                price="1 499"
                 subtitle="3 дня бесплатно"
-                result="Мама не одинока — и вы спокойны"
+                result="Попробуйте — маме понравится"
                 features={[
-                  "100 вопросов в день",
+                  "Безлимит вопросов",
                   "Напоминания о лекарствах",
-                  "Пишет первым каждый день",
+                  "Голос, фото, открытки",
                   "Помощь с Госуслугами и ЖКХ",
                   "Вечерний отчёт для вас",
                 ]}
               />
               <GiftPricingCard
-                name="VIP-подарок"
-                price="1 990"
-                subtitle="3 дня бесплатно"
-                result="Полная автоматизация заботы"
+                name="На 3 месяца"
+                price="2 499"
+                popular
+                period="3 мес"
+                subtitle="Экономия 44%"
+                result="Мама привыкнет — и вы спокойны"
                 features={[
-                  "Безлимит вопросов",
-                  "Все функции Подарочного",
-                  "Настройка личности бота",
-                  "Открытки и картинки",
-                  "Книга жизни — мемуары мамы",
+                  "Всё то же, что в месячном",
+                  "833₽/мес вместо 1 499₽",
+                  "Время на привыкание",
+                  "Идеально как подарок",
                 ]}
               />
             </div>
@@ -767,7 +767,7 @@ const giftFaqItems = [
   },
   {
     q: "Сколько стоит? Это дорого?",
-    a: "990₽/мес за Стандарт — это 33₽ в день. Дешевле букета цветов, но работает каждый день. Первые 3 дня бесплатно.",
+    a: "1 499₽/мес или 2 499₽ за 3 месяца (833₽/мес). Все функции без ограничений. Первые 3 дня бесплатно.",
   },
   {
     q: "Кто видит переписку мамы с ботом?",
@@ -937,6 +937,7 @@ function GiftPricingCard({
   features,
   popular,
   isFree,
+  period,
 }: {
   name: string;
   price: string;
@@ -945,6 +946,7 @@ function GiftPricingCard({
   features: string[];
   popular?: boolean;
   isFree?: boolean;
+  period?: string;
 }) {
   return (
     <Card
@@ -967,7 +969,7 @@ function GiftPricingCard({
           ) : (
             <>
               <span className="text-3xl font-serif font-medium">{price}₽</span>
-              <span className="text-muted-foreground">/мес</span>
+              <span className="text-muted-foreground">{period ? `/${period}` : "/мес"}</span>
             </>
           )}
         </div>

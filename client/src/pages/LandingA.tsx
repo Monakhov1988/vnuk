@@ -552,46 +552,32 @@ export default function LandingA() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mt-12">
+          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto mt-12">
             <PricingCard
-              name="Базовый"
-              price="490"
-              subtitle="Как открытка, но каждый день"
-              result="Вы знаете, что мама приняла лекарства"
+              name="На 1 месяц"
+              price="1 499"
+              subtitle="3 дня бесплатно"
+              result="Попробуйте — маме понравится"
               features={[
+                "Безлимит вопросов",
                 "Напоминания о лекарствах",
-                "Дневник давления",
-                "Лента событий",
-                "До 5 напоминаний",
+                "Голос, фото, открытки",
+                "Помощь с Госуслугами и ЖКХ",
+                "Вечерний отчёт для вас",
               ]}
             />
             <PricingCard
-              name="Стандарт"
-              price="990"
+              name="На 3 месяца"
+              price="2 499"
               popular
-              subtitle="Забота на полную"
-              result="Мама не одинока — с ней тёплый собеседник"
+              period="3 мес"
+              subtitle="Экономия 44%"
+              result="Мама привыкнет — и вы спокойны"
               features={[
-                "Все из Базового",
-                "ИИ-чат с Внучком голосом",
-                "Распознавание счётчиков",
-                "Безлимитные напоминания",
-                "Защита от мошенников",
-                "Проактивные сообщения",
-              ]}
-            />
-            <PricingCard
-              name="Премиум"
-              price="1 990"
-              subtitle="Максимум спокойствия"
-              result="Полная автоматизация заботы"
-              features={[
-                "Все из Стандарта",
-                "Настройка личности бота",
-                "Темы экспертизы",
-                "Генерация картинок и открыток",
-                "Расширенная история давления",
-                "Рецепты с пошаговыми инструкциями",
+                "Всё то же, что в месячном",
+                "833₽/мес вместо 1 499₽",
+                "Время на привыкание",
+                "Экономия 44%",
               ]}
             />
           </div>
@@ -670,7 +656,7 @@ export default function LandingA() {
                   className="rounded-full h-14 px-8 bg-white text-orange-600 hover:bg-orange-50 font-semibold text-lg shadow-xl"
                   data-testid="button-cta-final-a"
                 >
-                  Подарить маме заботу — от 490₽/мес
+                  Подарить маме заботу — от 1 499₽/мес
                 </Button>
               </Link>
               <p className="mt-4 text-sm text-orange-200 opacity-80">
@@ -900,6 +886,7 @@ function PricingCard({
   result,
   features,
   popular,
+  period,
 }: {
   name: string;
   price: string;
@@ -907,6 +894,7 @@ function PricingCard({
   result: string;
   features: string[];
   popular?: boolean;
+  period?: string;
 }) {
   return (
     <Card
@@ -924,7 +912,7 @@ function PricingCard({
         </CardDescription>
         <div className="mt-3">
           <span className="text-3xl font-bold">{price}₽</span>
-          <span className="text-muted-foreground">/мес</span>
+          <span className="text-muted-foreground">{period ? `/${period}` : "/мес"}</span>
         </div>
         <div className="mt-3 bg-orange-50 rounded-lg px-3 py-2" data-testid={`pricing-result-${name}`}>
           <p className="text-xs font-medium text-orange-700">{result}</p>

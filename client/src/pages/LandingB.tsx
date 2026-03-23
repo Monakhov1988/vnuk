@@ -418,52 +418,37 @@ export default function LandingB() {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <Badge className="mb-4 bg-amber-500/10 text-amber-400 border-amber-500/20 font-mono text-xs">ТАРИФЫ</Badge>
             <h2 className="text-3xl md:text-5xl font-bold mb-4" style={{ fontFamily: "'Inter', sans-serif" }}>
-              ИИ-забота за 990₽
+              ИИ-забота за 1 499₽
             </h2>
             <p className="text-slate-300 text-lg">
               Первые 3 дня бесплатно. Без привязки карты. Отменить в 1 клик.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             <PricingCardTech
-              name="Базовый"
-              price="490"
-              description="Базовые возможности агента"
+              name="На 1 месяц"
+              price="1 499"
+              description="3 дня бесплатно"
               features={[
-                "ИИ-чат в Telegram",
+                "Безлимит вопросов",
                 "Напоминания о лекарствах",
-                "Дневник давления",
-                "Лента событий",
-                "До 5 напоминаний/день"
+                "Голос, фото, открытки",
+                "Помощь с Госуслугами и ЖКХ",
+                "Вечерний отчёт для вас",
               ]}
             />
             <PricingCardTech
-              name="Стандарт"
-              price="990"
+              name="На 3 месяца"
+              price="2 499"
               popular
-              description="Полный набор ИИ-возможностей"
+              period="3 мес"
+              description="Экономия 44%"
               features={[
-                "Всё из Базового",
-                "Голосовые сообщения",
-                "Распознавание по фото",
-                "Обнаружение угроз",
-                "Проактивные сообщения",
-                "Безлимитные напоминания",
-                "Генерация изображений"
-              ]}
-            />
-            <PricingCardTech
-              name="Премиум"
-              price="1 990"
-              description="Максимум возможностей"
-              features={[
-                "Всё из Стандарта",
-                "Настройка личности бота",
-                "Темы экспертизы",
-                "Расширенная история давления",
-                "Рецепты с инструкциями",
-                "Погода по городу"
+                "Всё то же, что в месячном",
+                "833₽/мес вместо 1 499₽",
+                "Время на привыкание",
+                "Экономия 44%",
               ]}
             />
           </div>
@@ -545,7 +530,7 @@ export default function LandingB() {
               },
               {
                 q: "Сколько стоит?",
-                a: "От 490₽/мес за базовые функции. Самый популярный тариф — 990₽/мес с голосовыми сообщениями, распознаванием фото и защитой от мошенников. Первые 3 дня бесплатно."
+                a: "1 499₽/мес или 2 499₽ за 3 месяца (833₽/мес). Все функции без ограничений. Первые 3 дня бесплатно."
               }
             ].map((item, i) => (
               <div
@@ -731,7 +716,7 @@ function UseCaseCard({ title, before, after, icon }: { title: string; before: st
   );
 }
 
-function PricingCardTech({ name, price, description, features, popular }: { name: string; price: string; description: string; features: string[]; popular?: boolean }) {
+function PricingCardTech({ name, price, description, features, popular, period }: { name: string; price: string; description: string; features: string[]; popular?: boolean; period?: string }) {
   return (
     <div className={`relative rounded-2xl p-6 transition-all ${popular ? "bg-gradient-to-b from-cyan-500/10 to-blue-500/5 border-2 border-cyan-500/30 scale-105" : "bg-slate-900/50 border border-slate-800 hover:border-slate-700"}`} data-testid={`pricing-card-${name.toLowerCase()}`}>
       {popular && (
@@ -747,7 +732,7 @@ function PricingCardTech({ name, price, description, features, popular }: { name
         <p className="text-xs text-slate-400 mb-4">{description}</p>
         <div>
           <span className="text-4xl font-bold">{price}₽</span>
-          <span className="text-slate-500">/мес</span>
+          <span className="text-slate-500">{period ? `/${period}` : "/мес"}</span>
         </div>
       </div>
 

@@ -9,66 +9,35 @@ import { useToast } from "@/hooks/use-toast";
 
 const plans = [
   {
-    id: "none",
-    name: "Бесплатный",
-    price: "0",
-    period: "навсегда",
-    description: "Попробовать",
-    features: [
-      "10 вопросов в день",
-      "Рецепты, погода, транспорт",
-      "Стихи, загадки, открытки",
-      "Голосовой ввод",
-    ],
-    missing: ["Напоминания о лекарствах", "Защита от мошенников"],
-    popular: false,
-  },
-  {
-    id: "basic",
-    name: "Базовый",
-    price: "490",
+    id: "monthly",
+    name: "На 1 месяц",
+    price: "1 499",
     period: "мес",
-    description: "Контроль лекарств",
+    description: "3 дня бесплатно",
     features: [
-      "30 вопросов в день",
+      "Безлимит вопросов",
       "Напоминания о лекарствах",
-      "Дневник давления",
-      "Лента событий",
+      "Голос, фото, открытки",
+      "Помощь с Госуслугами и ЖКХ",
+      "Вечерний отчёт для вас",
     ],
-    missing: ["Защита от мошенников", "Бот пишет первым"],
+    missing: [],
     popular: false,
   },
   {
-    id: "standard",
-    name: "Стандарт",
-    price: "990",
-    period: "мес",
-    description: "Полная забота",
+    id: "quarterly",
+    name: "На 3 месяца",
+    price: "2 499",
+    period: "3 мес",
+    description: "Экономия 44%",
     features: [
-      "100 вопросов в день",
-      "Все из «Базового»",
-      "Защита от мошенников",
-      "Бот пишет первым",
-      "Распознавание счётчиков",
+      "Всё то же, что в месячном",
+      "833₽/мес вместо 1 499₽",
+      "Время на привыкание",
+      "Экономия 44%",
     ],
     missing: [],
     popular: true,
-  },
-  {
-    id: "premium",
-    name: "Премиум",
-    price: "1 990",
-    period: "мес",
-    description: "Максимум заботы",
-    features: [
-      "Безлимит вопросов",
-      "Все из «Стандарта»",
-      "Настройка личности бота",
-      "Открытки и картинки",
-      "Расширенная история",
-    ],
-    missing: [],
-    popular: false,
   },
 ];
 
@@ -152,11 +121,11 @@ export default function PricingPage() {
         <div className="container mx-auto text-center max-w-3xl mb-12">
           <h1 className="text-3xl md:text-5xl font-bold mb-4">Выберите тариф заботы</h1>
           <p className="text-lg text-muted-foreground">
-            Бесплатный тариф — навсегда. Подписка — от 490₽/мес. Отменить можно в любой момент.
+            3 дня бесплатно. Подписка — 1 499₽/мес или 2 499₽ за 3 месяца. Отменить можно в любой момент.
           </p>
         </div>
 
-        <div className="container mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl">
+        <div className="container mx-auto grid md:grid-cols-2 gap-6 max-w-3xl">
           {plans.map((plan) => (
             <Card key={plan.id} className={`relative overflow-hidden transition-all hover:-translate-y-1 ${plan.popular ? "border-primary shadow-lg shadow-primary/10 scale-105" : "border-slate-200"}`}>
               {plan.popular && (
