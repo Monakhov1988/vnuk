@@ -718,9 +718,9 @@ export default function GiftLanding() {
                 <Mail className="w-4 h-4" />
                 support@vnuchok.ru
               </a>
-              <a href="https://t.me/vnuchok_bot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-slate-300 transition-colors" data-testid="link-footer-telegram-gift">
+              <a href="https://t.me/vnuchok1_bot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-slate-300 transition-colors" data-testid="link-footer-telegram-gift">
                 <Send className="w-4 h-4" />
-                @vnuchok_bot в Telegram
+                @vnuchok1_bot в Telegram
               </a>
             </div>
 

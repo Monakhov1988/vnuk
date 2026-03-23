@@ -912,7 +912,7 @@ export default function LandingC() {
                     className="rounded-xl h-14 px-8 bg-white/10 text-white hover:bg-white/20 font-semibold text-base border border-white/20 backdrop-blur-sm transition-all duration-300"
                     data-testid="button-cta-telegram-c"
                   >
-                    <a href="https://t.me/GrandSonGleb_bot" target="_blank" rel="noopener noreferrer">
+                    <a href="https://t.me/vnuchok1_bot" target="_blank" rel="noopener noreferrer">
                       <Send className="w-5 h-5 mr-2" />
                       Запустить бот в Telegram
                     </a>
@@ -944,9 +944,9 @@ export default function LandingC() {
                 <Mail className="w-4 h-4" />
                 support@vnuchok.ru
               </a>
-              <a href="https://t.me/vnuchok_bot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-slate-300 transition-colors" data-testid="link-footer-telegram">
+              <a href="https://t.me/vnuchok1_bot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-slate-300 transition-colors" data-testid="link-footer-telegram">
                 <Send className="w-4 h-4" />
-                @vnuchok_bot в Telegram
+                @vnuchok1_bot в Telegram
               </a>
             </div>
 

@@ -592,7 +592,7 @@ export default function LandingD() {
                     className="rounded-full h-14 px-8 bg-white/10 text-white hover:bg-white/20 font-semibold text-base border border-white/20"
                     data-testid="button-cta-telegram-d"
                   >
-                    <a href="https://t.me/GrandSonGleb_bot" target="_blank" rel="noopener noreferrer">
+                    <a href="https://t.me/vnuchok1_bot" target="_blank" rel="noopener noreferrer">
                       <Send className="w-5 h-5 mr-2" />
                       Бот в Telegram
                     </a>
@@ -620,9 +620,9 @@ export default function LandingD() {
                 <Mail className="w-4 h-4" />
                 support@vnuchok.ru
               </a>
-              <a href="https://t.me/vnuchok_bot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-slate-800 transition-colors" data-testid="link-footer-telegram-d">
+              <a href="https://t.me/vnuchok1_bot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-slate-800 transition-colors" data-testid="link-footer-telegram-d">
                 <Send className="w-4 h-4" />
-                @vnuchok_bot
+                @vnuchok1_bot
               </a>
             </div>
 
